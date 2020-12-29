@@ -1,6 +1,8 @@
 # CBoy
-A Nintendo GameBoy emulator written in C.
-I'm going to try and implement this emulator following
-[*DMG-01: How to Emulate a Game Boy*](https://blog.ryanlevick.com/DMG-01/public/book/)
-by Ryan Levick. The tricky part is that this book uses Rust to implement the emulator,
-but I want to use C, so things could go south quickly. We'll see how this turns out.
+A Nintendo Game Boy emulator written in C.
+I've not implemented an emulator before, so this is me jumping off the deep end.
+I won't follow any one guide for the implementation, but below you'll find my references.
+
+# References
+* [*DMG-01: How to Emulate a Game Boy*](https://blog.ryanlevick.com/DMG-01/public/book/)
+* [*Emulation of Nintendo Game Boy (DMG-01)*](https://raw.githubusercontent.com/Baekalfen/PyBoy/master/PyBoy.pdf)
