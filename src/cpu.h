@@ -13,6 +13,8 @@ typedef struct gb_registers {
     uint8_t f;
     uint8_t h;
     uint8_t l;
+    uint16_t sp; // stack pointer
+    uint16_t pc; // program counter
 } gb_registers;
 
 
