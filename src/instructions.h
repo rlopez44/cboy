@@ -77,9 +77,9 @@ enum operands {
     IMM_8,
     IMM_16,
     // 8-bit 'address' (added to 0xFF00 to determine 16-bit address)
-    ADDR_8,
+    PTR_8,
     // 16-bit address
-    ADDR_16,
+    PTR_16,
     // register values as pointers
     PTR_C,
     PTR_BC,
@@ -93,14 +93,14 @@ enum operands {
     CC_C,
     CC_NC,
     // RST vectors
-    ADDR_0x00,
-    ADDR_0x08,
-    ADDR_0x10,
-    ADDR_0x18,
-    ADDR_0x20,
-    ADDR_0x28,
-    ADDR_0x30,
-    ADDR_0x38,
+    PTR_0x00,
+    PTR_0x08,
+    PTR_0x10,
+    PTR_0x18,
+    PTR_0x20,
+    PTR_0x28,
+    PTR_0x30,
+    PTR_0x38,
     // bit numbers for bit instructions
     BIT_0,
     BIT_1,
@@ -118,7 +118,7 @@ typedef struct gb_instruction {
     enum operands op1, op2;
     uint8_t length; // in bytes
     // alt duration only used for conditional calls and returns
-    uint8_t duration, alt_duration; // in T-states (clock ticks)
+    uint8_t duration, alt_duration; // in M-cycles (one M-cycle = four clock ticks)
 } gb_instruction;
 
 #endif
