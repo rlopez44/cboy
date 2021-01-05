@@ -2,8 +2,9 @@
 #define CPU_H_
 
 #include <stdint.h>
+#include "memory.h"
 
-// the GameBoy CPU registers
+// the Game Boy CPU registers
 typedef struct gb_registers {
     uint8_t a;
     uint8_t b;
@@ -16,6 +17,15 @@ typedef struct gb_registers {
     uint16_t sp; // stack pointer
     uint16_t pc; // program counter
 } gb_registers;
+
+// the Game Boy CPU
+typedef struct gb_cpu {
+    // the CPU's registers
+    gb_registers *reg;
+
+    // the CPU's address bus.
+    gb_address_bus *bus;
+} gb_cpu;
 
 
 /* Utility functions for reading and writing
