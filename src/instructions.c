@@ -1,4 +1,6 @@
 #include "instructions.h"
+#include "cpu.h"
+#include "memory.h"
 
 // the CPU's instruction set
 static const gb_instruction instruction_table[512] = {
@@ -523,3 +525,166 @@ static const gb_instruction instruction_table[512] = {
     [0x1fe] = {SET, BIT_7, PTR_HL, 2, 4, 4},
     [0x1ff] = {SET, BIT_7, REG_A, 2, 2, 2},
 };
+
+/* updates the program counter after instruction execution
+ * returns the number of m-cycles elapsed during instruction execution
+ */
+uint8_t execute_instruction(gb_cpu *cpu)
+{
+    // the instructions duration
+    uint8_t curr_inst_duration;
+
+    uint8_t inst_code = read_byte(cpu->bus, cpu->reg->pc);
+    gb_instruction inst = instruction_table[inst_code];
+
+    // check if we need to access a prefixed instruction
+    if (inst.opcode == PREFIX)
+    {
+        inst = instruction_table[0x100 + inst_code];
+    }
+
+    switch (inst.opcode)
+    {
+        case NOP:
+            cpu->reg->pc += inst.length;
+            curr_inst_duration = inst.duration;
+            break;
+
+        case LD:
+            break;
+
+        case INC:
+            break;
+
+        case DEC:
+            break;
+
+        case RLCA:
+            break;
+
+        case ADD:
+            break;
+
+        case RRCA:
+            break;
+
+        case STOP:
+            break;
+
+        case RLA:
+            break;
+
+        case JR:
+            break;
+
+        case RRA:
+            break;
+
+        case DAA:
+            break;
+
+        case CPL:
+            break;
+
+        case SCF:
+            break;
+
+        case CCF:
+            break;
+
+        case HALT:
+            break;
+
+        case ADC:
+            break;
+
+        case SUB:
+            break;
+
+        case SBC:
+            break;
+
+        case AND:
+            break;
+
+        case XOR:
+            break;
+
+        case OR:
+            break;
+
+        case CP:
+            break;
+
+        case RET:
+            break;
+
+        case POP:
+            break;
+
+        case JP:
+            break;
+
+        case CALL:
+            break;
+
+        case PUSH:
+            break;
+
+        case RST:
+            break;
+
+        case RETI:
+            break;
+
+        case LDH:
+            break;
+
+        case DI:
+            break;
+
+        case EI:
+            break;
+
+        // CB Opcodes
+        case RLC:
+            break;
+
+        case RRC:
+            break;
+
+        case RL:
+            break;
+
+        case RR:
+            break;
+
+        case SLA:
+            break;
+
+        case SRA:
+            break;
+
+        case SWAP:
+            break;
+
+        case SRL:
+            break;
+
+        case BIT:
+            break;
+
+        case RES:
+            break;
+
+        case SET:
+            break;
+
+        // invalid opcodes are just ignored
+        case UNUSED:
+        default:
+            ++(cpu->reg->pc);
+            curr_inst_duration = 0;
+    }
+    return curr_inst_duration;
+}
