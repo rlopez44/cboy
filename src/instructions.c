@@ -531,22 +531,23 @@ static const gb_instruction instruction_table[512] = {
  */
 uint8_t execute_instruction(gb_cpu *cpu)
 {
-    // the instructions duration
+    // the instruction's duration
     uint8_t curr_inst_duration;
 
-    uint8_t inst_code = read_byte(cpu->bus, cpu->reg->pc);
+    uint8_t inst_code = read_byte(cpu->bus, (cpu->reg->pc)++);
     gb_instruction inst = instruction_table[inst_code];
 
     // check if we need to access a prefixed instruction
     if (inst.opcode == PREFIX)
     {
+        // read the prefixed instruction code and access instruction
+        inst_code = read_byte(cpu->bus, (cpu->reg->pc)++);
         inst = instruction_table[0x100 + inst_code];
     }
 
     switch (inst.opcode)
     {
         case NOP:
-            cpu->reg->pc += inst.length;
             curr_inst_duration = inst.duration;
             break;
 
@@ -681,9 +682,9 @@ uint8_t execute_instruction(gb_cpu *cpu)
             break;
 
         // invalid opcodes are just ignored
+        // may lead to undefined behavior
         case UNUSED:
         default:
-            ++(cpu->reg->pc);
             curr_inst_duration = 0;
     }
     return curr_inst_duration;
