@@ -33,23 +33,23 @@ typedef struct gb_cpu {
  * of register b in the high byte and register
  * c in the low byte of the two-byte register.
  */
-uint16_t get_bc(gb_registers *reg);
+uint16_t read_bc(gb_registers *reg);
 
-void set_bc(gb_registers *reg, uint16_t value);
+void write_bc(gb_registers *reg, uint16_t value);
 
 /* Similar utility functions for the af, de, and hl registers
  * ----------------------------------------------------------
  */
-uint16_t get_af(gb_registers *reg);
+uint16_t read_af(gb_registers *reg);
 
-void set_af(gb_registers *reg, uint16_t value);
+void write_af(gb_registers *reg, uint16_t value);
 
-uint16_t get_de(gb_registers *reg);
+uint16_t read_de(gb_registers *reg);
 
-void set_de(gb_registers *reg, uint16_t value);
+void write_de(gb_registers *reg, uint16_t value);
 
-uint16_t get_hl(gb_registers *reg);
+uint16_t read_hl(gb_registers *reg);
 
-void set_hl(gb_registers *reg, uint16_t value);
+void write_hl(gb_registers *reg, uint16_t value);
 
 #endif
