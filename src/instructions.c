@@ -526,6 +526,99 @@ static const gb_instruction instruction_table[512] = {
     [0x1ff] = {SET, BIT_7, REG_A, 2, 2, 2},
 };
 
+// the load instruction
+static void ld(gb_cpu *cpu, gb_instruction *inst)
+{
+    switch (inst->op1)
+    {
+        case REG_A:
+            switch (inst->op2)
+            {
+                case REG_A:
+                    cpu->reg->a = cpu->reg->a;
+                    break;
+
+                case REG_B:
+                    cpu->reg->a = cpu->reg->b;
+                    break;
+
+                case REG_C:
+                    cpu->reg->a = cpu->reg->c;
+                    break;
+
+                case REG_D:
+                    cpu->reg->a = cpu->reg->d;
+                    break;
+
+                case REG_E:
+                    cpu->reg->a = cpu->reg->e;
+                    break;
+
+                case REG_H:
+                    cpu->reg->a = cpu->reg->h;
+                    break;
+
+                case REG_L:
+                    cpu->reg->a = cpu->reg->l;
+                    break;
+
+                case PTR_BC:
+                    cpu->reg->a = read_byte(cpu->bus, read_bc(cpu->reg));
+                    break;
+
+                case PTR_DE:
+                    cpu->reg->a = read_byte(cpu->bus, read_de(cpu->reg));
+                    break;
+
+                case PTR_HL:
+                    cpu->reg->a = read_byte(cpu->bus, read_hl(cpu->reg));
+                    break;
+
+                case PTR_HL_INC:
+                {
+                    uint16_t hl = read_hl(cpu->reg);
+                    cpu->reg->a = read_byte(cpu->bus, hl);
+                    // increment HL register after loading value it points to
+                    write_hl(cpu->reg, hl + 1);
+                    break;
+                }
+
+                case PTR_HL_DEC:
+                {
+                    uint16_t hl = read_hl(cpu->reg);
+                    cpu->reg->a = read_byte(cpu->bus, hl);
+                    // decrement HL register after loading value it points to
+                    write_hl(cpu->reg, hl - 1);
+                    break;
+                }
+
+                case IMM_8:
+                    // load immediate value
+                    cpu->reg->a = read_byte(cpu->bus, (cpu->reg->pc)++);
+                    break;
+
+                case PTR_16:
+                {
+                    // load 16-bit immediate value
+                    // NOTE: little-endian
+                    uint8_t lo = read_byte(cpu->bus, (cpu->reg->pc)++);
+                    uint8_t hi = read_byte(cpu->bus, (cpu->reg->pc)++);
+
+                    // use this value as a pointer
+                    uint16_t addr = ((uint16_t)hi << 8) | ((uint16_t)lo);
+                    cpu->reg->a = read_byte(cpu->bus, addr);
+                    break;
+                }
+
+                default: // should not reach here
+                    break;
+            }
+
+        default: // should not get here
+            break;
+    }
+}
+
 /* updates the program counter after instruction execution
  * returns the number of m-cycles elapsed during instruction execution
  */
@@ -552,6 +645,7 @@ uint8_t execute_instruction(gb_cpu *cpu)
             break;
 
         case LD:
+            ld(cpu, &inst);
             break;
 
         case INC:
