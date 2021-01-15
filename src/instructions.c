@@ -614,6 +614,49 @@ static void ld(gb_cpu *cpu, gb_instruction *inst)
                     break;
             }
 
+        case REG_B:
+            switch (inst->op2)
+            {
+                case REG_A:
+                    cpu->reg->b = cpu->reg->a;
+                    break;
+
+                case REG_B:
+                    cpu->reg->b = cpu->reg->b;
+                    break;
+
+                case REG_C:
+                    cpu->reg->b = cpu->reg->c;
+                    break;
+
+                case REG_D:
+                    cpu->reg->b = cpu->reg->d;
+                    break;
+
+                case REG_E:
+                    cpu->reg->b = cpu->reg->e;
+                    break;
+
+                case REG_H:
+                    cpu->reg->b = cpu->reg->h;
+                    break;
+
+                case REG_L:
+                    cpu->reg->b = cpu->reg->l;
+                    break;
+
+                case PTR_HL:
+                    cpu->reg->b = read_byte(cpu->bus, read_hl(cpu->reg));
+                    break;
+
+                case IMM_8:
+                    cpu->reg->b = read_byte(cpu->bus, (cpu->reg->pc)++);
+                    break;
+
+                default: // shouldn't get here
+                    break;
+            }
+
         default: // should not get here
             break;
     }
