@@ -1,6 +1,9 @@
 # binaries
 bin/
 
+# object files directory
+obj/
+
 # Prerequisites
 *.d
 

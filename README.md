@@ -3,6 +3,15 @@ A Nintendo Game Boy emulator written in C.
 I've not implemented an emulator before, so this is me jumping off the deep end.
 I won't follow any one guide for the implementation, but below you'll find my references.
 
+# Compiling the Emulator
+To compile the emulator, run `make` in the project's root directory. To compile with debug symbols,
+run `make debug` instead. The emulator will be compiled in the `bin/` subdirectory.
+
+# Clean Up
+The `make` and `make debug` commands create `obj/` and `bin/` subdirectories for storing object files
+and the emulator, respectively. To clean up the `obj/` directory, run `make clean`. To clean up the
+`obj/` and `bin/` directories, run `make full-clean`.
+
 # References
 * [*DMG-01: How to Emulate a Game Boy*](https://rylev.github.io/DMG-01/public/book/)
 * [*Emulation of Nintendo Game Boy (DMG-01)*](https://raw.githubusercontent.com/Baekalfen/PyBoy/master/PyBoy.pdf)
