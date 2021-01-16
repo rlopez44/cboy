@@ -657,6 +657,221 @@ static void ld(gb_cpu *cpu, gb_instruction *inst)
                     break;
             }
 
+        case REG_C:
+            switch (inst->op2)
+            {
+                case REG_A:
+                    cpu->reg->c = cpu->reg->a;
+                    break;
+
+                case REG_B:
+                    cpu->reg->c = cpu->reg->b;
+                    break;
+
+                case REG_C:
+                    cpu->reg->c = cpu->reg->c;
+                    break;
+
+                case REG_D:
+                    cpu->reg->c = cpu->reg->d;
+                    break;
+
+                case REG_E:
+                    cpu->reg->c = cpu->reg->e;
+                    break;
+
+                case REG_H:
+                    cpu->reg->c = cpu->reg->h;
+                    break;
+
+                case REG_L:
+                    cpu->reg->c = cpu->reg->l;
+                    break;
+
+                case PTR_HL:
+                    cpu->reg->c = read_byte(cpu->bus, read_hl(cpu->reg));
+                    break;
+
+                case IMM_8:
+                    cpu->reg->c = read_byte(cpu->bus, (cpu->reg->pc)++);
+                    break;
+
+                default: // shouldn't get here
+                    break;
+            }
+
+        case REG_D:
+            switch (inst->op2)
+            {
+                case REG_A:
+                    cpu->reg->d = cpu->reg->a;
+                    break;
+
+                case REG_B:
+                    cpu->reg->d = cpu->reg->b;
+                    break;
+
+                case REG_C:
+                    cpu->reg->d = cpu->reg->c;
+                    break;
+
+                case REG_D:
+                    cpu->reg->d = cpu->reg->d;
+                    break;
+
+                case REG_E:
+                    cpu->reg->d = cpu->reg->e;
+                    break;
+
+                case REG_H:
+                    cpu->reg->d = cpu->reg->h;
+                    break;
+
+                case REG_L:
+                    cpu->reg->d = cpu->reg->l;
+                    break;
+
+                case PTR_HL:
+                    cpu->reg->d = read_byte(cpu->bus, read_hl(cpu->reg));
+                    break;
+
+                case IMM_8:
+                    cpu->reg->d = read_byte(cpu->bus, (cpu->reg->pc)++);
+                    break;
+
+                default: // shouldn't get here
+                    break;
+            }
+
+        case REG_E:
+            switch (inst->op2)
+            {
+                case REG_A:
+                    cpu->reg->e = cpu->reg->a;
+                    break;
+
+                case REG_B:
+                    cpu->reg->e = cpu->reg->b;
+                    break;
+
+                case REG_C:
+                    cpu->reg->e = cpu->reg->c;
+                    break;
+
+                case REG_D:
+                    cpu->reg->e = cpu->reg->d;
+                    break;
+
+                case REG_E:
+                    cpu->reg->e = cpu->reg->e;
+                    break;
+
+                case REG_H:
+                    cpu->reg->e = cpu->reg->h;
+                    break;
+
+                case REG_L:
+                    cpu->reg->e = cpu->reg->l;
+                    break;
+
+                case PTR_HL:
+                    cpu->reg->e = read_byte(cpu->bus, read_hl(cpu->reg));
+                    break;
+
+                case IMM_8:
+                    cpu->reg->e = read_byte(cpu->bus, (cpu->reg->pc)++);
+                    break;
+
+                default: // shouldn't get here
+                    break;
+            }
+
+        case REG_H:
+            switch (inst->op2)
+            {
+                case REG_A:
+                    cpu->reg->h = cpu->reg->a;
+                    break;
+
+                case REG_B:
+                    cpu->reg->h = cpu->reg->b;
+                    break;
+
+                case REG_C:
+                    cpu->reg->h = cpu->reg->c;
+                    break;
+
+                case REG_D:
+                    cpu->reg->h = cpu->reg->d;
+                    break;
+
+                case REG_E:
+                    cpu->reg->h = cpu->reg->e;
+                    break;
+
+                case REG_H:
+                    cpu->reg->h = cpu->reg->h;
+                    break;
+
+                case REG_L:
+                    cpu->reg->h = cpu->reg->l;
+                    break;
+
+                case PTR_HL:
+                    cpu->reg->h = read_byte(cpu->bus, read_hl(cpu->reg));
+                    break;
+
+                case IMM_8:
+                    cpu->reg->h = read_byte(cpu->bus, (cpu->reg->pc)++);
+                    break;
+
+                default: // shouldn't get here
+                    break;
+            }
+
+        case REG_L:
+            switch (inst->op2)
+            {
+                case REG_A:
+                    cpu->reg->l = cpu->reg->a;
+                    break;
+
+                case REG_B:
+                    cpu->reg->l = cpu->reg->b;
+                    break;
+
+                case REG_C:
+                    cpu->reg->l = cpu->reg->c;
+                    break;
+
+                case REG_D:
+                    cpu->reg->l = cpu->reg->d;
+                    break;
+
+                case REG_E:
+                    cpu->reg->l = cpu->reg->e;
+                    break;
+
+                case REG_H:
+                    cpu->reg->l = cpu->reg->h;
+                    break;
+
+                case REG_L:
+                    cpu->reg->l = cpu->reg->l;
+                    break;
+
+                case PTR_HL:
+                    cpu->reg->l = read_byte(cpu->bus, read_hl(cpu->reg));
+                    break;
+
+                case IMM_8:
+                    cpu->reg->l = read_byte(cpu->bus, (cpu->reg->pc)++);
+                    break;
+
+                default: // shouldn't get here
+                    break;
+            }
+
         default: // should not get here
             break;
     }
