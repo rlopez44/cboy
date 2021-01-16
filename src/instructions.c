@@ -879,6 +879,50 @@ static void ld(gb_cpu *cpu, gb_instruction *inst)
             }
             break;
 
+        case PTR_HL:
+            switch (inst->op2)
+            {
+                case REG_A:
+                    write_byte(cpu->bus, read_hl(cpu->reg), cpu->reg->a);
+                    break;
+
+                case REG_B:
+                    write_byte(cpu->bus, read_hl(cpu->reg), cpu->reg->b);
+                    break;
+
+                case REG_C:
+                    write_byte(cpu->bus, read_hl(cpu->reg), cpu->reg->c);
+                    break;
+
+                case REG_D:
+                    write_byte(cpu->bus, read_hl(cpu->reg), cpu->reg->d);
+                    break;
+
+                case REG_E:
+                    write_byte(cpu->bus, read_hl(cpu->reg), cpu->reg->e);
+                    break;
+
+                case REG_H:
+                    write_byte(cpu->bus, read_hl(cpu->reg), cpu->reg->h);
+                    break;
+
+                case REG_L:
+                    write_byte(cpu->bus, read_hl(cpu->reg), cpu->reg->l);
+                    break;
+
+                case IMM_8:
+                {
+                    // store immediate value into byte pointed to by HL
+                    uint8_t value = read_byte(cpu->bus, (cpu->reg->pc)++);
+                    write_byte(cpu->bus, read_hl(cpu->reg), value);
+                    break;
+                }
+
+                default: // shouldn't get here
+                    break;
+            }
+            break;
+
         default: // should not get here
             break;
     }
