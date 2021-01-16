@@ -613,6 +613,7 @@ static void ld(gb_cpu *cpu, gb_instruction *inst)
                 default: // should not reach here
                     break;
             }
+            break;
 
         case REG_B:
             switch (inst->op2)
@@ -656,6 +657,7 @@ static void ld(gb_cpu *cpu, gb_instruction *inst)
                 default: // shouldn't get here
                     break;
             }
+            break;
 
         case REG_C:
             switch (inst->op2)
@@ -699,6 +701,7 @@ static void ld(gb_cpu *cpu, gb_instruction *inst)
                 default: // shouldn't get here
                     break;
             }
+            break;
 
         case REG_D:
             switch (inst->op2)
@@ -742,6 +745,7 @@ static void ld(gb_cpu *cpu, gb_instruction *inst)
                 default: // shouldn't get here
                     break;
             }
+            break;
 
         case REG_E:
             switch (inst->op2)
@@ -785,6 +789,7 @@ static void ld(gb_cpu *cpu, gb_instruction *inst)
                 default: // shouldn't get here
                     break;
             }
+            break;
 
         case REG_H:
             switch (inst->op2)
@@ -828,6 +833,7 @@ static void ld(gb_cpu *cpu, gb_instruction *inst)
                 default: // shouldn't get here
                     break;
             }
+            break;
 
         case REG_L:
             switch (inst->op2)
@@ -871,6 +877,7 @@ static void ld(gb_cpu *cpu, gb_instruction *inst)
                 default: // shouldn't get here
                     break;
             }
+            break;
 
         default: // should not get here
             break;
