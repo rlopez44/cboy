@@ -52,3 +52,46 @@ void write_hl(gb_registers *reg, uint16_t value)
     reg->h = (uint8_t)((value & 0xFF00) >> 8);
     reg->l = (uint8_t)(value & 0xFF);
 }
+
+// set all flags at once
+void set_flags(gb_registers *reg, uint8_t zero, uint8_t subtract,
+               uint8_t half_carry, uint8_t carry)
+{
+    uint8_t new_flags = zero << 7
+                        | subtract << 6
+                        | half_carry << 5
+                        | carry << 4;
+
+    // NOTE: flags are stored in upper nibble of flags register
+    // clear the flags then set the new flag values
+    reg->f = (reg->f & ~0xf0) | (new_flags & 0xf0);
+}
+
+// set individual flags
+void set_zero_flag(gb_registers *reg, uint8_t value)
+{
+    // zero flag is the seventh bit of the flag register
+    uint8_t mask = 1 << 7;
+    reg->f = (reg->f & ~mask) | (value & mask);
+}
+
+void set_subtract_flag(gb_registers *reg, uint8_t value)
+{
+    // subtract flag is the sixth bit of the flag register
+    uint8_t mask = 1 << 6;
+    reg->f = (reg->f & ~mask) | (value & mask);
+}
+
+void set_half_carry_flag(gb_registers *reg, uint8_t value)
+{
+    // half carry flag is the fifth bit of the flag register
+    uint8_t mask = 1 << 5;
+    reg->f = (reg->f & ~mask) | (value & mask);
+}
+
+void set_carry_flag(gb_registers *reg, uint8_t value)
+{
+    // carry flag is the fourth bit of the flag register
+    uint8_t mask = 1 << 4;
+    reg->f = (reg->f & ~mask) | (value & mask);
+}
