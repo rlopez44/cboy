@@ -1070,6 +1070,52 @@ static void ld(gb_cpu *cpu, gb_instruction *inst)
     }
 }
 
+// the 'load from high page' instruction
+static void ldh(gb_cpu *cpu, gb_instruction *inst)
+{
+    // address that will be used in the instructions,
+    // either to read from or write to memory
+    uint16_t addr;
+    switch (inst->op1)
+    {
+        case REG_A:
+            switch (inst->op2)
+            {
+                case PTR_C:
+                    // 0xff00 + register C gives address to read from
+                    addr = 0xff00 + (uint16_t)cpu->reg->c;
+                    break;
+
+                case PTR_8:
+                    // immediate value is low byte of address
+                    // low byte + 0xff00 gives full address
+                    addr = 0xff00 + (uint16_t)read_byte(cpu->bus, (cpu->reg->pc)++);
+                    break;
+
+                default: // shouldn't get here
+                    break;
+            }
+            cpu->reg->a = read_byte(cpu->bus, addr);
+            break;
+
+        case PTR_C:
+            // address to write to is given by adding C register to 0xff00
+            addr = 0xff00 + (uint16_t)cpu->reg->c;
+            write_byte(cpu->bus, addr, cpu->reg->a);
+            break;
+
+        case PTR_8:
+            // immediate value is the low byte of the address to read from
+            // the low byte added to 0xff00 gives the full 16-bit address
+            addr = 0xff00 + (uint16_t)read_byte(cpu->bus, (cpu->reg->pc)++);
+            write_byte(cpu->bus, addr, cpu->reg->a);
+            break;
+
+        default: // shouldn't get here
+            break;
+    }
+}
+
 /* updates the program counter after instruction execution
  * returns the number of m-cycles elapsed during instruction execution
  */
@@ -1097,6 +1143,10 @@ uint8_t execute_instruction(gb_cpu *cpu)
 
         case LD:
             ld(cpu, &inst);
+            break;
+
+        case LDH:
+            ldh(cpu, &inst);
             break;
 
         case INC:
@@ -1181,9 +1231,6 @@ uint8_t execute_instruction(gb_cpu *cpu)
             break;
 
         case RETI:
-            break;
-
-        case LDH:
             break;
 
         case DI:
