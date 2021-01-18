@@ -923,6 +923,148 @@ static void ld(gb_cpu *cpu, gb_instruction *inst)
             }
             break;
 
+        case PTR_HL_INC:
+        {
+            // store register A's value into [HL] then increment HL
+            uint16_t hl = read_hl(cpu->reg);
+            write_byte(cpu->bus, hl, cpu->reg->a);
+            write_hl(cpu->reg, hl + 1);
+            break;
+        }
+
+        case PTR_HL_DEC:
+        {
+            // store register A's value into [HL] then decrement HL
+            uint16_t hl = read_hl(cpu->reg);
+            write_byte(cpu->bus, hl, cpu->reg->a);
+            write_hl(cpu->reg, hl - 1);
+            break;
+        }
+
+        case PTR_BC:
+            write_byte(cpu->bus, read_bc(cpu->reg), cpu->reg->a);
+            break;
+
+        case PTR_DE:
+            write_byte(cpu->bus, read_de(cpu->reg), cpu->reg->a);
+            break;
+
+        case REG_BC: // only instruction is LD BC, IMM_16
+        {
+            // little endian
+            uint8_t lo = read_byte(cpu->bus, (cpu->reg->pc)++);
+            uint8_t hi = read_byte(cpu->bus, (cpu->reg->pc)++);
+            uint16_t value = ((uint16_t)hi << 8) | ((uint16_t)lo);
+            write_bc(cpu->reg, value);
+            break;
+        }
+
+        case REG_DE: // only instruction is LD DE, IMM_16
+        {
+            // little endian
+            uint8_t lo = read_byte(cpu->bus, (cpu->reg->pc)++);
+            uint8_t hi = read_byte(cpu->bus, (cpu->reg->pc)++);
+            uint16_t value = ((uint16_t)hi << 8) | ((uint16_t)lo);
+            write_de(cpu->reg, value);
+            break;
+        }
+
+        case REG_HL:
+            switch (inst->op2)
+            {
+                case IMM_16:
+                {
+                    // little endian
+                    uint8_t lo = read_byte(cpu->bus, (cpu->reg->pc)++);
+                    uint8_t hi = read_byte(cpu->bus, (cpu->reg->pc)++);
+                    uint16_t value = ((uint16_t)hi << 8) | ((uint16_t)lo);
+                    write_hl(cpu->reg, value);
+                    break;
+                }
+
+                case IMM_8:
+                {
+                    /* read byte from memory as a signed value
+                     * NOTE: the cast from unsigned to signed 8-bit integer
+                     * is always safe since the two types are the same length
+                     */
+                    int8_t offset = (int8_t)read_byte(cpu->bus, (cpu->reg->pc)++);
+
+                    // NOTE: possible bugs can occur due to implicit integer conversions when
+                    // offset < 0. To avoid this, we perform explicit casts of SP and the offset
+                    write_hl(cpu->reg, (int32_t)cpu->reg->sp + (int32_t)offset);
+
+                    /* Flags to set:
+                     * zero flag: 0
+                     * subtract flag: 0
+                     * half carry flag: set if overflow from bit 3
+                     * carry flag: set if overflow from bit 7
+                     *
+                     * NOTE: overflow can only occur if offset > 0
+                     */
+                    uint8_t half_carry = 0, carry = 0;
+                    if (offset > 0)
+                    {
+                        // lowest nibbles must add to value bigger than 0xf to overflow
+                        half_carry = (cpu->reg->sp & 0xf) + (offset & 0xf) > 0xf;
+
+                        // sum of lowest bytes must be greater than 0xff to overflow
+                        carry = (cpu->reg->sp & 0xff) + offset > 0xff;
+                    }
+                    set_flags(cpu->reg, 0, 0, half_carry, carry);
+                    break;
+                }
+
+                default: // shouldn't get here
+                    break;
+            }
+
+        case REG_SP:
+            switch (inst->op2)
+            {
+                case IMM_16:
+                {
+                    uint8_t lo = read_byte(cpu->bus, (cpu->reg->pc)++);
+                    uint8_t hi = read_byte(cpu->bus, (cpu->reg->pc)++);
+                    cpu->reg->sp = ((uint16_t)hi << 8) | ((uint16_t)lo);
+                    break;
+                }
+
+                case REG_HL:
+                    cpu->reg->sp = read_hl(cpu->reg);
+                    break;
+
+                default: // shouldn't get here
+                    break;
+            }
+            break;
+
+        case PTR_16:
+        {
+            // load the immediate address
+            uint8_t lo = read_byte(cpu->bus, (cpu->reg->pc)++);
+            uint8_t hi = read_byte(cpu->bus, (cpu->reg->pc)++);
+            uint16_t addr = ((uint16_t)hi << 8) | (uint16_t)lo;
+
+            switch (inst->op2)
+            {
+                case REG_A:
+                    write_byte(cpu->bus, addr, cpu->reg->a);
+                    break;
+
+                case REG_SP:
+                    // write SP into the two bytes pointed to by the immediate address
+                    // NOTE: little endian. write lo byte at addr and hi byte at addr + 1
+                    write_byte(cpu->bus, addr, (uint8_t)(cpu->reg->sp & 0xff));
+                    write_byte(cpu->bus, addr + 1, (uint8_t)(cpu->reg->sp >> 8));
+                    break;
+
+                default: // shouldn't get here
+                    break;
+            }
+            break;
+        }
+
         default: // should not get here
             break;
     }
