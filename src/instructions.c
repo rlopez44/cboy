@@ -1225,9 +1225,7 @@ static void inc(gb_cpu *cpu, gb_instruction *inst)
     }
 }
 
-/* updates the program counter after instruction execution
- * returns the number of m-cycles elapsed during instruction execution
- */
+// returns the number of m-cycles elapsed during instruction execution
 uint8_t execute_instruction(gb_cpu *cpu)
 {
     // the instruction's duration
