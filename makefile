@@ -1,5 +1,7 @@
 CC = gcc
-CFLAGS = -g
+CFLAGS = -I./include/
+DEBUG_CFLAG = -g
+OBJS = obj/main.o obj/cpu.o obj/instructions.o obj/memory.o
 
 all: directories cboy
 
@@ -10,11 +12,11 @@ directories:
 	@mkdir -p ./bin/
 	@mkdir -p ./obj/
 
-cboy: obj/main.o obj/cpu.o obj/instructions.o obj/memory.o
-	$(CC) -o bin/$@ $^
+cboy: $(OBJS)
+	$(CC) $(CFLAGS) -o bin/$@ $^
 
-cboy-debug: obj/main.o obj/cpu.o obj/instructions.o obj/memory.o
-	$(CC) $(CFLAGS) -o bin/cboy $^
+cboy-debug: $(OBJS)
+	$(CC) $(CFLAGS) $(DEBUG_CFLAG) -o bin/cboy $^
 
 obj/%.o: src/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
