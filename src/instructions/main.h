@@ -1,7 +1,7 @@
 #ifndef INSTRUCTIONS_MAIN_H
 #define INSTRUCTIONS_MAIN_H
 
-#include "instructions.h"
+#include "cboy/instructions.h"
 
 // load instructions
 void ld(gb_cpu *cpu, gb_instruction *inst);

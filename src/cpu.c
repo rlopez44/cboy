@@ -1,4 +1,4 @@
-#include "cpu.h"
+#include "cboy/cpu.h"
 
 /* bc register contains the b register in the
  * high byte and the c register in the low byte

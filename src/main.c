@@ -1,6 +1,6 @@
 #include <stdio.h>
-#include "cpu.h"
-#include "instructions.h"
+#include "cboy/cpu.h"
+#include "cboy/instructions.h"
 
 int main(int argc, char *argv[])
 {

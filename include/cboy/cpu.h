@@ -2,7 +2,7 @@
 #define CPU_H_
 
 #include <stdint.h>
-#include "memory.h"
+#include "cboy/memory.h"
 
 // the Game Boy CPU registers
 typedef struct gb_registers {

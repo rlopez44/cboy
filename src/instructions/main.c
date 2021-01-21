@@ -1,7 +1,6 @@
-// top-level header files
-#include "instructions.h"
-#include "cpu.h"
-#include "memory.h"
+#include "cboy/instructions.h"
+#include "cboy/cpu.h"
+#include "cboy/memory.h"
 
 // instructions directory header files
 #include "main.h"

@@ -1,4 +1,4 @@
-#include "memory.h"
+#include "cboy/memory.h"
 
 /* for now simply read and write to the byte at the given memory address.
  * as more components of the emulator are implemented, these functions
