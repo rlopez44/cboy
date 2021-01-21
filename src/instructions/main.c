@@ -1,7 +1,7 @@
+#include <stdint.h>
 #include "cboy/instructions.h"
 #include "cboy/cpu.h"
 #include "cboy/memory.h"
-
 // instructions directory header files
 #include "main.h"
 

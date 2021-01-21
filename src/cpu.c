@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include "cboy/cpu.h"
 
 /* bc register contains the b register in the

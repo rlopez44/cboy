@@ -1,9 +1,9 @@
 // Implementation of the arithmetic instruction sets
 
+#include <stdint.h>
 #include "cboy/instructions.h"
 #include "cboy/cpu.h"
 #include "cboy/memory.h"
-
 // instructions directory
 #include "main.h"
 

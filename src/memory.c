@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include "cboy/memory.h"
 
 /* for now simply read and write to the byte at the given memory address.
