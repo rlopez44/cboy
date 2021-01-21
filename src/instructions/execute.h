@@ -1,5 +1,5 @@
-#ifndef INSTRUCTIONS_MAIN_H
-#define INSTRUCTIONS_MAIN_H
+#ifndef INSTRUCTIONS_EXECUTE_H
+#define INSTRUCTIONS_EXECUTE_H
 
 #include "cboy/instructions.h"
 

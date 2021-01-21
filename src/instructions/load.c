@@ -4,8 +4,7 @@
 #include "cboy/instructions.h"
 #include "cboy/cpu.h"
 #include "cboy/memory.h"
-// instructions directory header files
-#include "main.h"
+#include "execute.h"
 
 // the load instruction
 void ld(gb_cpu *cpu, gb_instruction *inst)

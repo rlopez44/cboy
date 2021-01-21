@@ -4,8 +4,7 @@
 #include "cboy/instructions.h"
 #include "cboy/cpu.h"
 #include "cboy/memory.h"
-// instructions directory
-#include "main.h"
+#include "execute.h"
 
 // the increment instruction
 void inc(gb_cpu *cpu, gb_instruction *inst)

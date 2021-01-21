@@ -2,8 +2,7 @@
 #include "cboy/instructions.h"
 #include "cboy/cpu.h"
 #include "cboy/memory.h"
-// instructions directory header files
-#include "main.h"
+#include "execute.h"
 
 // the CPU's instruction set
 static const gb_instruction instruction_table[512] = {

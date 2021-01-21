@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -I./include/
 DEBUG_CFLAG = -g
 OBJS = obj/main.o obj/cpu.o obj/memory.o
-OBJS += obj/instructions/main.o obj/instructions/load.o obj/instructions/arithmetic.o
+OBJS += obj/instructions/execute.o obj/instructions/load.o obj/instructions/arithmetic.o
 
 all: directories cboy
 
