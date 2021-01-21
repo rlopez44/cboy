@@ -2,6 +2,7 @@
 #define INSTRUCTIONS_H_
 
 #include <stdint.h>
+#include "cboy/cpu.h"
 
 // Game Boy CPU opcodes
 // See: https://gbdev.io/gb-opcodes/optables/
@@ -120,5 +121,9 @@ typedef struct gb_instruction {
     // alt duration only used for conditional calls and returns
     uint8_t duration, alt_duration; // in M-cycles (one M-cycle = four clock ticks)
 } gb_instruction;
+
+// executes the cpu instruction specified by the PC
+// returns the number of m-cycles elapsed during instruction execution
+uint8_t execute_instruction(gb_cpu *cpu);
 
 #endif
