@@ -9,11 +9,16 @@
 // the increment instruction
 void inc(gb_cpu *cpu, gb_instruction *inst)
 {
+    /* NOTE: Flags are affected by the INC r8 and INC [HL] instructions.
+     * Zero Flag:         set if result is 0
+     * Subtract Flag:     reset
+     * Half Carry Flag:   set if overflow from bit 3
+     */
     switch (inst->op1)
     {
         case REG_A:
         {
-            // store old value for carry flag check
+            // store old value for half carry flag check
             uint8_t old_a = (cpu->reg->a)++;
 
             set_zero_flag(cpu->reg, cpu->reg->a == 0);
@@ -118,17 +123,21 @@ void inc(gb_cpu *cpu, gb_instruction *inst)
 // the decrement instruction
 void dec(gb_cpu *cpu, gb_instruction *inst)
 {
+    /* NOTE: Flags are affected by the DEC r8 and DEC [HL] instructions.
+     * Zero Flag:         set if result is 0
+     * Subtract Flag:     set
+     * Half Carry Flag:   set if borrow from bit 4
+     */
     switch (inst->op1)
     {
         case REG_A:
         {
-            // store old value for carry flag check
+            // store old value for half-carry flag check
             uint8_t old_a = (cpu->reg->a)--;
 
             set_zero_flag(cpu->reg, cpu->reg->a == 0);
             set_subtract_flag(cpu->reg, 1);
-            // set if borrow from bit 4
-            // occurs if lower nibble is < 1 (i.e. 0)
+            // borrow from bit 4 occurs if lower nibble is < 1 (i.e. 0)
             set_half_carry_flag(cpu->reg, (old_a & 0xf) == 0);
             break;
         }
@@ -139,7 +148,6 @@ void dec(gb_cpu *cpu, gb_instruction *inst)
 
             set_zero_flag(cpu->reg, cpu->reg->b == 0);
             set_subtract_flag(cpu->reg, 1);
-            // borrow from bit 4
             set_half_carry_flag(cpu->reg, (old_b & 0xf) == 0);
             break;
         }
@@ -150,7 +158,6 @@ void dec(gb_cpu *cpu, gb_instruction *inst)
 
             set_zero_flag(cpu->reg, cpu->reg->c == 0);
             set_subtract_flag(cpu->reg, 1);
-            // borrow from bit 4
             set_half_carry_flag(cpu->reg, (old_c & 0xf) == 0);
             break;
         }
@@ -161,7 +168,6 @@ void dec(gb_cpu *cpu, gb_instruction *inst)
 
             set_zero_flag(cpu->reg, cpu->reg->d == 0);
             set_subtract_flag(cpu->reg, 1);
-            // borrow from bit 4
             set_half_carry_flag(cpu->reg, (old_d & 0xf) == 0);
             break;
         }
@@ -172,7 +178,6 @@ void dec(gb_cpu *cpu, gb_instruction *inst)
 
             set_zero_flag(cpu->reg, cpu->reg->e == 0);
             set_subtract_flag(cpu->reg, 1);
-            // borrow from bit 4
             set_half_carry_flag(cpu->reg, (old_e & 0xf) == 0);
             break;
         }
@@ -183,7 +188,6 @@ void dec(gb_cpu *cpu, gb_instruction *inst)
 
             set_zero_flag(cpu->reg, cpu->reg->h == 0);
             set_subtract_flag(cpu->reg, 1);
-            // borrow from bit 4
             set_half_carry_flag(cpu->reg, (old_h & 0xf) == 0);
             break;
         }
@@ -194,7 +198,6 @@ void dec(gb_cpu *cpu, gb_instruction *inst)
 
             set_zero_flag(cpu->reg, cpu->reg->l == 0);
             set_subtract_flag(cpu->reg, 1);
-            // borrow from bit 4
             set_half_carry_flag(cpu->reg, (old_l & 0xf) == 0);
             break;
         }
@@ -207,7 +210,6 @@ void dec(gb_cpu *cpu, gb_instruction *inst)
 
             set_zero_flag(cpu->reg, old_val - 1 == 0);
             set_subtract_flag(cpu->reg, 1);
-            // borrow from bit 4
             set_half_carry_flag(cpu->reg, (old_val & 0xf) == 0);
             break;
         }
