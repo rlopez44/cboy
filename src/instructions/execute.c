@@ -564,6 +564,7 @@ uint8_t execute_instruction(gb_cpu *cpu)
             break;
 
         case DEC:
+            dec(cpu, &inst);
             break;
 
         case RLCA:

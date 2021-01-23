@@ -9,5 +9,6 @@ void ldh(gb_cpu *cpu, gb_instruction *inst);
 
 // arithmetic instructions
 void inc(gb_cpu *cpu, gb_instruction *inst);
+void dec(gb_cpu *cpu, gb_instruction *inst);
 
 #endif
