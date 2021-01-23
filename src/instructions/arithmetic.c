@@ -114,9 +114,6 @@ void inc(gb_cpu *cpu, gb_instruction *inst)
         case REG_SP:
             ++(cpu->reg->sp);
             break;
-
-        default: // shouldn't get here
-            break;
     }
 }
 
@@ -229,9 +226,6 @@ void dec(gb_cpu *cpu, gb_instruction *inst)
         case REG_SP:
             --(cpu->reg->sp);
             break;
-
-        default: // shouldn't get here
-            break;
     }
 }
 
@@ -302,9 +296,6 @@ void add(gb_cpu *cpu, gb_instruction *inst)
                 case IMM_8:
                     to_add = read_byte(cpu->bus, (cpu->reg->sp)++);
                     break;
-
-                default:
-                    break;
             }
             uint8_t old_a = cpu->reg->a;
             cpu->reg->a += to_add;
@@ -335,9 +326,6 @@ void add(gb_cpu *cpu, gb_instruction *inst)
 
                 case REG_SP:
                     to_add = cpu->reg->sp;
-
-                default:
-                    break;
             }
             uint16_t old_hl = read_hl(cpu->reg);
             write_hl(cpu->reg, old_hl + to_add);
@@ -364,8 +352,5 @@ void add(gb_cpu *cpu, gb_instruction *inst)
             set_flags(cpu->reg, 0, 0, half_carry, carry);
             break;
         }
-
-        default:
-            break;
     }
 }

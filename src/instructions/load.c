@@ -89,9 +89,6 @@ void ld(gb_cpu *cpu, gb_instruction *inst)
                     cpu->reg->a = read_byte(cpu->bus, addr);
                     break;
                 }
-
-                default: // should not reach here
-                    break;
             }
             break;
 
@@ -132,9 +129,6 @@ void ld(gb_cpu *cpu, gb_instruction *inst)
 
                 case IMM_8:
                     cpu->reg->b = read_byte(cpu->bus, (cpu->reg->pc)++);
-                    break;
-
-                default: // shouldn't get here
                     break;
             }
             break;
@@ -177,9 +171,6 @@ void ld(gb_cpu *cpu, gb_instruction *inst)
                 case IMM_8:
                     cpu->reg->c = read_byte(cpu->bus, (cpu->reg->pc)++);
                     break;
-
-                default: // shouldn't get here
-                    break;
             }
             break;
 
@@ -220,9 +211,6 @@ void ld(gb_cpu *cpu, gb_instruction *inst)
 
                 case IMM_8:
                     cpu->reg->d = read_byte(cpu->bus, (cpu->reg->pc)++);
-                    break;
-
-                default: // shouldn't get here
                     break;
             }
             break;
@@ -265,9 +253,6 @@ void ld(gb_cpu *cpu, gb_instruction *inst)
                 case IMM_8:
                     cpu->reg->e = read_byte(cpu->bus, (cpu->reg->pc)++);
                     break;
-
-                default: // shouldn't get here
-                    break;
             }
             break;
 
@@ -308,9 +293,6 @@ void ld(gb_cpu *cpu, gb_instruction *inst)
 
                 case IMM_8:
                     cpu->reg->h = read_byte(cpu->bus, (cpu->reg->pc)++);
-                    break;
-
-                default: // shouldn't get here
                     break;
             }
             break;
@@ -353,9 +335,6 @@ void ld(gb_cpu *cpu, gb_instruction *inst)
                 case IMM_8:
                     cpu->reg->l = read_byte(cpu->bus, (cpu->reg->pc)++);
                     break;
-
-                default: // shouldn't get here
-                    break;
             }
             break;
 
@@ -397,9 +376,6 @@ void ld(gb_cpu *cpu, gb_instruction *inst)
                     write_byte(cpu->bus, read_hl(cpu->reg), value);
                     break;
                 }
-
-                default: // shouldn't get here
-                    break;
             }
             break;
 
@@ -494,9 +470,6 @@ void ld(gb_cpu *cpu, gb_instruction *inst)
                     set_flags(cpu->reg, 0, 0, half_carry, carry);
                     break;
                 }
-
-                default: // shouldn't get here
-                    break;
             }
 
         case REG_SP:
@@ -512,9 +485,6 @@ void ld(gb_cpu *cpu, gb_instruction *inst)
 
                 case REG_HL:
                     cpu->reg->sp = read_hl(cpu->reg);
-                    break;
-
-                default: // shouldn't get here
                     break;
             }
             break;
@@ -538,15 +508,9 @@ void ld(gb_cpu *cpu, gb_instruction *inst)
                     write_byte(cpu->bus, addr, (uint8_t)(cpu->reg->sp & 0xff));
                     write_byte(cpu->bus, addr + 1, (uint8_t)(cpu->reg->sp >> 8));
                     break;
-
-                default: // shouldn't get here
-                    break;
             }
             break;
         }
-
-        default: // should not get here
-            break;
     }
 }
 
@@ -571,9 +535,6 @@ void ldh(gb_cpu *cpu, gb_instruction *inst)
                     // low byte + 0xff00 gives full address
                     addr = 0xff00 + (uint16_t)read_byte(cpu->bus, (cpu->reg->pc)++);
                     break;
-
-                default: // shouldn't get here
-                    break;
             }
             cpu->reg->a = read_byte(cpu->bus, addr);
             break;
@@ -589,9 +550,6 @@ void ldh(gb_cpu *cpu, gb_instruction *inst)
             // the low byte added to 0xff00 gives the full 16-bit address
             addr = 0xff00 + (uint16_t)read_byte(cpu->bus, (cpu->reg->pc)++);
             write_byte(cpu->bus, addr, cpu->reg->a);
-            break;
-
-        default: // shouldn't get here
             break;
     }
 }
