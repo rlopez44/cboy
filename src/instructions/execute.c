@@ -567,10 +567,11 @@ uint8_t execute_instruction(gb_cpu *cpu)
             dec(cpu, &inst);
             break;
 
-        case RLCA:
+        case ADD:
+            add(cpu, &inst);
             break;
 
-        case ADD:
+        case RLCA:
             break;
 
         case RRCA:

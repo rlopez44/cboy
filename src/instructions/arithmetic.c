@@ -119,7 +119,7 @@ void inc(gb_cpu *cpu, gb_instruction *inst)
             break;
     }
 }
-//
+
 // the decrement instruction
 void dec(gb_cpu *cpu, gb_instruction *inst)
 {
@@ -231,6 +231,141 @@ void dec(gb_cpu *cpu, gb_instruction *inst)
             break;
 
         default: // shouldn't get here
+            break;
+    }
+}
+
+// the add instruction
+void add(gb_cpu *cpu, gb_instruction *inst)
+{
+    /* NOTE: See below for affected flags.
+     *
+     * ADD A, r8 or ADD A, [HL] or ADD A, n8
+     * -----------------------------------
+     *  Zero Flag:         set if result is zero
+     *  Subtract Flag:     reset
+     *  Half Carry Flag:   set if overflow from bit 3
+     *  Carry Flag:        set if overflow from bit 7
+     *
+     *  ADD HL, r16 (including SP)
+     *  --------------------------
+     *  Subtract Flag:     reset
+     *  Half Carry Flag:   set if overflow from bit 11
+     *  Carry Flag:        set if overflow from bit 15
+     *
+     *  ADD SP, e8 (signed 8-bit)
+     *  ----------
+     *  Zero Flag:         reset
+     *  Subtract Flag:     reset
+     *  Half Carry Flag:   set if overflow from bit 3
+     *  Carry Flag:        set if overflow from bit 7
+     */
+    switch (inst->op1)
+    {
+        case REG_A:
+        {
+            uint8_t to_add; // value to add
+            switch (inst->op2)
+            {
+                case REG_A:
+                    to_add = cpu->reg->a;
+                    break;
+
+                case REG_B:
+                    to_add = cpu->reg->b;
+                    break;
+
+                case REG_C:
+                    to_add = cpu->reg->c;
+                    break;
+
+                case REG_D:
+                    to_add = cpu->reg->d;
+                    break;
+
+                case REG_E:
+                    to_add = cpu->reg->e;
+                    break;
+
+                case REG_H:
+                    to_add = cpu->reg->h;
+                    break;
+
+                case REG_L:
+                    to_add = cpu->reg->l;
+                    break;
+
+                case PTR_HL:
+                    to_add = read_byte(cpu->bus, read_hl(cpu->reg));
+                    break;
+
+                case IMM_8:
+                    to_add = read_byte(cpu->bus, (cpu->reg->sp)++);
+                    break;
+
+                default:
+                    break;
+            }
+            uint8_t old_a = cpu->reg->a;
+            cpu->reg->a += to_add;
+            set_flags(cpu->reg,
+                      cpu->reg->a == 0,                           // zero
+                      0,                                          // subtract
+                      (old_a & 0xf) + (to_add & 0xf) > 0xf,       // half carry
+                      (uint16_t)old_a + (uint16_t)to_add > 0xff); // carry
+            break;
+        }
+
+        case REG_HL:
+        {
+            uint16_t to_add; // value to add
+            switch (inst->op2)
+            {
+                case REG_BC:
+                    to_add = read_bc(cpu->reg);
+                    break;
+
+                case REG_DE:
+                    to_add = read_de(cpu->reg);
+                    break;
+
+                case REG_HL:
+                    to_add = read_hl(cpu->reg);
+                    break;
+
+                case REG_SP:
+                    to_add = cpu->reg->sp;
+
+                default:
+                    break;
+            }
+            uint16_t old_hl = read_hl(cpu->reg);
+            write_hl(cpu->reg, old_hl + to_add);
+            set_zero_flag(cpu->reg, 0);
+            set_half_carry_flag(cpu->reg, (old_hl & 0xfff) + (to_add & 0xfff) > 0xfff);
+            set_carry_flag(cpu->reg, (uint32_t)old_hl + (uint32_t)to_add > 0xffff);
+            break;
+        }
+
+        case REG_SP: // single case, add signed 8-bit offset
+        {
+            // cast is safe since we don't change integer width
+            int8_t offset = (int8_t)read_byte(cpu->bus, (cpu->reg->pc)++);
+            // explicit casts to avoid bugs due to implicit integer conversions
+            cpu->reg->sp = (int32_t)cpu->reg->sp + (int32_t)offset;
+
+            uint8_t half_carry = 0, carry = 0;
+            // overflow can occur only if offset > 0
+            if (offset > 0)
+            {
+                half_carry = (cpu->reg->sp & 0xf) + (offset & 0xf) > 0xf;
+                carry = (cpu->reg->sp & 0xff) + offset > 0xff;
+            }
+            set_flags(cpu->reg, 0, 0, half_carry, carry);
+            break;
+        }
+
+        default:
             break;
     }
 }
