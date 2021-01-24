@@ -571,6 +571,10 @@ uint8_t execute_instruction(gb_cpu *cpu)
             add(cpu, &inst);
             break;
 
+        case ADC:
+            adc(cpu, &inst);
+            break;
+
         case RLCA:
             break;
 
@@ -602,9 +606,6 @@ uint8_t execute_instruction(gb_cpu *cpu)
             break;
 
         case HALT:
-            break;
-
-        case ADC:
             break;
 
         case SUB:

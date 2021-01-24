@@ -11,5 +11,6 @@ void ldh(gb_cpu *cpu, gb_instruction *inst);
 void inc(gb_cpu *cpu, gb_instruction *inst);
 void dec(gb_cpu *cpu, gb_instruction *inst);
 void add(gb_cpu *cpu, gb_instruction *inst);
+void adc(gb_cpu *cpu, gb_instruction *inst);
 
 #endif

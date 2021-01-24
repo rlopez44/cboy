@@ -355,6 +355,68 @@ void add(gb_cpu *cpu, gb_instruction *inst)
     }
 }
 
+// the add with carry (ADC) instruction
+void adc(gb_cpu *cpu, gb_instruction *inst)
+{
+    /* NOTE: See below for affected flags.
+     *
+     * ADD A, r8 or ADD A, [HL] or ADD A, n8
+     * -------------------------------------
+     *  Zero Flag:         set if result is zero
+     *  Subtract Flag:     reset
+     *  Half Carry Flag:   set if overflow from bit 3
+     *  Carry Flag:        set if overflow from bit 7
+     */
+
+    // NOTE: first operand of ADC is always the A register
+    uint8_t to_add = read_carry_flag(cpu->reg); // initialize to value of carry flag
+    switch (inst->op2)
+    {
+        case REG_A:
+            to_add += cpu->reg->a;
+            break;
+
+        case REG_B:
+            to_add += cpu->reg->b;
+            break;
+
+        case REG_C:
+            to_add += cpu->reg->c;
+            break;
+
+        case REG_D:
+            to_add += cpu->reg->d;
+            break;
+
+        case REG_E:
+            to_add += cpu->reg->e;
+            break;
+
+        case REG_H:
+            to_add += cpu->reg->h;
+            break;
+
+        case REG_L:
+            to_add += cpu->reg->l;
+            break;
+
+        case PTR_HL:
+            to_add += read_byte(cpu->bus, read_hl(cpu->reg));
+            break;
+
+        case IMM_8:
+            to_add += read_byte(cpu->bus, (cpu->reg->pc)++);
+            break;
+    }
+    uint8_t old_a = cpu->reg->a;
+    cpu->reg->a += to_add;
+    set_flags(cpu->reg,
+              cpu->reg->a == 0,                           // zero
+              0,                                          // subtract
+              (old_a & 0xf) + (to_add & 0xf) > 0xf,       // half carry
+              (uint16_t)old_a + (uint16_t)to_add > 0xff); // carry
+}
+
 // the subtract instruction
 void sub(gb_cpu *cpu, gb_instruction *inst)
 {
