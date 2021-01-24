@@ -96,3 +96,29 @@ void set_carry_flag(gb_registers *reg, uint8_t value)
     uint8_t mask = 1 << 4;
     reg->f = (reg->f & ~mask) | (value & mask);
 }
+
+// TODO: see about inlining these functions
+// read individual flags
+uint8_t read_zero_flag(gb_registers *reg)
+{
+    // seventh bit of the flags register
+    return (reg->f >> 7) & 1;
+}
+
+uint8_t read_subtract_flag(gb_registers *reg)
+{
+    // sixth bit of the flags register
+    return (reg->f >> 6) & 1;
+}
+
+uint8_t read_half_carry_flag(gb_registers *reg)
+{
+    // fifth bit of the flags register
+    return (reg->f >> 5) & 1;
+}
+
+uint8_t read_carry_flag(gb_registers *reg)
+{
+    // fourth bit of the flags register
+    return (reg->f >> 4) & 1;
+}

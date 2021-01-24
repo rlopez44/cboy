@@ -65,4 +65,13 @@ void set_half_carry_flag(gb_registers *reg, uint8_t value);
 
 void set_carry_flag(gb_registers *reg, uint8_t value);
 
+// utility functions for reading indiidual flags
+uint8_t read_zero_flag(gb_registers *reg);
+
+uint8_t read_subtract_flag(gb_registers *reg);
+
+uint8_t read_half_carry_flag(gb_registers *reg);
+
+uint8_t read_carry_flag(gb_registers *reg);
+
 #endif
