@@ -13,5 +13,6 @@ void dec(gb_cpu *cpu, gb_instruction *inst);
 void add(gb_cpu *cpu, gb_instruction *inst);
 void adc(gb_cpu *cpu, gb_instruction *inst);
 void sub(gb_cpu *cpu, gb_instruction *inst);
+void sbc(gb_cpu *cpu, gb_instruction *inst);
 
 #endif

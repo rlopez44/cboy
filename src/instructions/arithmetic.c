@@ -480,3 +480,64 @@ void sub(gb_cpu *cpu, gb_instruction *inst)
               (old_a & 0xf) < (to_sub & 0xf), // half carry
               old_a < to_sub);                // carry
 }
+
+// the subtract with carry (SBC) instruction
+void sbc(gb_cpu *cpu, gb_instruction *inst)
+{
+    /* NOTE: First operand of SBC is always the A register
+     *
+     * Affected Flags
+     * --------------
+     * Zero Flag:         set if result is zero
+     * Subtract Flag:     set
+     * Half Carry Flag:   set if borrow from bit 4
+     * Carry Flag:        set if borrow (set if op2 + carry > A)
+     */
+
+    uint8_t to_sub = read_carry_flag(cpu->reg); // initialize to value of carry flag
+    switch (inst->op2)
+    {
+        case REG_A:
+            to_sub += cpu->reg->a;
+            break;
+
+        case REG_B:
+            to_sub += cpu->reg->b;
+            break;
+
+        case REG_C:
+            to_sub += cpu->reg->c;
+            break;
+
+        case REG_D:
+            to_sub += cpu->reg->d;
+            break;
+
+        case REG_E:
+            to_sub += cpu->reg->e;
+            break;
+
+        case REG_H:
+            to_sub += cpu->reg->h;
+            break;
+
+        case REG_L:
+            to_sub += cpu->reg->l;
+            break;
+
+        case PTR_HL:
+            to_sub += read_byte(cpu->bus, read_hl(cpu->reg));
+            break;
+
+        case IMM_8:
+            to_sub += read_byte(cpu->bus, (cpu->reg->pc)++);
+            break;
+    }
+    uint8_t old_a = cpu->reg->a;
+    cpu->reg->a -= to_sub;
+    set_flags(cpu->reg,
+              cpu->reg->a == 0,               // zero
+              1,                              // subtract
+              (old_a & 0xf) < (to_sub & 0xf), // half carry
+              old_a < to_sub);                // carry
+}
