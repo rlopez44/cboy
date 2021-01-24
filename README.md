@@ -1,7 +1,8 @@
 # CBoy
 A Nintendo Game Boy emulator written in C.
-I've not implemented an emulator before, so this is me jumping off the deep end.
-I won't follow any one guide for the implementation, but below you'll find my references.
+I've never made an emulator before, and I've also never programmed anything substantial
+using C, so I'm kinda jumping off the deep end here. Below you'll find the references
+I'm using as I build this out.
 
 # Compiling the Emulator
 To compile the emulator, run `make` in the project's root directory. To compile with debug symbols,
@@ -20,4 +21,4 @@ and the emulator, respectively. To clean up the `obj/` directory, run `make clea
     * [CPU opcode reference](https://rgbds.gbdev.io/docs/v0.4.2/gbz80.7)
     * [Pan Docs (Game Boy technical reference)](https://gbdev.io/pandocs/)
 * [The `jitboy` Game Boy emulator](https://github.com/sysprog21/jitboy)
-* [The `GiiBiiAdvance` Gb, GBC, and GBA emulator](https://github.com/AntonioND/giibiiadvance)
+* [The `GiiBiiAdvance` GB, GBC, and GBA emulator](https://github.com/AntonioND/giibiiadvance)
