@@ -20,3 +20,4 @@ and the emulator, respectively. To clean up the `obj/` directory, run `make clea
     * [CPU opcode reference](https://rgbds.gbdev.io/docs/v0.4.2/gbz80.7)
     * [Pan Docs (Game Boy technical reference)](https://gbdev.io/pandocs/)
 * [The `jitboy` Game Boy emulator](https://github.com/sysprog21/jitboy)
+* [The `GiiBiiAdvance` Gb, GBC, and GBA emulator](https://github.com/AntonioND/giibiiadvance)
