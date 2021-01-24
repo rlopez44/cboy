@@ -235,7 +235,7 @@ void add(gb_cpu *cpu, gb_instruction *inst)
     /* NOTE: See below for affected flags.
      *
      * ADD A, r8 or ADD A, [HL] or ADD A, n8
-     * -----------------------------------
+     * -------------------------------------
      *  Zero Flag:         set if result is zero
      *  Subtract Flag:     reset
      *  Half Carry Flag:   set if overflow from bit 3
@@ -248,7 +248,7 @@ void add(gb_cpu *cpu, gb_instruction *inst)
      *  Carry Flag:        set if overflow from bit 15
      *
      *  ADD SP, e8 (signed 8-bit)
-     *  ----------
+     *  -------------------------
      *  Zero Flag:         reset
      *  Subtract Flag:     reset
      *  Half Carry Flag:   set if overflow from bit 3
