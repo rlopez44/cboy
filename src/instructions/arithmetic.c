@@ -596,3 +596,59 @@ void and(gb_cpu *cpu, gb_instruction *inst)
     cpu->reg->a &= to_and;
     set_flags(cpu->reg, cpu->reg->a == 0, 0, 1, 0);
 }
+
+// the bitwise or instruction
+void or(gb_cpu *cpu, gb_instruction *inst)
+{
+    /* NOTE: first operand of OR is always the A register
+     *
+     * Affected flags
+     * --------------
+     *  Zero Flag:         set if result is zero
+     *  Subtract Flag:     reset
+     *  Half Carry Flag:   reset
+     *  Carry Flag:        reset
+     */
+
+    uint8_t to_or; // value to bitwise or with register A
+    switch (inst->op2)
+    {
+        case REG_A:
+            to_or = cpu->reg->a;
+            break;
+
+        case REG_B:
+            to_or = cpu->reg->b;
+            break;
+
+        case REG_C:
+            to_or = cpu->reg->c;
+            break;
+
+        case REG_D:
+            to_or = cpu->reg->d;
+            break;
+
+        case REG_E:
+            to_or = cpu->reg->e;
+            break;
+
+        case REG_H:
+            to_or = cpu->reg->h;
+            break;
+
+        case REG_L:
+            to_or = cpu->reg->l;
+            break;
+
+        case PTR_HL:
+            to_or = read_byte(cpu->bus, read_hl(cpu->reg));
+            break;
+
+        case IMM_8:
+            to_or = read_byte(cpu->bus, (cpu->reg->pc)++);
+            break;
+    }
+    cpu->reg->a |= to_or;
+    set_flags(cpu->reg, cpu->reg->a == 0, 0, 0, 0);
+}

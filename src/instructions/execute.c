@@ -587,6 +587,10 @@ uint8_t execute_instruction(gb_cpu *cpu)
             and(cpu, &inst);
             break;
 
+        case OR:
+            or(cpu, &inst);
+            break;
+
         case RLCA:
             break;
 
@@ -621,9 +625,6 @@ uint8_t execute_instruction(gb_cpu *cpu)
             break;
 
         case XOR:
-            break;
-
-        case OR:
             break;
 
         case CP:
