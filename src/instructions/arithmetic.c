@@ -540,3 +540,59 @@ void sbc(gb_cpu *cpu, gb_instruction *inst)
               (old_a & 0xf) < (to_sub & 0xf), // half carry
               old_a < to_sub);                // carry
 }
+
+// the bitwise and instruction
+void and(gb_cpu *cpu, gb_instruction *inst)
+{
+    /* NOTE: first operand of AND is always the A register
+     *
+     * Affected flags
+     * --------------
+     *  Zero Flag:         set if result is zero
+     *  Subtract Flag:     reset
+     *  Half Carry Flag:   set
+     *  Carry Flag:        reset
+     */
+
+    uint8_t to_and; // value to bitwise and with register A
+    switch (inst->op2)
+    {
+        case REG_A:
+            to_and = cpu->reg->a;
+            break;
+
+        case REG_B:
+            to_and = cpu->reg->b;
+            break;
+
+        case REG_C:
+            to_and = cpu->reg->c;
+            break;
+
+        case REG_D:
+            to_and = cpu->reg->d;
+            break;
+
+        case REG_E:
+            to_and = cpu->reg->e;
+            break;
+
+        case REG_H:
+            to_and = cpu->reg->h;
+            break;
+
+        case REG_L:
+            to_and = cpu->reg->l;
+            break;
+
+        case PTR_HL:
+            to_and = read_byte(cpu->bus, read_hl(cpu->reg));
+            break;
+
+        case IMM_8:
+            to_and = read_byte(cpu->bus, (cpu->reg->pc)++);
+            break;
+    }
+    cpu->reg->a &= to_and;
+    set_flags(cpu->reg, cpu->reg->a == 0, 0, 1, 0);
+}
