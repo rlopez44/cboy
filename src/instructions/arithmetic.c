@@ -358,17 +358,16 @@ void add(gb_cpu *cpu, gb_instruction *inst)
 // the add with carry (ADC) instruction
 void adc(gb_cpu *cpu, gb_instruction *inst)
 {
-    /* NOTE: See below for affected flags.
+    /* NOTE: first operand of ADC is always the A register
      *
-     * ADD A, r8 or ADD A, [HL] or ADD A, n8
-     * -------------------------------------
+     * Affected flags
+     * --------------
      *  Zero Flag:         set if result is zero
      *  Subtract Flag:     reset
      *  Half Carry Flag:   set if overflow from bit 3
      *  Carry Flag:        set if overflow from bit 7
      */
 
-    // NOTE: first operand of ADC is always the A register
     uint8_t to_add = read_carry_flag(cpu->reg); // initialize to value of carry flag
     switch (inst->op2)
     {
