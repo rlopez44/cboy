@@ -591,6 +591,10 @@ uint8_t execute_instruction(gb_cpu *cpu)
             or(cpu, &inst);
             break;
 
+        case XOR:
+            xor(cpu, &inst);
+            break;
+
         case RLCA:
             break;
 
@@ -622,9 +626,6 @@ uint8_t execute_instruction(gb_cpu *cpu)
             break;
 
         case HALT:
-            break;
-
-        case XOR:
             break;
 
         case CP:

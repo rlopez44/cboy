@@ -652,3 +652,60 @@ void or(gb_cpu *cpu, gb_instruction *inst)
     cpu->reg->a |= to_or;
     set_flags(cpu->reg, cpu->reg->a == 0, 0, 0, 0);
 }
+
+// the bitwise xor instruction
+void xor(gb_cpu *cpu, gb_instruction *inst)
+{
+    /* NOTE: first operand of XOR is always the A register
+     * NOTE: XOR A, A will always set the zero flag
+     *
+     * Affected flags
+     * --------------
+     *  Zero Flag:         set if result is zero
+     *  Subtract Flag:     reset
+     *  Half Carry Flag:   reset
+     *  Carry Flag:        reset
+     */
+
+    uint8_t to_xor; // value to bitwise xor with register A
+    switch (inst->op2)
+    {
+        case REG_A:
+            to_xor = cpu->reg->a;
+            break;
+
+        case REG_B:
+            to_xor = cpu->reg->b;
+            break;
+
+        case REG_C:
+            to_xor = cpu->reg->c;
+            break;
+
+        case REG_D:
+            to_xor = cpu->reg->d;
+            break;
+
+        case REG_E:
+            to_xor = cpu->reg->e;
+            break;
+
+        case REG_H:
+            to_xor = cpu->reg->h;
+            break;
+
+        case REG_L:
+            to_xor = cpu->reg->l;
+            break;
+
+        case PTR_HL:
+            to_xor = read_byte(cpu->bus, read_hl(cpu->reg));
+            break;
+
+        case IMM_8:
+            to_xor = read_byte(cpu->bus, (cpu->reg->pc)++);
+            break;
+    }
+    cpu->reg->a ^= to_xor;
+    set_flags(cpu->reg, cpu->reg->a == 0, 0, 0, 0);
+}
