@@ -1,6 +1,7 @@
 // Implementation of the arithmetic instruction sets
 
 #include <stdint.h>
+#include <stdbool.h>
 #include "cboy/instructions.h"
 #include "cboy/cpu.h"
 #include "cboy/memory.h"
@@ -416,13 +417,48 @@ void adc(gb_cpu *cpu, gb_instruction *inst)
               (uint16_t)old_a + (uint16_t)to_add > 0xff); // carry
 }
 
+/* Helper function used by the SUB, SBC, and CP instructions.
+ * Calculates the difference between register A and to_sub,
+ * stores the result in register A if needed (for SUB and SBC),
+ * and sets flags accordingly.
+ */
+static void sub_from_reg_a(gb_registers *reg, uint8_t to_sub, bool store_result)
+{
+    /* NOTE: Regardless of which of the three instructions
+     * calls this function, the four flags are set according
+     * to the rules below given a value for to_sub.
+     * -----------------------------------------------------
+     *
+     *  Zero Flag:         set if result is zero
+     *  Subtract Flag:     set
+     *  Half Carry Flag:   set if borrow from bit 4
+     *  Carry Flag:        set if borrow (set if to_sub > A)
+     */
+
+    // save original value of register A
+    uint8_t old_a = reg->a;
+
+    // store the result if needed (SUB and SBC only)
+    if (store_result)
+    {
+        reg->a -= to_sub;
+    }
+
+    // set flags accordingly
+    set_flags(reg,
+              old_a - to_sub == 0,            // zero
+              1,                              // subtract
+              (old_a & 0xf) < (to_sub & 0xf), // half carry
+              old_a < to_sub);                // carry
+}
+
 // the subtract instruction
 void sub(gb_cpu *cpu, gb_instruction *inst)
 {
-    /* NOTE: See below for affected flags.
+    /* NOTE: First operand of SUB is always the A register
      *
-     * SUB A, r8 or SUB A, [HL] or SUB A, n8
-     * -------------------------------------
+     * Affected Flags
+     * --------------
      *  Zero Flag:         set if result is zero
      *  Subtract Flag:     set
      *  Half Carry Flag:   set if borrow from bit 4
@@ -431,7 +467,6 @@ void sub(gb_cpu *cpu, gb_instruction *inst)
      *  NOTE: SUB A, A will always set the zero flag
      */
 
-    // first operand of SUB is always the A register
     uint8_t to_sub; // the value to subtract
     switch (inst->op2)
     {
@@ -471,13 +506,9 @@ void sub(gb_cpu *cpu, gb_instruction *inst)
             to_sub = read_byte(cpu->bus, (cpu->reg->pc)++);
             break;
     }
-    uint8_t old_a = cpu->reg->a;
-    cpu->reg->a -= to_sub;
-    set_flags(cpu->reg,
-              cpu->reg->a == 0,               // zero
-              1,                              // subtract
-              (old_a & 0xf) < (to_sub & 0xf), // half carry
-              old_a < to_sub);                // carry
+
+    // calculate and store the difference and set flags
+    sub_from_reg_a(cpu->reg, to_sub, 1);
 }
 
 // the subtract with carry (SBC) instruction
@@ -532,13 +563,68 @@ void sbc(gb_cpu *cpu, gb_instruction *inst)
             to_sub += read_byte(cpu->bus, (cpu->reg->pc)++);
             break;
     }
-    uint8_t old_a = cpu->reg->a;
-    cpu->reg->a -= to_sub;
-    set_flags(cpu->reg,
-              cpu->reg->a == 0,               // zero
-              1,                              // subtract
-              (old_a & 0xf) < (to_sub & 0xf), // half carry
-              old_a < to_sub);                // carry
+
+    // calculate and store the difference and set flags
+    sub_from_reg_a(cpu->reg, to_sub, 1);
+}
+
+// the compare (CP) instruction (same as SUB but without storing the result)
+void cp(gb_cpu *cpu, gb_instruction *inst)
+{
+    /* NOTE: First operand of CP is always the A register
+     *
+     * Affected Flags
+     * --------------
+     * Zero Flag:         set if result is zero
+     * Subtract Flag:     set
+     * Half Carry Flag:   set if borrow from bit 4
+     * Carry Flag:        set if borrow (set if op2 > A)
+     *
+     * NOTE: CP A, A will always set the zero flag
+     */
+
+    uint8_t to_sub; // the value to subtract
+    switch (inst->op2)
+    {
+        case REG_A:
+            to_sub = cpu->reg->a;
+            break;
+
+        case REG_B:
+            to_sub = cpu->reg->b;
+            break;
+
+        case REG_C:
+            to_sub = cpu->reg->c;
+            break;
+
+        case REG_D:
+            to_sub = cpu->reg->d;
+            break;
+
+        case REG_E:
+            to_sub = cpu->reg->e;
+            break;
+
+        case REG_H:
+            to_sub = cpu->reg->h;
+            break;
+
+        case REG_L:
+            to_sub = cpu->reg->l;
+            break;
+
+        case PTR_HL:
+            to_sub = read_byte(cpu->bus, read_hl(cpu->reg));
+            break;
+
+        case IMM_8:
+            to_sub = read_byte(cpu->bus, (cpu->reg->pc)++);
+            break;
+    }
+
+    // calculate the difference (without storing the result) and set flags
+    sub_from_reg_a(cpu->reg, to_sub, 0);
 }
 
 // the bitwise and instruction

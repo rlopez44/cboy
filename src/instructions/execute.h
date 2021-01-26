@@ -14,6 +14,7 @@ void add(gb_cpu *cpu, gb_instruction *inst);
 void adc(gb_cpu *cpu, gb_instruction *inst);
 void sub(gb_cpu *cpu, gb_instruction *inst);
 void sbc(gb_cpu *cpu, gb_instruction *inst);
+void cp(gb_cpu *cpu, gb_instruction *inst);
 void and(gb_cpu *cpu, gb_instruction *inst);
 void or(gb_cpu *cpu, gb_instruction *inst);
 void xor(gb_cpu *cpu, gb_instruction *inst);

@@ -583,6 +583,10 @@ uint8_t execute_instruction(gb_cpu *cpu)
             sbc(cpu, &inst);
             break;
 
+        case CP:
+            cp(cpu, &inst);
+            break;
+
         case AND:
             and(cpu, &inst);
             break;
@@ -626,9 +630,6 @@ uint8_t execute_instruction(gb_cpu *cpu)
             break;
 
         case HALT:
-            break;
-
-        case CP:
             break;
 
         case RET:
