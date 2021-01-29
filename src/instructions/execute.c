@@ -553,50 +553,62 @@ uint8_t execute_instruction(gb_cpu *cpu)
 
         case LD:
             ld(cpu, &inst);
+            curr_inst_duration = inst.duration;
             break;
 
         case LDH:
             ldh(cpu, &inst);
+            curr_inst_duration = inst.duration;
             break;
 
         case INC:
             inc(cpu, &inst);
+            curr_inst_duration = inst.duration;
             break;
 
         case DEC:
             dec(cpu, &inst);
+            curr_inst_duration = inst.duration;
             break;
 
         case ADD:
             add(cpu, &inst);
+            curr_inst_duration = inst.duration;
             break;
 
         case ADC:
             adc(cpu, &inst);
+            curr_inst_duration = inst.duration;
             break;
 
         case SUB:
             sub(cpu, &inst);
+            curr_inst_duration = inst.duration;
             break;
 
         case SBC:
             sbc(cpu, &inst);
+            curr_inst_duration = inst.duration;
             break;
 
         case CP:
             cp(cpu, &inst);
+            curr_inst_duration = inst.duration;
             break;
 
         case AND:
             and(cpu, &inst);
+            curr_inst_duration = inst.duration;
             break;
 
         case OR:
             or(cpu, &inst);
+            curr_inst_duration = inst.duration;
             break;
 
         case XOR:
             xor(cpu, &inst);
+            curr_inst_duration = inst.duration;
             break;
 
         case RLCA:
