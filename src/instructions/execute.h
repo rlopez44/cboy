@@ -19,4 +19,7 @@ void and(gb_cpu *cpu, gb_instruction *inst);
 void or(gb_cpu *cpu, gb_instruction *inst);
 void xor(gb_cpu *cpu, gb_instruction *inst);
 
+// jump and subroutine-related instructions
+uint8_t jp(gb_cpu *cpu, gb_instruction *inst);
+
 #endif

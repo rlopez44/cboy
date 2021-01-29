@@ -245,7 +245,7 @@ static const gb_instruction instruction_table[512] = {
     [0xe6] = {AND, REG_A, IMM_8, 2, 2, 2},
     [0xe7] = {RST, PTR_0x20, NONE, 1, 4, 4},
     [0xe8] = {ADD, REG_SP, IMM_8, 2, 4, 4},
-    [0xe9] = {JP, PTR_HL, NONE, 1, 2, 2},
+    [0xe9] = {JP, REG_HL, NONE, 1, 2, 2},
     [0xea] = {LD, PTR_16, REG_A, 3, 4, 4},
     [0xeb] = {UNUSED, NONE, NONE, 0, 0, 0},
     [0xec] = {UNUSED, NONE, NONE, 0, 0, 0},
@@ -611,6 +611,10 @@ uint8_t execute_instruction(gb_cpu *cpu)
             curr_inst_duration = inst.duration;
             break;
 
+        case JP:
+            curr_inst_duration = jp(cpu, &inst);
+            break;
+
         case RLCA:
             break;
 
@@ -648,9 +652,6 @@ uint8_t execute_instruction(gb_cpu *cpu)
             break;
 
         case POP:
-            break;
-
-        case JP:
             break;
 
         case CALL:
