@@ -615,6 +615,10 @@ uint8_t execute_instruction(gb_cpu *cpu)
             curr_inst_duration = jp(cpu, &inst);
             break;
 
+        case JR:
+            curr_inst_duration = jr(cpu, &inst);
+            break;
+
         case RLCA:
             break;
 
@@ -625,9 +629,6 @@ uint8_t execute_instruction(gb_cpu *cpu)
             break;
 
         case RLA:
-            break;
-
-        case JR:
             break;
 
         case RRA:
