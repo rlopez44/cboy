@@ -158,3 +158,74 @@ uint8_t jr(gb_cpu *cpu, gb_instruction *inst)
     }
     return duration;
 }
+
+/* the call instruction
+ * --------------------
+ * Some of the CALL instructions are conditional, so
+ * we need to return the instruction duration explicitly
+ */
+uint8_t call(gb_cpu *cpu, gb_instruction *inst)
+{
+    uint8_t duration;
+
+    // get the address to call
+    uint8_t lo = read_byte(cpu->bus, (cpu->reg->pc)++);
+    uint8_t hi = read_byte(cpu->bus, (cpu->reg->pc)++);
+    uint16_t addr = ((uint16_t)hi << 8) | ((uint16_t)lo);
+
+    // check the second operand first. If it's NONE, we have
+    // the unconditional CALL, else a conditional CALL
+    switch (inst->op2)
+    {
+        case NONE:
+            duration = inst->duration;
+
+            // push next instruction address onto the stack
+            // so that a RET instruction can pop it later
+            stack_push(cpu, cpu->reg->pc);
+
+            // implicit jump instruction to the target address
+            cpu->reg->pc = addr;
+            break;
+
+        case IMM_16: // first operand is the condition
+        {
+            uint8_t will_jump; // the condition for the jump
+            switch (inst->op1)
+            {
+                case CC_C:
+                    will_jump = read_carry_flag(cpu->reg);
+                    break;
+
+                case CC_NC:
+                    will_jump = !read_carry_flag(cpu->reg);
+                    break;
+
+                case CC_Z:
+                    will_jump = read_zero_flag(cpu->reg);
+                    break;
+
+                case CC_NZ:
+                    will_jump = !read_zero_flag(cpu->reg);
+                    break;
+            }
+
+            if (will_jump)
+            {
+                // push next instruction address onto the stack
+                stack_push(cpu, cpu->reg->pc);
+
+                // implicit jump to the target address
+                cpu->reg->pc = addr;
+
+                duration = inst->duration;
+            }
+            else
+            {
+                duration = inst->alt_duration;
+            }
+            break;
+        }
+    }
+    return duration;
+}

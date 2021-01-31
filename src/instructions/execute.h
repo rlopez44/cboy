@@ -22,5 +22,6 @@ void xor(gb_cpu *cpu, gb_instruction *inst);
 // jump and subroutine-related instructions
 uint8_t jp(gb_cpu *cpu, gb_instruction *inst);
 uint8_t jr(gb_cpu *cpu, gb_instruction *inst);
+uint8_t call(gb_cpu *cpu, gb_instruction *inst);
 
 #endif

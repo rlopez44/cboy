@@ -538,6 +538,7 @@ uint8_t execute_instruction(gb_cpu *cpu)
     gb_instruction inst = instruction_table[inst_code];
 
     // check if we need to access a prefixed instruction
+    // TODO: account for duration of the prefix opcode
     if (inst.opcode == PREFIX)
     {
         // read the prefixed instruction code and access instruction
@@ -619,6 +620,10 @@ uint8_t execute_instruction(gb_cpu *cpu)
             curr_inst_duration = jr(cpu, &inst);
             break;
 
+        case CALL:
+            curr_inst_duration = call(cpu, &inst);
+            break;
+
         case RLCA:
             break;
 
@@ -653,9 +658,6 @@ uint8_t execute_instruction(gb_cpu *cpu)
             break;
 
         case POP:
-            break;
-
-        case CALL:
             break;
 
         case PUSH:

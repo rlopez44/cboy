@@ -74,4 +74,9 @@ uint8_t read_half_carry_flag(gb_registers *reg);
 
 uint8_t read_carry_flag(gb_registers *reg);
 
+// stack push and pop operations
+void stack_push(gb_cpu *cpu, uint16_t value);
+
+uint16_t stack_pop(gb_cpu *cpu);
+
 #endif
