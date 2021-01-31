@@ -229,3 +229,54 @@ uint8_t call(gb_cpu *cpu, gb_instruction *inst)
     }
     return duration;
 }
+
+/* the restart (RST) instruction
+ * -----------------------------
+ * A faster version of the unconditional CALL instruction
+ * for suitable target addresses. These target addresses
+ * are the following:
+ *
+ *  0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38
+ */
+void rst(gb_cpu *cpu, gb_instruction *inst)
+{
+    uint16_t addr; // the target address
+    switch (inst->op1)
+    {
+        case PTR_0x00:
+            addr = 0x00;
+            break;
+
+        case PTR_0x08:
+            addr = 0x08;
+            break;
+
+        case PTR_0x10:
+            addr = 0x10;
+            break;
+
+        case PTR_0x18:
+            addr = 0x18;
+            break;
+
+        case PTR_0x20:
+            addr = 0x20;
+            break;
+
+        case PTR_0x28:
+            addr = 0x28;
+            break;
+
+        case PTR_0x30:
+            addr = 0x30;
+            break;
+
+        case PTR_0x38:
+            addr = 0x38;
+            break;
+    }
+
+    // perform the call
+    stack_push(cpu, cpu->reg->pc);
+    cpu->reg->pc = addr;
+}

@@ -624,6 +624,11 @@ uint8_t execute_instruction(gb_cpu *cpu)
             curr_inst_duration = call(cpu, &inst);
             break;
 
+        case RST:
+            rst(cpu, &inst);
+            curr_inst_duration = inst.duration;
+            break;
+
         case RLCA:
             break;
 
@@ -661,9 +666,6 @@ uint8_t execute_instruction(gb_cpu *cpu)
             break;
 
         case PUSH:
-            break;
-
-        case RST:
             break;
 
         case RETI:
