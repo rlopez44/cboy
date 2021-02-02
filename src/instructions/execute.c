@@ -1,6 +1,6 @@
 #include <stdint.h>
 #include "cboy/instructions.h"
-#include "cboy/cpu.h"
+#include "cboy/gameboy.h"
 #include "cboy/memory.h"
 #include "execute.h"
 
@@ -529,12 +529,12 @@ static const gb_instruction instruction_table[512] = {
 };
 
 // returns the number of m-cycles elapsed during instruction execution
-uint8_t execute_instruction(gb_cpu *cpu)
+uint8_t execute_instruction(gameboy *gb)
 {
     // the instruction's duration
     uint8_t curr_inst_duration;
 
-    uint8_t inst_code = read_byte(cpu->bus, (cpu->reg->pc)++);
+    uint8_t inst_code = read_byte(gb->memory, (gb->cpu->reg->pc)++);
     gb_instruction inst = instruction_table[inst_code];
 
     // check if we need to access a prefixed instruction
@@ -542,7 +542,7 @@ uint8_t execute_instruction(gb_cpu *cpu)
     if (inst.opcode == PREFIX)
     {
         // read the prefixed instruction code and access instruction
-        inst_code = read_byte(cpu->bus, (cpu->reg->pc)++);
+        inst_code = read_byte(gb->memory, (gb->cpu->reg->pc)++);
         inst = instruction_table[0x100 + inst_code];
     }
 
@@ -553,79 +553,79 @@ uint8_t execute_instruction(gb_cpu *cpu)
             break;
 
         case LD:
-            ld(cpu, &inst);
+            ld(gb, &inst);
             curr_inst_duration = inst.duration;
             break;
 
         case LDH:
-            ldh(cpu, &inst);
+            ldh(gb, &inst);
             curr_inst_duration = inst.duration;
             break;
 
         case INC:
-            inc(cpu, &inst);
+            inc(gb, &inst);
             curr_inst_duration = inst.duration;
             break;
 
         case DEC:
-            dec(cpu, &inst);
+            dec(gb, &inst);
             curr_inst_duration = inst.duration;
             break;
 
         case ADD:
-            add(cpu, &inst);
+            add(gb, &inst);
             curr_inst_duration = inst.duration;
             break;
 
         case ADC:
-            adc(cpu, &inst);
+            adc(gb, &inst);
             curr_inst_duration = inst.duration;
             break;
 
         case SUB:
-            sub(cpu, &inst);
+            sub(gb, &inst);
             curr_inst_duration = inst.duration;
             break;
 
         case SBC:
-            sbc(cpu, &inst);
+            sbc(gb, &inst);
             curr_inst_duration = inst.duration;
             break;
 
         case CP:
-            cp(cpu, &inst);
+            cp(gb, &inst);
             curr_inst_duration = inst.duration;
             break;
 
         case AND:
-            and(cpu, &inst);
+            and(gb, &inst);
             curr_inst_duration = inst.duration;
             break;
 
         case OR:
-            or(cpu, &inst);
+            or(gb, &inst);
             curr_inst_duration = inst.duration;
             break;
 
         case XOR:
-            xor(cpu, &inst);
+            xor(gb, &inst);
             curr_inst_duration = inst.duration;
             break;
 
         case JP:
-            curr_inst_duration = jp(cpu, &inst);
+            curr_inst_duration = jp(gb, &inst);
             break;
 
         case JR:
-            curr_inst_duration = jr(cpu, &inst);
+            curr_inst_duration = jr(gb, &inst);
             break;
 
         case CALL:
-            curr_inst_duration = call(cpu, &inst);
+            curr_inst_duration = call(gb, &inst);
             break;
 
         case RST:
-            rst(cpu, &inst);
+            rst(gb, &inst);
             curr_inst_duration = inst.duration;
             break;
 
@@ -713,6 +713,7 @@ uint8_t execute_instruction(gb_cpu *cpu)
 
         // invalid opcodes are just ignored
         // may lead to undefined behavior
+        // TODO: maybe log invalid opcodes
         case UNUSED:
         default:
             curr_inst_duration = 0;

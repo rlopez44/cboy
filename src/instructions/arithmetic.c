@@ -3,12 +3,13 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "cboy/instructions.h"
+#include "cboy/gameboy.h"
 #include "cboy/cpu.h"
 #include "cboy/memory.h"
 #include "execute.h"
 
 // the increment instruction
-void inc(gb_cpu *cpu, gb_instruction *inst)
+void inc(gameboy *gb, gb_instruction *inst)
 {
     /* NOTE: Flags are affected by the INC r8 and INC [HL] instructions.
      * Zero Flag:         set if result is 0
@@ -20,106 +21,106 @@ void inc(gb_cpu *cpu, gb_instruction *inst)
         case REG_A:
         {
             // store old value for half carry flag check
-            uint8_t old_a = (cpu->reg->a)++;
+            uint8_t old_a = (gb->cpu->reg->a)++;
 
-            set_zero_flag(cpu->reg, cpu->reg->a == 0);
-            set_subtract_flag(cpu->reg, 0);
-            set_half_carry_flag(cpu->reg, (old_a & 0xf) + 1 > 0xf);
+            set_zero_flag(gb->cpu->reg, gb->cpu->reg->a == 0);
+            set_subtract_flag(gb->cpu->reg, 0);
+            set_half_carry_flag(gb->cpu->reg, (old_a & 0xf) + 1 > 0xf);
             break;
         }
 
         case REG_B:
         {
-            uint8_t old_b = (cpu->reg->b)++;
+            uint8_t old_b = (gb->cpu->reg->b)++;
 
-            set_zero_flag(cpu->reg, cpu->reg->b == 0);
-            set_subtract_flag(cpu->reg, 0);
-            set_half_carry_flag(cpu->reg, (old_b & 0xf) + 1 > 0xf);
+            set_zero_flag(gb->cpu->reg, gb->cpu->reg->b == 0);
+            set_subtract_flag(gb->cpu->reg, 0);
+            set_half_carry_flag(gb->cpu->reg, (old_b & 0xf) + 1 > 0xf);
             break;
         }
 
         case REG_C:
         {
-            uint8_t old_c = (cpu->reg->c)++;
+            uint8_t old_c = (gb->cpu->reg->c)++;
 
-            set_zero_flag(cpu->reg, cpu->reg->c == 0);
-            set_subtract_flag(cpu->reg, 0);
-            set_half_carry_flag(cpu->reg, (old_c & 0xf) + 1 > 0xf);
+            set_zero_flag(gb->cpu->reg, gb->cpu->reg->c == 0);
+            set_subtract_flag(gb->cpu->reg, 0);
+            set_half_carry_flag(gb->cpu->reg, (old_c & 0xf) + 1 > 0xf);
             break;
         }
 
         case REG_D:
         {
-            uint8_t old_d = (cpu->reg->d)++;
+            uint8_t old_d = (gb->cpu->reg->d)++;
 
-            set_zero_flag(cpu->reg, cpu->reg->d == 0);
-            set_subtract_flag(cpu->reg, 0);
-            set_half_carry_flag(cpu->reg, (old_d & 0xf) + 1 > 0xf);
+            set_zero_flag(gb->cpu->reg, gb->cpu->reg->d == 0);
+            set_subtract_flag(gb->cpu->reg, 0);
+            set_half_carry_flag(gb->cpu->reg, (old_d & 0xf) + 1 > 0xf);
             break;
         }
 
         case REG_E:
         {
-            uint8_t old_e = (cpu->reg->e)++;
+            uint8_t old_e = (gb->cpu->reg->e)++;
 
-            set_zero_flag(cpu->reg, cpu->reg->e == 0);
-            set_subtract_flag(cpu->reg, 0);
-            set_half_carry_flag(cpu->reg, (old_e & 0xf) + 1 > 0xf);
+            set_zero_flag(gb->cpu->reg, gb->cpu->reg->e == 0);
+            set_subtract_flag(gb->cpu->reg, 0);
+            set_half_carry_flag(gb->cpu->reg, (old_e & 0xf) + 1 > 0xf);
             break;
         }
 
         case REG_H:
         {
-            uint8_t old_h = (cpu->reg->h)++;
+            uint8_t old_h = (gb->cpu->reg->h)++;
 
-            set_zero_flag(cpu->reg, cpu->reg->h == 0);
-            set_subtract_flag(cpu->reg, 0);
-            set_half_carry_flag(cpu->reg, (old_h & 0xf) + 1 > 0xf);
+            set_zero_flag(gb->cpu->reg, gb->cpu->reg->h == 0);
+            set_subtract_flag(gb->cpu->reg, 0);
+            set_half_carry_flag(gb->cpu->reg, (old_h & 0xf) + 1 > 0xf);
             break;
         }
 
         case REG_L:
         {
-            uint8_t old_l = (cpu->reg->l)++;
+            uint8_t old_l = (gb->cpu->reg->l)++;
 
-            set_zero_flag(cpu->reg, cpu->reg->l == 0);
-            set_subtract_flag(cpu->reg, 0);
-            set_half_carry_flag(cpu->reg, (old_l & 0xf) + 1 > 0xf);
+            set_zero_flag(gb->cpu->reg, gb->cpu->reg->l == 0);
+            set_subtract_flag(gb->cpu->reg, 0);
+            set_half_carry_flag(gb->cpu->reg, (old_l & 0xf) + 1 > 0xf);
             break;
         }
 
         case PTR_HL:
         {
-            uint16_t addr = read_hl(cpu->reg);
-            uint8_t old_val = read_byte(cpu->bus, addr);
-            write_byte(cpu->bus, addr, old_val + 1);
+            uint16_t addr = read_hl(gb->cpu->reg);
+            uint8_t old_val = read_byte(gb->memory, addr);
+            write_byte(gb->memory, addr, old_val + 1);
 
-            set_zero_flag(cpu->reg, old_val + 1 == 0);
-            set_subtract_flag(cpu->reg, 0);
-            set_half_carry_flag(cpu->reg, (old_val & 0xf) + 1 > 0xf);
+            set_zero_flag(gb->cpu->reg, old_val + 1 == 0);
+            set_subtract_flag(gb->cpu->reg, 0);
+            set_half_carry_flag(gb->cpu->reg, (old_val & 0xf) + 1 > 0xf);
             break;
         }
 
         case REG_BC:
-            write_bc(cpu->reg, read_bc(cpu->reg) + 1);
+            write_bc(gb->cpu->reg, read_bc(gb->cpu->reg) + 1);
             break;
 
         case REG_DE:
-            write_de(cpu->reg, read_de(cpu->reg) + 1);
+            write_de(gb->cpu->reg, read_de(gb->cpu->reg) + 1);
             break;
 
         case REG_HL:
-            write_hl(cpu->reg, read_hl(cpu->reg) + 1);
+            write_hl(gb->cpu->reg, read_hl(gb->cpu->reg) + 1);
             break;
 
         case REG_SP:
-            ++(cpu->reg->sp);
+            ++(gb->cpu->reg->sp);
             break;
     }
 }
 
 // the decrement instruction
-void dec(gb_cpu *cpu, gb_instruction *inst)
+void dec(gameboy *gb, gb_instruction *inst)
 {
     /* NOTE: Flags are affected by the DEC r8 and DEC [HL] instructions.
      * Zero Flag:         set if result is 0
@@ -131,107 +132,107 @@ void dec(gb_cpu *cpu, gb_instruction *inst)
         case REG_A:
         {
             // store old value for half-carry flag check
-            uint8_t old_a = (cpu->reg->a)--;
+            uint8_t old_a = (gb->cpu->reg->a)--;
 
-            set_zero_flag(cpu->reg, cpu->reg->a == 0);
-            set_subtract_flag(cpu->reg, 1);
+            set_zero_flag(gb->cpu->reg, gb->cpu->reg->a == 0);
+            set_subtract_flag(gb->cpu->reg, 1);
             // borrow from bit 4 occurs if lower nibble is < 1 (i.e. 0)
-            set_half_carry_flag(cpu->reg, (old_a & 0xf) == 0);
+            set_half_carry_flag(gb->cpu->reg, (old_a & 0xf) == 0);
             break;
         }
 
         case REG_B:
         {
-            uint8_t old_b = (cpu->reg->b)--;
+            uint8_t old_b = (gb->cpu->reg->b)--;
 
-            set_zero_flag(cpu->reg, cpu->reg->b == 0);
-            set_subtract_flag(cpu->reg, 1);
-            set_half_carry_flag(cpu->reg, (old_b & 0xf) == 0);
+            set_zero_flag(gb->cpu->reg, gb->cpu->reg->b == 0);
+            set_subtract_flag(gb->cpu->reg, 1);
+            set_half_carry_flag(gb->cpu->reg, (old_b & 0xf) == 0);
             break;
         }
 
         case REG_C:
         {
-            uint8_t old_c = (cpu->reg->c)--;
+            uint8_t old_c = (gb->cpu->reg->c)--;
 
-            set_zero_flag(cpu->reg, cpu->reg->c == 0);
-            set_subtract_flag(cpu->reg, 1);
-            set_half_carry_flag(cpu->reg, (old_c & 0xf) == 0);
+            set_zero_flag(gb->cpu->reg, gb->cpu->reg->c == 0);
+            set_subtract_flag(gb->cpu->reg, 1);
+            set_half_carry_flag(gb->cpu->reg, (old_c & 0xf) == 0);
             break;
         }
 
         case REG_D:
         {
-            uint8_t old_d = (cpu->reg->d)--;
+            uint8_t old_d = (gb->cpu->reg->d)--;
 
-            set_zero_flag(cpu->reg, cpu->reg->d == 0);
-            set_subtract_flag(cpu->reg, 1);
-            set_half_carry_flag(cpu->reg, (old_d & 0xf) == 0);
+            set_zero_flag(gb->cpu->reg, gb->cpu->reg->d == 0);
+            set_subtract_flag(gb->cpu->reg, 1);
+            set_half_carry_flag(gb->cpu->reg, (old_d & 0xf) == 0);
             break;
         }
 
         case REG_E:
         {
-            uint8_t old_e = (cpu->reg->e)--;
+            uint8_t old_e = (gb->cpu->reg->e)--;
 
-            set_zero_flag(cpu->reg, cpu->reg->e == 0);
-            set_subtract_flag(cpu->reg, 1);
-            set_half_carry_flag(cpu->reg, (old_e & 0xf) == 0);
+            set_zero_flag(gb->cpu->reg, gb->cpu->reg->e == 0);
+            set_subtract_flag(gb->cpu->reg, 1);
+            set_half_carry_flag(gb->cpu->reg, (old_e & 0xf) == 0);
             break;
         }
 
         case REG_H:
         {
-            uint8_t old_h = (cpu->reg->h)--;
+            uint8_t old_h = (gb->cpu->reg->h)--;
 
-            set_zero_flag(cpu->reg, cpu->reg->h == 0);
-            set_subtract_flag(cpu->reg, 1);
-            set_half_carry_flag(cpu->reg, (old_h & 0xf) == 0);
+            set_zero_flag(gb->cpu->reg, gb->cpu->reg->h == 0);
+            set_subtract_flag(gb->cpu->reg, 1);
+            set_half_carry_flag(gb->cpu->reg, (old_h & 0xf) == 0);
             break;
         }
 
         case REG_L:
         {
-            uint8_t old_l = (cpu->reg->l)--;
+            uint8_t old_l = (gb->cpu->reg->l)--;
 
-            set_zero_flag(cpu->reg, cpu->reg->l == 0);
-            set_subtract_flag(cpu->reg, 1);
-            set_half_carry_flag(cpu->reg, (old_l & 0xf) == 0);
+            set_zero_flag(gb->cpu->reg, gb->cpu->reg->l == 0);
+            set_subtract_flag(gb->cpu->reg, 1);
+            set_half_carry_flag(gb->cpu->reg, (old_l & 0xf) == 0);
             break;
         }
 
         case PTR_HL:
         {
-            uint16_t addr = read_hl(cpu->reg);
-            uint8_t old_val = read_byte(cpu->bus, addr);
-            write_byte(cpu->bus, addr, old_val - 1);
+            uint16_t addr = read_hl(gb->cpu->reg);
+            uint8_t old_val = read_byte(gb->memory, addr);
+            write_byte(gb->memory, addr, old_val - 1);
 
-            set_zero_flag(cpu->reg, old_val - 1 == 0);
-            set_subtract_flag(cpu->reg, 1);
-            set_half_carry_flag(cpu->reg, (old_val & 0xf) == 0);
+            set_zero_flag(gb->cpu->reg, old_val - 1 == 0);
+            set_subtract_flag(gb->cpu->reg, 1);
+            set_half_carry_flag(gb->cpu->reg, (old_val & 0xf) == 0);
             break;
         }
 
         case REG_BC:
-            write_bc(cpu->reg, read_bc(cpu->reg) - 1);
+            write_bc(gb->cpu->reg, read_bc(gb->cpu->reg) - 1);
             break;
 
         case REG_DE:
-            write_de(cpu->reg, read_de(cpu->reg) - 1);
+            write_de(gb->cpu->reg, read_de(gb->cpu->reg) - 1);
             break;
 
         case REG_HL:
-            write_hl(cpu->reg, read_hl(cpu->reg) - 1);
+            write_hl(gb->cpu->reg, read_hl(gb->cpu->reg) - 1);
             break;
 
         case REG_SP:
-            --(cpu->reg->sp);
+            --(gb->cpu->reg->sp);
             break;
     }
 }
 
 // the add instruction
-void add(gb_cpu *cpu, gb_instruction *inst)
+void add(gameboy *gb, gb_instruction *inst)
 {
     /* NOTE: See below for affected flags.
      *
@@ -263,45 +264,45 @@ void add(gb_cpu *cpu, gb_instruction *inst)
             switch (inst->op2)
             {
                 case REG_A:
-                    to_add = cpu->reg->a;
+                    to_add = gb->cpu->reg->a;
                     break;
 
                 case REG_B:
-                    to_add = cpu->reg->b;
+                    to_add = gb->cpu->reg->b;
                     break;
 
                 case REG_C:
-                    to_add = cpu->reg->c;
+                    to_add = gb->cpu->reg->c;
                     break;
 
                 case REG_D:
-                    to_add = cpu->reg->d;
+                    to_add = gb->cpu->reg->d;
                     break;
 
                 case REG_E:
-                    to_add = cpu->reg->e;
+                    to_add = gb->cpu->reg->e;
                     break;
 
                 case REG_H:
-                    to_add = cpu->reg->h;
+                    to_add = gb->cpu->reg->h;
                     break;
 
                 case REG_L:
-                    to_add = cpu->reg->l;
+                    to_add = gb->cpu->reg->l;
                     break;
 
                 case PTR_HL:
-                    to_add = read_byte(cpu->bus, read_hl(cpu->reg));
+                    to_add = read_byte(gb->memory, read_hl(gb->cpu->reg));
                     break;
 
                 case IMM_8:
-                    to_add = read_byte(cpu->bus, (cpu->reg->sp)++);
+                    to_add = read_byte(gb->memory, (gb->cpu->reg->sp)++);
                     break;
             }
-            uint8_t old_a = cpu->reg->a;
-            cpu->reg->a += to_add;
-            set_flags(cpu->reg,
-                      cpu->reg->a == 0,                           // zero
+            uint8_t old_a = gb->cpu->reg->a;
+            gb->cpu->reg->a += to_add;
+            set_flags(gb->cpu->reg,
+                      gb->cpu->reg->a == 0,                       // zero
                       0,                                          // subtract
                       (old_a & 0xf) + (to_add & 0xf) > 0xf,       // half carry
                       (uint16_t)old_a + (uint16_t)to_add > 0xff); // carry
@@ -314,50 +315,50 @@ void add(gb_cpu *cpu, gb_instruction *inst)
             switch (inst->op2)
             {
                 case REG_BC:
-                    to_add = read_bc(cpu->reg);
+                    to_add = read_bc(gb->cpu->reg);
                     break;
 
                 case REG_DE:
-                    to_add = read_de(cpu->reg);
+                    to_add = read_de(gb->cpu->reg);
                     break;
 
                 case REG_HL:
-                    to_add = read_hl(cpu->reg);
+                    to_add = read_hl(gb->cpu->reg);
                     break;
 
                 case REG_SP:
-                    to_add = cpu->reg->sp;
+                    to_add = gb->cpu->reg->sp;
             }
-            uint16_t old_hl = read_hl(cpu->reg);
-            write_hl(cpu->reg, old_hl + to_add);
-            set_zero_flag(cpu->reg, 0);
-            set_half_carry_flag(cpu->reg, (old_hl & 0xfff) + (to_add & 0xfff) > 0xfff);
-            set_carry_flag(cpu->reg, (uint32_t)old_hl + (uint32_t)to_add > 0xffff);
+            uint16_t old_hl = read_hl(gb->cpu->reg);
+            write_hl(gb->cpu->reg, old_hl + to_add);
+            set_zero_flag(gb->cpu->reg, 0);
+            set_half_carry_flag(gb->cpu->reg, (old_hl & 0xfff) + (to_add & 0xfff) > 0xfff);
+            set_carry_flag(gb->cpu->reg, (uint32_t)old_hl + (uint32_t)to_add > 0xffff);
             break;
         }
 
         case REG_SP: // single case, add signed 8-bit offset
         {
             // cast is safe since we don't change integer width
-            int8_t offset = (int8_t)read_byte(cpu->bus, (cpu->reg->pc)++);
+            int8_t offset = (int8_t)read_byte(gb->memory, (gb->cpu->reg->pc)++);
             // explicit casts to avoid bugs due to implicit integer conversions
-            cpu->reg->sp = (int32_t)cpu->reg->sp + (int32_t)offset;
+            gb->cpu->reg->sp = (int32_t)gb->cpu->reg->sp + (int32_t)offset;
 
             uint8_t half_carry = 0, carry = 0;
             // overflow can occur only if offset > 0
             if (offset > 0)
             {
-                half_carry = (cpu->reg->sp & 0xf) + (offset & 0xf) > 0xf;
-                carry = (cpu->reg->sp & 0xff) + offset > 0xff;
+                half_carry = (gb->cpu->reg->sp & 0xf) + (offset & 0xf) > 0xf;
+                carry = (gb->cpu->reg->sp & 0xff) + offset > 0xff;
             }
-            set_flags(cpu->reg, 0, 0, half_carry, carry);
+            set_flags(gb->cpu->reg, 0, 0, half_carry, carry);
             break;
         }
     }
 }
 
 // the add with carry (ADC) instruction
-void adc(gb_cpu *cpu, gb_instruction *inst)
+void adc(gameboy *gb, gb_instruction *inst)
 {
     /* NOTE: first operand of ADC is always the A register
      *
@@ -369,49 +370,49 @@ void adc(gb_cpu *cpu, gb_instruction *inst)
      *  Carry Flag:        set if overflow from bit 7
      */
 
-    uint8_t to_add = read_carry_flag(cpu->reg); // initialize to value of carry flag
+    uint8_t to_add = read_carry_flag(gb->cpu->reg); // initialize to value of carry flag
     switch (inst->op2)
     {
         case REG_A:
-            to_add += cpu->reg->a;
+            to_add += gb->cpu->reg->a;
             break;
 
         case REG_B:
-            to_add += cpu->reg->b;
+            to_add += gb->cpu->reg->b;
             break;
 
         case REG_C:
-            to_add += cpu->reg->c;
+            to_add += gb->cpu->reg->c;
             break;
 
         case REG_D:
-            to_add += cpu->reg->d;
+            to_add += gb->cpu->reg->d;
             break;
 
         case REG_E:
-            to_add += cpu->reg->e;
+            to_add += gb->cpu->reg->e;
             break;
 
         case REG_H:
-            to_add += cpu->reg->h;
+            to_add += gb->cpu->reg->h;
             break;
 
         case REG_L:
-            to_add += cpu->reg->l;
+            to_add += gb->cpu->reg->l;
             break;
 
         case PTR_HL:
-            to_add += read_byte(cpu->bus, read_hl(cpu->reg));
+            to_add += read_byte(gb->memory, read_hl(gb->cpu->reg));
             break;
 
         case IMM_8:
-            to_add += read_byte(cpu->bus, (cpu->reg->pc)++);
+            to_add += read_byte(gb->memory, (gb->cpu->reg->pc)++);
             break;
     }
-    uint8_t old_a = cpu->reg->a;
-    cpu->reg->a += to_add;
-    set_flags(cpu->reg,
-              cpu->reg->a == 0,                           // zero
+    uint8_t old_a = gb->cpu->reg->a;
+    gb->cpu->reg->a += to_add;
+    set_flags(gb->cpu->reg,
+              gb->cpu->reg->a == 0,                       // zero
               0,                                          // subtract
               (old_a & 0xf) + (to_add & 0xf) > 0xf,       // half carry
               (uint16_t)old_a + (uint16_t)to_add > 0xff); // carry
@@ -453,7 +454,7 @@ static void sub_from_reg_a(gb_registers *reg, uint8_t to_sub, bool store_result)
 }
 
 // the subtract instruction
-void sub(gb_cpu *cpu, gb_instruction *inst)
+void sub(gameboy *gb, gb_instruction *inst)
 {
     /* NOTE: First operand of SUB is always the A register
      *
@@ -471,48 +472,48 @@ void sub(gb_cpu *cpu, gb_instruction *inst)
     switch (inst->op2)
     {
         case REG_A:
-            to_sub = cpu->reg->a;
+            to_sub = gb->cpu->reg->a;
             break;
 
         case REG_B:
-            to_sub = cpu->reg->b;
+            to_sub = gb->cpu->reg->b;
             break;
 
         case REG_C:
-            to_sub = cpu->reg->c;
+            to_sub = gb->cpu->reg->c;
             break;
 
         case REG_D:
-            to_sub = cpu->reg->d;
+            to_sub = gb->cpu->reg->d;
             break;
 
         case REG_E:
-            to_sub = cpu->reg->e;
+            to_sub = gb->cpu->reg->e;
             break;
 
         case REG_H:
-            to_sub = cpu->reg->h;
+            to_sub = gb->cpu->reg->h;
             break;
 
         case REG_L:
-            to_sub = cpu->reg->l;
+            to_sub = gb->cpu->reg->l;
             break;
 
         case PTR_HL:
-            to_sub = read_byte(cpu->bus, read_hl(cpu->reg));
+            to_sub = read_byte(gb->memory, read_hl(gb->cpu->reg));
             break;
 
         case IMM_8:
-            to_sub = read_byte(cpu->bus, (cpu->reg->pc)++);
+            to_sub = read_byte(gb->memory, (gb->cpu->reg->pc)++);
             break;
     }
 
     // calculate and store the difference and set flags
-    sub_from_reg_a(cpu->reg, to_sub, 1);
+    sub_from_reg_a(gb->cpu->reg, to_sub, 1);
 }
 
 // the subtract with carry (SBC) instruction
-void sbc(gb_cpu *cpu, gb_instruction *inst)
+void sbc(gameboy *gb, gb_instruction *inst)
 {
     /* NOTE: First operand of SBC is always the A register
      *
@@ -524,52 +525,52 @@ void sbc(gb_cpu *cpu, gb_instruction *inst)
      * Carry Flag:        set if borrow (set if op2 + carry > A)
      */
 
-    uint8_t to_sub = read_carry_flag(cpu->reg); // initialize to value of carry flag
+    uint8_t to_sub = read_carry_flag(gb->cpu->reg); // initialize to value of carry flag
     switch (inst->op2)
     {
         case REG_A:
-            to_sub += cpu->reg->a;
+            to_sub += gb->cpu->reg->a;
             break;
 
         case REG_B:
-            to_sub += cpu->reg->b;
+            to_sub += gb->cpu->reg->b;
             break;
 
         case REG_C:
-            to_sub += cpu->reg->c;
+            to_sub += gb->cpu->reg->c;
             break;
 
         case REG_D:
-            to_sub += cpu->reg->d;
+            to_sub += gb->cpu->reg->d;
             break;
 
         case REG_E:
-            to_sub += cpu->reg->e;
+            to_sub += gb->cpu->reg->e;
             break;
 
         case REG_H:
-            to_sub += cpu->reg->h;
+            to_sub += gb->cpu->reg->h;
             break;
 
         case REG_L:
-            to_sub += cpu->reg->l;
+            to_sub += gb->cpu->reg->l;
             break;
 
         case PTR_HL:
-            to_sub += read_byte(cpu->bus, read_hl(cpu->reg));
+            to_sub += read_byte(gb->memory, read_hl(gb->cpu->reg));
             break;
 
         case IMM_8:
-            to_sub += read_byte(cpu->bus, (cpu->reg->pc)++);
+            to_sub += read_byte(gb->memory, (gb->cpu->reg->pc)++);
             break;
     }
 
     // calculate and store the difference and set flags
-    sub_from_reg_a(cpu->reg, to_sub, 1);
+    sub_from_reg_a(gb->cpu->reg, to_sub, 1);
 }
 
 // the compare (CP) instruction (same as SUB but without storing the result)
-void cp(gb_cpu *cpu, gb_instruction *inst)
+void cp(gameboy *gb, gb_instruction *inst)
 {
     /* NOTE: First operand of CP is always the A register
      *
@@ -587,48 +588,48 @@ void cp(gb_cpu *cpu, gb_instruction *inst)
     switch (inst->op2)
     {
         case REG_A:
-            to_sub = cpu->reg->a;
+            to_sub = gb->cpu->reg->a;
             break;
 
         case REG_B:
-            to_sub = cpu->reg->b;
+            to_sub = gb->cpu->reg->b;
             break;
 
         case REG_C:
-            to_sub = cpu->reg->c;
+            to_sub = gb->cpu->reg->c;
             break;
 
         case REG_D:
-            to_sub = cpu->reg->d;
+            to_sub = gb->cpu->reg->d;
             break;
 
         case REG_E:
-            to_sub = cpu->reg->e;
+            to_sub = gb->cpu->reg->e;
             break;
 
         case REG_H:
-            to_sub = cpu->reg->h;
+            to_sub = gb->cpu->reg->h;
             break;
 
         case REG_L:
-            to_sub = cpu->reg->l;
+            to_sub = gb->cpu->reg->l;
             break;
 
         case PTR_HL:
-            to_sub = read_byte(cpu->bus, read_hl(cpu->reg));
+            to_sub = read_byte(gb->memory, read_hl(gb->cpu->reg));
             break;
 
         case IMM_8:
-            to_sub = read_byte(cpu->bus, (cpu->reg->pc)++);
+            to_sub = read_byte(gb->memory, (gb->cpu->reg->pc)++);
             break;
     }
 
     // calculate the difference (without storing the result) and set flags
-    sub_from_reg_a(cpu->reg, to_sub, 0);
+    sub_from_reg_a(gb->cpu->reg, to_sub, 0);
 }
 
 // the bitwise and instruction
-void and(gb_cpu *cpu, gb_instruction *inst)
+void and(gameboy *gb, gb_instruction *inst)
 {
     /* NOTE: first operand of AND is always the A register
      *
@@ -644,47 +645,47 @@ void and(gb_cpu *cpu, gb_instruction *inst)
     switch (inst->op2)
     {
         case REG_A:
-            to_and = cpu->reg->a;
+            to_and = gb->cpu->reg->a;
             break;
 
         case REG_B:
-            to_and = cpu->reg->b;
+            to_and = gb->cpu->reg->b;
             break;
 
         case REG_C:
-            to_and = cpu->reg->c;
+            to_and = gb->cpu->reg->c;
             break;
 
         case REG_D:
-            to_and = cpu->reg->d;
+            to_and = gb->cpu->reg->d;
             break;
 
         case REG_E:
-            to_and = cpu->reg->e;
+            to_and = gb->cpu->reg->e;
             break;
 
         case REG_H:
-            to_and = cpu->reg->h;
+            to_and = gb->cpu->reg->h;
             break;
 
         case REG_L:
-            to_and = cpu->reg->l;
+            to_and = gb->cpu->reg->l;
             break;
 
         case PTR_HL:
-            to_and = read_byte(cpu->bus, read_hl(cpu->reg));
+            to_and = read_byte(gb->memory, read_hl(gb->cpu->reg));
             break;
 
         case IMM_8:
-            to_and = read_byte(cpu->bus, (cpu->reg->pc)++);
+            to_and = read_byte(gb->memory, (gb->cpu->reg->pc)++);
             break;
     }
-    cpu->reg->a &= to_and;
-    set_flags(cpu->reg, cpu->reg->a == 0, 0, 1, 0);
+    gb->cpu->reg->a &= to_and;
+    set_flags(gb->cpu->reg, gb->cpu->reg->a == 0, 0, 1, 0);
 }
 
 // the bitwise or instruction
-void or(gb_cpu *cpu, gb_instruction *inst)
+void or(gameboy *gb, gb_instruction *inst)
 {
     /* NOTE: first operand of OR is always the A register
      *
@@ -700,47 +701,47 @@ void or(gb_cpu *cpu, gb_instruction *inst)
     switch (inst->op2)
     {
         case REG_A:
-            to_or = cpu->reg->a;
+            to_or = gb->cpu->reg->a;
             break;
 
         case REG_B:
-            to_or = cpu->reg->b;
+            to_or = gb->cpu->reg->b;
             break;
 
         case REG_C:
-            to_or = cpu->reg->c;
+            to_or = gb->cpu->reg->c;
             break;
 
         case REG_D:
-            to_or = cpu->reg->d;
+            to_or = gb->cpu->reg->d;
             break;
 
         case REG_E:
-            to_or = cpu->reg->e;
+            to_or = gb->cpu->reg->e;
             break;
 
         case REG_H:
-            to_or = cpu->reg->h;
+            to_or = gb->cpu->reg->h;
             break;
 
         case REG_L:
-            to_or = cpu->reg->l;
+            to_or = gb->cpu->reg->l;
             break;
 
         case PTR_HL:
-            to_or = read_byte(cpu->bus, read_hl(cpu->reg));
+            to_or = read_byte(gb->memory, read_hl(gb->cpu->reg));
             break;
 
         case IMM_8:
-            to_or = read_byte(cpu->bus, (cpu->reg->pc)++);
+            to_or = read_byte(gb->memory, (gb->cpu->reg->pc)++);
             break;
     }
-    cpu->reg->a |= to_or;
-    set_flags(cpu->reg, cpu->reg->a == 0, 0, 0, 0);
+    gb->cpu->reg->a |= to_or;
+    set_flags(gb->cpu->reg, gb->cpu->reg->a == 0, 0, 0, 0);
 }
 
 // the bitwise xor instruction
-void xor(gb_cpu *cpu, gb_instruction *inst)
+void xor(gameboy *gb, gb_instruction *inst)
 {
     /* NOTE: first operand of XOR is always the A register
      * NOTE: XOR A, A will always set the zero flag
@@ -757,41 +758,41 @@ void xor(gb_cpu *cpu, gb_instruction *inst)
     switch (inst->op2)
     {
         case REG_A:
-            to_xor = cpu->reg->a;
+            to_xor = gb->cpu->reg->a;
             break;
 
         case REG_B:
-            to_xor = cpu->reg->b;
+            to_xor = gb->cpu->reg->b;
             break;
 
         case REG_C:
-            to_xor = cpu->reg->c;
+            to_xor = gb->cpu->reg->c;
             break;
 
         case REG_D:
-            to_xor = cpu->reg->d;
+            to_xor = gb->cpu->reg->d;
             break;
 
         case REG_E:
-            to_xor = cpu->reg->e;
+            to_xor = gb->cpu->reg->e;
             break;
 
         case REG_H:
-            to_xor = cpu->reg->h;
+            to_xor = gb->cpu->reg->h;
             break;
 
         case REG_L:
-            to_xor = cpu->reg->l;
+            to_xor = gb->cpu->reg->l;
             break;
 
         case PTR_HL:
-            to_xor = read_byte(cpu->bus, read_hl(cpu->reg));
+            to_xor = read_byte(gb->memory, read_hl(gb->cpu->reg));
             break;
 
         case IMM_8:
-            to_xor = read_byte(cpu->bus, (cpu->reg->pc)++);
+            to_xor = read_byte(gb->memory, (gb->cpu->reg->pc)++);
             break;
     }
-    cpu->reg->a ^= to_xor;
-    set_flags(cpu->reg, cpu->reg->a == 0, 0, 0, 0);
+    gb->cpu->reg->a ^= to_xor;
+    set_flags(gb->cpu->reg, gb->cpu->reg->a == 0, 0, 0, 0);
 }

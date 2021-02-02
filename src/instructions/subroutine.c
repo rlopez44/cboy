@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include "cboy/instructions.h"
+#include "cboy/gameboy.h"
 #include "cboy/cpu.h"
 #include "cboy/memory.h"
 #include "execute.h"
@@ -12,7 +13,7 @@
  * have two possible durations, we need to return the
  * instruction duration for this instruction.
  */
-uint8_t jp(gb_cpu *cpu, gb_instruction *inst)
+uint8_t jp(gameboy *gb, gb_instruction *inst)
 {
     uint8_t duration;
 
@@ -28,29 +29,29 @@ uint8_t jp(gb_cpu *cpu, gb_instruction *inst)
                 case IMM_16:
                 {
                     // little-endian
-                    uint8_t lo = read_byte(cpu->bus, (cpu->reg->pc)++);
+                    uint8_t lo = read_byte(gb->memory, (gb->cpu->reg->pc)++);
                     // no need to increment PC here since we're going to jump anyway
-                    uint8_t hi = read_byte(cpu->bus, cpu->reg->pc);
+                    uint8_t hi = read_byte(gb->memory, gb->cpu->reg->pc);
 
-                    cpu->reg->pc = ((uint16_t)hi << 8) | ((uint16_t)lo);
+                    gb->cpu->reg->pc = ((uint16_t)hi << 8) | ((uint16_t)lo);
                     break;
                 }
 
                 // jump to address in HL register
                 case REG_HL:
-                    cpu->reg->pc = read_hl(cpu->reg);
+                    gb->cpu->reg->pc = read_hl(gb->cpu->reg);
                     break;
             }
             break;
 
         case IMM_16:
         {
-            uint8_t lo = read_byte(cpu->bus, (cpu->reg->pc)++);
+            uint8_t lo = read_byte(gb->memory, (gb->cpu->reg->pc)++);
             // increment the PC after reading the hi byte of the
             // address because we might not be jumping, in which
             // case we need the PC to be pointing to the instruction
             // immediately after this one.
-            uint8_t hi = read_byte(cpu->bus, (cpu->reg->pc)++);
+            uint8_t hi = read_byte(gb->memory, (gb->cpu->reg->pc)++);
 
             uint16_t addr = ((uint16_t)hi << 8) | ((uint16_t)lo);
 
@@ -58,25 +59,25 @@ uint8_t jp(gb_cpu *cpu, gb_instruction *inst)
             switch (inst->op1)
             {
                 case CC_C:
-                    will_jump = read_carry_flag(cpu->reg);
+                    will_jump = read_carry_flag(gb->cpu->reg);
                     break;
 
                 case CC_NC:
-                    will_jump = !read_carry_flag(cpu->reg);
+                    will_jump = !read_carry_flag(gb->cpu->reg);
                     break;
 
                 case CC_Z:
-                    will_jump = read_zero_flag(cpu->reg);
+                    will_jump = read_zero_flag(gb->cpu->reg);
                     break;
 
                 case CC_NZ:
-                    will_jump = !read_zero_flag(cpu->reg);
+                    will_jump = !read_zero_flag(gb->cpu->reg);
                     break;
             }
 
             if (will_jump)
             {
-                cpu->reg->pc = addr;
+                gb->cpu->reg->pc = addr;
                 duration = inst->duration;
             }
             else
@@ -94,11 +95,11 @@ uint8_t jp(gb_cpu *cpu, gb_instruction *inst)
  * following similar logic to the JP instruction,
  * we need to return the duration of this instruction
  */
-uint8_t jr(gb_cpu *cpu, gb_instruction *inst)
+uint8_t jr(gameboy *gb, gb_instruction *inst)
 {
     uint8_t duration;
     // the offset for the jump
-    int8_t offset = (int8_t)read_byte(cpu->bus, (cpu->reg->pc)++);
+    int8_t offset = (int8_t)read_byte(gb->memory, (gb->cpu->reg->pc)++);
 
     // check the second operand first. If it's NONE, we have
     // the only unconditional jump out of the 5 instructions
@@ -117,7 +118,7 @@ uint8_t jr(gb_cpu *cpu, gb_instruction *inst)
              * avoid possible bugs due to implicit integer
              * conversions.
              */
-            cpu->reg->pc = (int32_t)cpu->reg->pc + (int32_t)offset;
+            gb->cpu->reg->pc = (int32_t)gb->cpu->reg->pc + (int32_t)offset;
             break;
 
         case IMM_8:
@@ -128,25 +129,25 @@ uint8_t jr(gb_cpu *cpu, gb_instruction *inst)
             switch (inst->op1)
             {
                 case CC_C:
-                    will_jump = read_carry_flag(cpu->reg);
+                    will_jump = read_carry_flag(gb->cpu->reg);
                     break;
 
                 case CC_NC:
-                    will_jump = !read_carry_flag(cpu->reg);
+                    will_jump = !read_carry_flag(gb->cpu->reg);
                     break;
 
                 case CC_Z:
-                    will_jump = read_zero_flag(cpu->reg);
+                    will_jump = read_zero_flag(gb->cpu->reg);
                     break;
 
                 case CC_NZ:
-                    will_jump = !read_zero_flag(cpu->reg);
+                    will_jump = !read_zero_flag(gb->cpu->reg);
                     break;
             }
 
             if (will_jump)
             {
-                cpu->reg->pc = (int32_t)cpu->reg->pc + (int32_t)offset;
+                gb->cpu->reg->pc = (int32_t)gb->cpu->reg->pc + (int32_t)offset;
                 duration = inst->duration;
             }
             else
@@ -164,13 +165,13 @@ uint8_t jr(gb_cpu *cpu, gb_instruction *inst)
  * Some of the CALL instructions are conditional, so
  * we need to return the instruction duration explicitly
  */
-uint8_t call(gb_cpu *cpu, gb_instruction *inst)
+uint8_t call(gameboy *gb, gb_instruction *inst)
 {
     uint8_t duration;
 
     // get the address to call
-    uint8_t lo = read_byte(cpu->bus, (cpu->reg->pc)++);
-    uint8_t hi = read_byte(cpu->bus, (cpu->reg->pc)++);
+    uint8_t lo = read_byte(gb->memory, (gb->cpu->reg->pc)++);
+    uint8_t hi = read_byte(gb->memory, (gb->cpu->reg->pc)++);
     uint16_t addr = ((uint16_t)hi << 8) | ((uint16_t)lo);
 
     // check the second operand first. If it's NONE, we have
@@ -182,10 +183,10 @@ uint8_t call(gb_cpu *cpu, gb_instruction *inst)
 
             // push next instruction address onto the stack
             // so that a RET instruction can pop it later
-            stack_push(cpu, cpu->reg->pc);
+            stack_push(gb, gb->cpu->reg->pc);
 
             // implicit jump instruction to the target address
-            cpu->reg->pc = addr;
+            gb->cpu->reg->pc = addr;
             break;
 
         case IMM_16: // first operand is the condition
@@ -194,29 +195,29 @@ uint8_t call(gb_cpu *cpu, gb_instruction *inst)
             switch (inst->op1)
             {
                 case CC_C:
-                    will_jump = read_carry_flag(cpu->reg);
+                    will_jump = read_carry_flag(gb->cpu->reg);
                     break;
 
                 case CC_NC:
-                    will_jump = !read_carry_flag(cpu->reg);
+                    will_jump = !read_carry_flag(gb->cpu->reg);
                     break;
 
                 case CC_Z:
-                    will_jump = read_zero_flag(cpu->reg);
+                    will_jump = read_zero_flag(gb->cpu->reg);
                     break;
 
                 case CC_NZ:
-                    will_jump = !read_zero_flag(cpu->reg);
+                    will_jump = !read_zero_flag(gb->cpu->reg);
                     break;
             }
 
             if (will_jump)
             {
                 // push next instruction address onto the stack
-                stack_push(cpu, cpu->reg->pc);
+                stack_push(gb, gb->cpu->reg->pc);
 
                 // implicit jump to the target address
-                cpu->reg->pc = addr;
+                gb->cpu->reg->pc = addr;
 
                 duration = inst->duration;
             }
@@ -238,7 +239,7 @@ uint8_t call(gb_cpu *cpu, gb_instruction *inst)
  *
  *  0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38
  */
-void rst(gb_cpu *cpu, gb_instruction *inst)
+void rst(gameboy *gb, gb_instruction *inst)
 {
     uint16_t addr; // the target address
     switch (inst->op1)
@@ -277,6 +278,6 @@ void rst(gb_cpu *cpu, gb_instruction *inst)
     }
 
     // perform the call
-    stack_push(cpu, cpu->reg->pc);
-    cpu->reg->pc = addr;
+    stack_push(gb, gb->cpu->reg->pc);
+    gb->cpu->reg->pc = addr;
 }

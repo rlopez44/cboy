@@ -2,7 +2,7 @@
 #define INSTRUCTIONS_H_
 
 #include <stdint.h>
-#include "cboy/cpu.h"
+#include "cboy/gameboy.h"
 
 // Game Boy CPU opcodes
 // See: https://gbdev.io/gb-opcodes/optables/
@@ -124,6 +124,6 @@ typedef struct gb_instruction {
 
 // executes the cpu instruction specified by the PC
 // returns the number of m-cycles elapsed during instruction execution
-uint8_t execute_instruction(gb_cpu *cpu);
+uint8_t execute_instruction(gameboy *gb);
 
 #endif

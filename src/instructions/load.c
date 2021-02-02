@@ -2,12 +2,13 @@
 
 #include <stdint.h>
 #include "cboy/instructions.h"
+#include "cboy/gameboy.h"
 #include "cboy/cpu.h"
 #include "cboy/memory.h"
 #include "execute.h"
 
 // the load instruction
-void ld(gb_cpu *cpu, gb_instruction *inst)
+void ld(gameboy *gb, gb_instruction *inst)
 {
     switch (inst->op1)
     {
@@ -15,78 +16,78 @@ void ld(gb_cpu *cpu, gb_instruction *inst)
             switch (inst->op2)
             {
                 case REG_A:
-                    cpu->reg->a = cpu->reg->a;
+                    gb->cpu->reg->a = gb->cpu->reg->a;
                     break;
 
                 case REG_B:
-                    cpu->reg->a = cpu->reg->b;
+                    gb->cpu->reg->a = gb->cpu->reg->b;
                     break;
 
                 case REG_C:
-                    cpu->reg->a = cpu->reg->c;
+                    gb->cpu->reg->a = gb->cpu->reg->c;
                     break;
 
                 case REG_D:
-                    cpu->reg->a = cpu->reg->d;
+                    gb->cpu->reg->a = gb->cpu->reg->d;
                     break;
 
                 case REG_E:
-                    cpu->reg->a = cpu->reg->e;
+                    gb->cpu->reg->a = gb->cpu->reg->e;
                     break;
 
                 case REG_H:
-                    cpu->reg->a = cpu->reg->h;
+                    gb->cpu->reg->a = gb->cpu->reg->h;
                     break;
 
                 case REG_L:
-                    cpu->reg->a = cpu->reg->l;
+                    gb->cpu->reg->a = gb->cpu->reg->l;
                     break;
 
                 case PTR_BC:
-                    cpu->reg->a = read_byte(cpu->bus, read_bc(cpu->reg));
+                    gb->cpu->reg->a = read_byte(gb->memory, read_bc(gb->cpu->reg));
                     break;
 
                 case PTR_DE:
-                    cpu->reg->a = read_byte(cpu->bus, read_de(cpu->reg));
+                    gb->cpu->reg->a = read_byte(gb->memory, read_de(gb->cpu->reg));
                     break;
 
                 case PTR_HL:
-                    cpu->reg->a = read_byte(cpu->bus, read_hl(cpu->reg));
+                    gb->cpu->reg->a = read_byte(gb->memory, read_hl(gb->cpu->reg));
                     break;
 
                 case PTR_HL_INC:
                 {
-                    uint16_t hl = read_hl(cpu->reg);
-                    cpu->reg->a = read_byte(cpu->bus, hl);
+                    uint16_t hl = read_hl(gb->cpu->reg);
+                    gb->cpu->reg->a = read_byte(gb->memory, hl);
                     // increment HL register after loading value it points to
-                    write_hl(cpu->reg, hl + 1);
+                    write_hl(gb->cpu->reg, hl + 1);
                     break;
                 }
 
                 case PTR_HL_DEC:
                 {
-                    uint16_t hl = read_hl(cpu->reg);
-                    cpu->reg->a = read_byte(cpu->bus, hl);
+                    uint16_t hl = read_hl(gb->cpu->reg);
+                    gb->cpu->reg->a = read_byte(gb->memory, hl);
                     // decrement HL register after loading value it points to
-                    write_hl(cpu->reg, hl - 1);
+                    write_hl(gb->cpu->reg, hl - 1);
                     break;
                 }
 
                 case IMM_8:
                     // load immediate value
-                    cpu->reg->a = read_byte(cpu->bus, (cpu->reg->pc)++);
+                    gb->cpu->reg->a = read_byte(gb->memory, (gb->cpu->reg->pc)++);
                     break;
 
                 case PTR_16:
                 {
                     // load 16-bit immediate value
                     // NOTE: little-endian
-                    uint8_t lo = read_byte(cpu->bus, (cpu->reg->pc)++);
-                    uint8_t hi = read_byte(cpu->bus, (cpu->reg->pc)++);
+                    uint8_t lo = read_byte(gb->memory, (gb->cpu->reg->pc)++);
+                    uint8_t hi = read_byte(gb->memory, (gb->cpu->reg->pc)++);
 
                     // use this value as a pointer
                     uint16_t addr = ((uint16_t)hi << 8) | ((uint16_t)lo);
-                    cpu->reg->a = read_byte(cpu->bus, addr);
+                    gb->cpu->reg->a = read_byte(gb->memory, addr);
                     break;
                 }
             }
@@ -96,39 +97,39 @@ void ld(gb_cpu *cpu, gb_instruction *inst)
             switch (inst->op2)
             {
                 case REG_A:
-                    cpu->reg->b = cpu->reg->a;
+                    gb->cpu->reg->b = gb->cpu->reg->a;
                     break;
 
                 case REG_B:
-                    cpu->reg->b = cpu->reg->b;
+                    gb->cpu->reg->b = gb->cpu->reg->b;
                     break;
 
                 case REG_C:
-                    cpu->reg->b = cpu->reg->c;
+                    gb->cpu->reg->b = gb->cpu->reg->c;
                     break;
 
                 case REG_D:
-                    cpu->reg->b = cpu->reg->d;
+                    gb->cpu->reg->b = gb->cpu->reg->d;
                     break;
 
                 case REG_E:
-                    cpu->reg->b = cpu->reg->e;
+                    gb->cpu->reg->b = gb->cpu->reg->e;
                     break;
 
                 case REG_H:
-                    cpu->reg->b = cpu->reg->h;
+                    gb->cpu->reg->b = gb->cpu->reg->h;
                     break;
 
                 case REG_L:
-                    cpu->reg->b = cpu->reg->l;
+                    gb->cpu->reg->b = gb->cpu->reg->l;
                     break;
 
                 case PTR_HL:
-                    cpu->reg->b = read_byte(cpu->bus, read_hl(cpu->reg));
+                    gb->cpu->reg->b = read_byte(gb->memory, read_hl(gb->cpu->reg));
                     break;
 
                 case IMM_8:
-                    cpu->reg->b = read_byte(cpu->bus, (cpu->reg->pc)++);
+                    gb->cpu->reg->b = read_byte(gb->memory, (gb->cpu->reg->pc)++);
                     break;
             }
             break;
@@ -137,39 +138,39 @@ void ld(gb_cpu *cpu, gb_instruction *inst)
             switch (inst->op2)
             {
                 case REG_A:
-                    cpu->reg->c = cpu->reg->a;
+                    gb->cpu->reg->c = gb->cpu->reg->a;
                     break;
 
                 case REG_B:
-                    cpu->reg->c = cpu->reg->b;
+                    gb->cpu->reg->c = gb->cpu->reg->b;
                     break;
 
                 case REG_C:
-                    cpu->reg->c = cpu->reg->c;
+                    gb->cpu->reg->c = gb->cpu->reg->c;
                     break;
 
                 case REG_D:
-                    cpu->reg->c = cpu->reg->d;
+                    gb->cpu->reg->c = gb->cpu->reg->d;
                     break;
 
                 case REG_E:
-                    cpu->reg->c = cpu->reg->e;
+                    gb->cpu->reg->c = gb->cpu->reg->e;
                     break;
 
                 case REG_H:
-                    cpu->reg->c = cpu->reg->h;
+                    gb->cpu->reg->c = gb->cpu->reg->h;
                     break;
 
                 case REG_L:
-                    cpu->reg->c = cpu->reg->l;
+                    gb->cpu->reg->c = gb->cpu->reg->l;
                     break;
 
                 case PTR_HL:
-                    cpu->reg->c = read_byte(cpu->bus, read_hl(cpu->reg));
+                    gb->cpu->reg->c = read_byte(gb->memory, read_hl(gb->cpu->reg));
                     break;
 
                 case IMM_8:
-                    cpu->reg->c = read_byte(cpu->bus, (cpu->reg->pc)++);
+                    gb->cpu->reg->c = read_byte(gb->memory, (gb->cpu->reg->pc)++);
                     break;
             }
             break;
@@ -178,39 +179,39 @@ void ld(gb_cpu *cpu, gb_instruction *inst)
             switch (inst->op2)
             {
                 case REG_A:
-                    cpu->reg->d = cpu->reg->a;
+                    gb->cpu->reg->d = gb->cpu->reg->a;
                     break;
 
                 case REG_B:
-                    cpu->reg->d = cpu->reg->b;
+                    gb->cpu->reg->d = gb->cpu->reg->b;
                     break;
 
                 case REG_C:
-                    cpu->reg->d = cpu->reg->c;
+                    gb->cpu->reg->d = gb->cpu->reg->c;
                     break;
 
                 case REG_D:
-                    cpu->reg->d = cpu->reg->d;
+                    gb->cpu->reg->d = gb->cpu->reg->d;
                     break;
 
                 case REG_E:
-                    cpu->reg->d = cpu->reg->e;
+                    gb->cpu->reg->d = gb->cpu->reg->e;
                     break;
 
                 case REG_H:
-                    cpu->reg->d = cpu->reg->h;
+                    gb->cpu->reg->d = gb->cpu->reg->h;
                     break;
 
                 case REG_L:
-                    cpu->reg->d = cpu->reg->l;
+                    gb->cpu->reg->d = gb->cpu->reg->l;
                     break;
 
                 case PTR_HL:
-                    cpu->reg->d = read_byte(cpu->bus, read_hl(cpu->reg));
+                    gb->cpu->reg->d = read_byte(gb->memory, read_hl(gb->cpu->reg));
                     break;
 
                 case IMM_8:
-                    cpu->reg->d = read_byte(cpu->bus, (cpu->reg->pc)++);
+                    gb->cpu->reg->d = read_byte(gb->memory, (gb->cpu->reg->pc)++);
                     break;
             }
             break;
@@ -219,39 +220,39 @@ void ld(gb_cpu *cpu, gb_instruction *inst)
             switch (inst->op2)
             {
                 case REG_A:
-                    cpu->reg->e = cpu->reg->a;
+                    gb->cpu->reg->e = gb->cpu->reg->a;
                     break;
 
                 case REG_B:
-                    cpu->reg->e = cpu->reg->b;
+                    gb->cpu->reg->e = gb->cpu->reg->b;
                     break;
 
                 case REG_C:
-                    cpu->reg->e = cpu->reg->c;
+                    gb->cpu->reg->e = gb->cpu->reg->c;
                     break;
 
                 case REG_D:
-                    cpu->reg->e = cpu->reg->d;
+                    gb->cpu->reg->e = gb->cpu->reg->d;
                     break;
 
                 case REG_E:
-                    cpu->reg->e = cpu->reg->e;
+                    gb->cpu->reg->e = gb->cpu->reg->e;
                     break;
 
                 case REG_H:
-                    cpu->reg->e = cpu->reg->h;
+                    gb->cpu->reg->e = gb->cpu->reg->h;
                     break;
 
                 case REG_L:
-                    cpu->reg->e = cpu->reg->l;
+                    gb->cpu->reg->e = gb->cpu->reg->l;
                     break;
 
                 case PTR_HL:
-                    cpu->reg->e = read_byte(cpu->bus, read_hl(cpu->reg));
+                    gb->cpu->reg->e = read_byte(gb->memory, read_hl(gb->cpu->reg));
                     break;
 
                 case IMM_8:
-                    cpu->reg->e = read_byte(cpu->bus, (cpu->reg->pc)++);
+                    gb->cpu->reg->e = read_byte(gb->memory, (gb->cpu->reg->pc)++);
                     break;
             }
             break;
@@ -260,39 +261,39 @@ void ld(gb_cpu *cpu, gb_instruction *inst)
             switch (inst->op2)
             {
                 case REG_A:
-                    cpu->reg->h = cpu->reg->a;
+                    gb->cpu->reg->h = gb->cpu->reg->a;
                     break;
 
                 case REG_B:
-                    cpu->reg->h = cpu->reg->b;
+                    gb->cpu->reg->h = gb->cpu->reg->b;
                     break;
 
                 case REG_C:
-                    cpu->reg->h = cpu->reg->c;
+                    gb->cpu->reg->h = gb->cpu->reg->c;
                     break;
 
                 case REG_D:
-                    cpu->reg->h = cpu->reg->d;
+                    gb->cpu->reg->h = gb->cpu->reg->d;
                     break;
 
                 case REG_E:
-                    cpu->reg->h = cpu->reg->e;
+                    gb->cpu->reg->h = gb->cpu->reg->e;
                     break;
 
                 case REG_H:
-                    cpu->reg->h = cpu->reg->h;
+                    gb->cpu->reg->h = gb->cpu->reg->h;
                     break;
 
                 case REG_L:
-                    cpu->reg->h = cpu->reg->l;
+                    gb->cpu->reg->h = gb->cpu->reg->l;
                     break;
 
                 case PTR_HL:
-                    cpu->reg->h = read_byte(cpu->bus, read_hl(cpu->reg));
+                    gb->cpu->reg->h = read_byte(gb->memory, read_hl(gb->cpu->reg));
                     break;
 
                 case IMM_8:
-                    cpu->reg->h = read_byte(cpu->bus, (cpu->reg->pc)++);
+                    gb->cpu->reg->h = read_byte(gb->memory, (gb->cpu->reg->pc)++);
                     break;
             }
             break;
@@ -301,39 +302,39 @@ void ld(gb_cpu *cpu, gb_instruction *inst)
             switch (inst->op2)
             {
                 case REG_A:
-                    cpu->reg->l = cpu->reg->a;
+                    gb->cpu->reg->l = gb->cpu->reg->a;
                     break;
 
                 case REG_B:
-                    cpu->reg->l = cpu->reg->b;
+                    gb->cpu->reg->l = gb->cpu->reg->b;
                     break;
 
                 case REG_C:
-                    cpu->reg->l = cpu->reg->c;
+                    gb->cpu->reg->l = gb->cpu->reg->c;
                     break;
 
                 case REG_D:
-                    cpu->reg->l = cpu->reg->d;
+                    gb->cpu->reg->l = gb->cpu->reg->d;
                     break;
 
                 case REG_E:
-                    cpu->reg->l = cpu->reg->e;
+                    gb->cpu->reg->l = gb->cpu->reg->e;
                     break;
 
                 case REG_H:
-                    cpu->reg->l = cpu->reg->h;
+                    gb->cpu->reg->l = gb->cpu->reg->h;
                     break;
 
                 case REG_L:
-                    cpu->reg->l = cpu->reg->l;
+                    gb->cpu->reg->l = gb->cpu->reg->l;
                     break;
 
                 case PTR_HL:
-                    cpu->reg->l = read_byte(cpu->bus, read_hl(cpu->reg));
+                    gb->cpu->reg->l = read_byte(gb->memory, read_hl(gb->cpu->reg));
                     break;
 
                 case IMM_8:
-                    cpu->reg->l = read_byte(cpu->bus, (cpu->reg->pc)++);
+                    gb->cpu->reg->l = read_byte(gb->memory, (gb->cpu->reg->pc)++);
                     break;
             }
             break;
@@ -342,38 +343,38 @@ void ld(gb_cpu *cpu, gb_instruction *inst)
             switch (inst->op2)
             {
                 case REG_A:
-                    write_byte(cpu->bus, read_hl(cpu->reg), cpu->reg->a);
+                    write_byte(gb->memory, read_hl(gb->cpu->reg), gb->cpu->reg->a);
                     break;
 
                 case REG_B:
-                    write_byte(cpu->bus, read_hl(cpu->reg), cpu->reg->b);
+                    write_byte(gb->memory, read_hl(gb->cpu->reg), gb->cpu->reg->b);
                     break;
 
                 case REG_C:
-                    write_byte(cpu->bus, read_hl(cpu->reg), cpu->reg->c);
+                    write_byte(gb->memory, read_hl(gb->cpu->reg), gb->cpu->reg->c);
                     break;
 
                 case REG_D:
-                    write_byte(cpu->bus, read_hl(cpu->reg), cpu->reg->d);
+                    write_byte(gb->memory, read_hl(gb->cpu->reg), gb->cpu->reg->d);
                     break;
 
                 case REG_E:
-                    write_byte(cpu->bus, read_hl(cpu->reg), cpu->reg->e);
+                    write_byte(gb->memory, read_hl(gb->cpu->reg), gb->cpu->reg->e);
                     break;
 
                 case REG_H:
-                    write_byte(cpu->bus, read_hl(cpu->reg), cpu->reg->h);
+                    write_byte(gb->memory, read_hl(gb->cpu->reg), gb->cpu->reg->h);
                     break;
 
                 case REG_L:
-                    write_byte(cpu->bus, read_hl(cpu->reg), cpu->reg->l);
+                    write_byte(gb->memory, read_hl(gb->cpu->reg), gb->cpu->reg->l);
                     break;
 
                 case IMM_8:
                 {
                     // store immediate value into byte pointed to by HL
-                    uint8_t value = read_byte(cpu->bus, (cpu->reg->pc)++);
-                    write_byte(cpu->bus, read_hl(cpu->reg), value);
+                    uint8_t value = read_byte(gb->memory, (gb->cpu->reg->pc)++);
+                    write_byte(gb->memory, read_hl(gb->cpu->reg), value);
                     break;
                 }
             }
@@ -382,46 +383,46 @@ void ld(gb_cpu *cpu, gb_instruction *inst)
         case PTR_HL_INC:
         {
             // store register A's value into [HL] then increment HL
-            uint16_t hl = read_hl(cpu->reg);
-            write_byte(cpu->bus, hl, cpu->reg->a);
-            write_hl(cpu->reg, hl + 1);
+            uint16_t hl = read_hl(gb->cpu->reg);
+            write_byte(gb->memory, hl, gb->cpu->reg->a);
+            write_hl(gb->cpu->reg, hl + 1);
             break;
         }
 
         case PTR_HL_DEC:
         {
             // store register A's value into [HL] then decrement HL
-            uint16_t hl = read_hl(cpu->reg);
-            write_byte(cpu->bus, hl, cpu->reg->a);
-            write_hl(cpu->reg, hl - 1);
+            uint16_t hl = read_hl(gb->cpu->reg);
+            write_byte(gb->memory, hl, gb->cpu->reg->a);
+            write_hl(gb->cpu->reg, hl - 1);
             break;
         }
 
         case PTR_BC:
-            write_byte(cpu->bus, read_bc(cpu->reg), cpu->reg->a);
+            write_byte(gb->memory, read_bc(gb->cpu->reg), gb->cpu->reg->a);
             break;
 
         case PTR_DE:
-            write_byte(cpu->bus, read_de(cpu->reg), cpu->reg->a);
+            write_byte(gb->memory, read_de(gb->cpu->reg), gb->cpu->reg->a);
             break;
 
         case REG_BC: // only instruction is LD BC, IMM_16
         {
             // little endian
-            uint8_t lo = read_byte(cpu->bus, (cpu->reg->pc)++);
-            uint8_t hi = read_byte(cpu->bus, (cpu->reg->pc)++);
+            uint8_t lo = read_byte(gb->memory, (gb->cpu->reg->pc)++);
+            uint8_t hi = read_byte(gb->memory, (gb->cpu->reg->pc)++);
             uint16_t value = ((uint16_t)hi << 8) | ((uint16_t)lo);
-            write_bc(cpu->reg, value);
+            write_bc(gb->cpu->reg, value);
             break;
         }
 
         case REG_DE: // only instruction is LD DE, IMM_16
         {
             // little endian
-            uint8_t lo = read_byte(cpu->bus, (cpu->reg->pc)++);
-            uint8_t hi = read_byte(cpu->bus, (cpu->reg->pc)++);
+            uint8_t lo = read_byte(gb->memory, (gb->cpu->reg->pc)++);
+            uint8_t hi = read_byte(gb->memory, (gb->cpu->reg->pc)++);
             uint16_t value = ((uint16_t)hi << 8) | ((uint16_t)lo);
-            write_de(cpu->reg, value);
+            write_de(gb->cpu->reg, value);
             break;
         }
 
@@ -431,10 +432,10 @@ void ld(gb_cpu *cpu, gb_instruction *inst)
                 case IMM_16:
                 {
                     // little endian
-                    uint8_t lo = read_byte(cpu->bus, (cpu->reg->pc)++);
-                    uint8_t hi = read_byte(cpu->bus, (cpu->reg->pc)++);
+                    uint8_t lo = read_byte(gb->memory, (gb->cpu->reg->pc)++);
+                    uint8_t hi = read_byte(gb->memory, (gb->cpu->reg->pc)++);
                     uint16_t value = ((uint16_t)hi << 8) | ((uint16_t)lo);
-                    write_hl(cpu->reg, value);
+                    write_hl(gb->cpu->reg, value);
                     break;
                 }
 
@@ -444,11 +445,11 @@ void ld(gb_cpu *cpu, gb_instruction *inst)
                      * NOTE: the cast from unsigned to signed 8-bit integer
                      * is always safe since the two types are the same length
                      */
-                    int8_t offset = (int8_t)read_byte(cpu->bus, (cpu->reg->pc)++);
+                    int8_t offset = (int8_t)read_byte(gb->memory, (gb->cpu->reg->pc)++);
 
                     // NOTE: possible bugs can occur due to implicit integer conversions when
                     // offset < 0. To avoid this, we perform explicit casts of SP and the offset
-                    write_hl(cpu->reg, (int32_t)cpu->reg->sp + (int32_t)offset);
+                    write_hl(gb->cpu->reg, (int32_t)gb->cpu->reg->sp + (int32_t)offset);
 
                     /* Flags to set:
                      * zero flag: 0
@@ -462,12 +463,12 @@ void ld(gb_cpu *cpu, gb_instruction *inst)
                     if (offset > 0)
                     {
                         // lowest nibbles must add to value bigger than 0xf to overflow
-                        half_carry = (cpu->reg->sp & 0xf) + (offset & 0xf) > 0xf;
+                        half_carry = (gb->cpu->reg->sp & 0xf) + (offset & 0xf) > 0xf;
 
                         // sum of lowest bytes must be greater than 0xff to overflow
-                        carry = (cpu->reg->sp & 0xff) + offset > 0xff;
+                        carry = (gb->cpu->reg->sp & 0xff) + offset > 0xff;
                     }
-                    set_flags(cpu->reg, 0, 0, half_carry, carry);
+                    set_flags(gb->cpu->reg, 0, 0, half_carry, carry);
                     break;
                 }
             }
@@ -477,14 +478,14 @@ void ld(gb_cpu *cpu, gb_instruction *inst)
             {
                 case IMM_16:
                 {
-                    uint8_t lo = read_byte(cpu->bus, (cpu->reg->pc)++);
-                    uint8_t hi = read_byte(cpu->bus, (cpu->reg->pc)++);
-                    cpu->reg->sp = ((uint16_t)hi << 8) | ((uint16_t)lo);
+                    uint8_t lo = read_byte(gb->memory, (gb->cpu->reg->pc)++);
+                    uint8_t hi = read_byte(gb->memory, (gb->cpu->reg->pc)++);
+                    gb->cpu->reg->sp = ((uint16_t)hi << 8) | ((uint16_t)lo);
                     break;
                 }
 
                 case REG_HL:
-                    cpu->reg->sp = read_hl(cpu->reg);
+                    gb->cpu->reg->sp = read_hl(gb->cpu->reg);
                     break;
             }
             break;
@@ -492,21 +493,21 @@ void ld(gb_cpu *cpu, gb_instruction *inst)
         case PTR_16:
         {
             // load the immediate address
-            uint8_t lo = read_byte(cpu->bus, (cpu->reg->pc)++);
-            uint8_t hi = read_byte(cpu->bus, (cpu->reg->pc)++);
+            uint8_t lo = read_byte(gb->memory, (gb->cpu->reg->pc)++);
+            uint8_t hi = read_byte(gb->memory, (gb->cpu->reg->pc)++);
             uint16_t addr = ((uint16_t)hi << 8) | (uint16_t)lo;
 
             switch (inst->op2)
             {
                 case REG_A:
-                    write_byte(cpu->bus, addr, cpu->reg->a);
+                    write_byte(gb->memory, addr, gb->cpu->reg->a);
                     break;
 
                 case REG_SP:
                     // write SP into the two bytes pointed to by the immediate address
                     // NOTE: little endian. write lo byte at addr and hi byte at addr + 1
-                    write_byte(cpu->bus, addr, (uint8_t)(cpu->reg->sp & 0xff));
-                    write_byte(cpu->bus, addr + 1, (uint8_t)(cpu->reg->sp >> 8));
+                    write_byte(gb->memory, addr, (uint8_t)(gb->cpu->reg->sp & 0xff));
+                    write_byte(gb->memory, addr + 1, (uint8_t)(gb->cpu->reg->sp >> 8));
                     break;
             }
             break;
@@ -515,7 +516,7 @@ void ld(gb_cpu *cpu, gb_instruction *inst)
 }
 
 // the 'load from high page' instruction
-void ldh(gb_cpu *cpu, gb_instruction *inst)
+void ldh(gameboy *gb, gb_instruction *inst)
 {
     // address that will be used in the instructions,
     // either to read from or write to memory
@@ -527,29 +528,29 @@ void ldh(gb_cpu *cpu, gb_instruction *inst)
             {
                 case PTR_C:
                     // 0xff00 + register C gives address to read from
-                    addr = 0xff00 + (uint16_t)cpu->reg->c;
+                    addr = 0xff00 + (uint16_t)gb->cpu->reg->c;
                     break;
 
                 case PTR_8:
                     // immediate value is low byte of address
                     // low byte + 0xff00 gives full address
-                    addr = 0xff00 + (uint16_t)read_byte(cpu->bus, (cpu->reg->pc)++);
+                    addr = 0xff00 + (uint16_t)read_byte(gb->memory, (gb->cpu->reg->pc)++);
                     break;
             }
-            cpu->reg->a = read_byte(cpu->bus, addr);
+            gb->cpu->reg->a = read_byte(gb->memory, addr);
             break;
 
         case PTR_C:
             // address to write to is given by adding C register to 0xff00
-            addr = 0xff00 + (uint16_t)cpu->reg->c;
-            write_byte(cpu->bus, addr, cpu->reg->a);
+            addr = 0xff00 + (uint16_t)gb->cpu->reg->c;
+            write_byte(gb->memory, addr, gb->cpu->reg->a);
             break;
 
         case PTR_8:
             // immediate value is the low byte of the address to read from
             // the low byte added to 0xff00 gives the full 16-bit address
-            addr = 0xff00 + (uint16_t)read_byte(cpu->bus, (cpu->reg->pc)++);
-            write_byte(cpu->bus, addr, cpu->reg->a);
+            addr = 0xff00 + (uint16_t)read_byte(gb->memory, (gb->cpu->reg->pc)++);
+            write_byte(gb->memory, addr, gb->cpu->reg->a);
             break;
     }
 }

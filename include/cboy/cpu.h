@@ -2,7 +2,6 @@
 #define CPU_H_
 
 #include <stdint.h>
-#include "cboy/memory.h"
 
 // the Game Boy CPU registers
 typedef struct gb_registers {
@@ -22,9 +21,6 @@ typedef struct gb_registers {
 typedef struct gb_cpu {
     // the CPU's registers
     gb_registers *reg;
-
-    // the CPU's address bus.
-    gb_address_bus *bus;
 } gb_cpu;
 
 
@@ -73,10 +69,5 @@ uint8_t read_subtract_flag(gb_registers *reg);
 uint8_t read_half_carry_flag(gb_registers *reg);
 
 uint8_t read_carry_flag(gb_registers *reg);
-
-// stack push and pop operations
-void stack_push(gb_cpu *cpu, uint16_t value);
-
-uint16_t stack_pop(gb_cpu *cpu);
 
 #endif
