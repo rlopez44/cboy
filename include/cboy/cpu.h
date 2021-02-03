@@ -2,6 +2,7 @@
 #define CPU_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 
 // the Game Boy CPU registers
 typedef struct gb_registers {
@@ -19,6 +20,15 @@ typedef struct gb_registers {
 
 // the Game Boy CPU
 typedef struct gb_cpu {
+    // the Interrupt Master Enable Flag
+    bool ime_flag;
+
+    /* flag set when an EI instruction is executed
+     * to indicate the IME flag will need to be
+     * set after the instruction following the EI
+     */
+    bool ime_delayed_set;
+
     // the CPU's registers
     gb_registers *reg;
 } gb_cpu;

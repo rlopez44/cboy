@@ -4,6 +4,7 @@ DEBUG_CFLAG = -g
 OBJS = obj/main.o obj/gameboy.o obj/cpu.o obj/memory.o
 OBJS += obj/instructions/execute.o obj/instructions/load.o
 OBJS += obj/instructions/arithmetic.o obj/instructions/subroutine.o
+OBJS += obj/instructions/misc.o
 
 all: directories cboy
 

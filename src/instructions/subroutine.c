@@ -1,6 +1,7 @@
 // Implementation of the jump and subroutine-related instruction sets
 
 #include <stdint.h>
+#include <stdbool.h>
 #include "cboy/instructions.h"
 #include "cboy/gameboy.h"
 #include "cboy/cpu.h"
@@ -328,4 +329,16 @@ uint8_t ret(gameboy *gb, gb_instruction *inst)
     }
 
     return duration;
+}
+
+/* Return from subroutine and enable interrupts
+ * --------------------------------------------
+ * This can be thought of as executing an EI instruction
+ * then an unconditional RET so that the IME flag is set
+ * right after this instruction is executed.
+ */
+void reti(gameboy *gb)
+{
+    gb->cpu->reg->pc = stack_pop(gb);
+    gb->cpu->ime_flag = true;
 }

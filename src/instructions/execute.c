@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdbool.h>
 #include "cboy/instructions.h"
 #include "cboy/gameboy.h"
 #include "cboy/memory.h"
@@ -531,6 +532,21 @@ static const gb_instruction instruction_table[512] = {
 // returns the number of m-cycles elapsed during instruction execution
 uint8_t execute_instruction(gameboy *gb)
 {
+    /* Check if the IME flag needs to be set after
+     * an EI instruction. Technically, we should be
+     * checking for this *after* the instruction has
+     * executed below, since the IME is set after the
+     * instruction following the EI. However, for our
+     * purposes it is enough to check at the beginning
+     * of this function since the instruction will
+     * execute anyway before this function returns.
+     */
+    if (gb->cpu->ime_delayed_set)
+    {
+        gb->cpu->ime_flag = true;
+        gb->cpu->ime_delayed_set = false;
+    }
+
     // the instruction's duration
     uint8_t curr_inst_duration;
 
@@ -633,6 +649,21 @@ uint8_t execute_instruction(gameboy *gb)
             curr_inst_duration = ret(gb, &inst);
             break;
 
+        case EI:
+            ei(gb);
+            curr_inst_duration = inst.duration;
+            break;
+
+        case DI:
+            di(gb);
+            curr_inst_duration = inst.duration;
+            break;
+
+        case RETI:
+            reti(gb);
+            curr_inst_duration = inst.duration;
+            break;
+
         case RLCA:
             break;
 
@@ -667,15 +698,6 @@ uint8_t execute_instruction(gameboy *gb)
             break;
 
         case PUSH:
-            break;
-
-        case RETI:
-            break;
-
-        case DI:
-            break;
-
-        case EI:
             break;
 
         // CB Opcodes
