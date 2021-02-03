@@ -629,6 +629,10 @@ uint8_t execute_instruction(gameboy *gb)
             curr_inst_duration = inst.duration;
             break;
 
+        case RET:
+            curr_inst_duration = ret(gb, &inst);
+            break;
+
         case RLCA:
             break;
 
@@ -657,9 +661,6 @@ uint8_t execute_instruction(gameboy *gb)
             break;
 
         case HALT:
-            break;
-
-        case RET:
             break;
 
         case POP:

@@ -25,5 +25,6 @@ uint8_t jp(gameboy *gb, gb_instruction *inst);
 uint8_t jr(gameboy *gb, gb_instruction *inst);
 uint8_t call(gameboy *gb, gb_instruction *inst);
 void rst(gameboy *gb, gb_instruction *inst);
+uint8_t ret(gameboy *gb, gb_instruction *inst);
 
 #endif

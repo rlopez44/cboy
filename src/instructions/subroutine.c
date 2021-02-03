@@ -281,3 +281,51 @@ void rst(gameboy *gb, gb_instruction *inst)
     stack_push(gb, gb->cpu->reg->pc);
     gb->cpu->reg->pc = addr;
 }
+
+/* the return from subroutine (RET) instruction
+ * --------------------------------------------
+ * Some of the RET instructions are conditional, so
+ * we need to return the instruction duration.
+ *
+ * This instruction pops the program counter from
+ * the stack.
+ */
+uint8_t ret(gameboy *gb, gb_instruction *inst)
+{
+    uint8_t duration;
+    uint8_t will_ret; // whether the instruction will return
+    switch (inst->op1)
+    {
+        case NONE: // the unconditional RET
+            will_ret = 1;
+            break;
+
+        case CC_C:
+            will_ret = read_carry_flag(gb->cpu->reg);
+            break;
+
+        case CC_NC:
+            will_ret = !read_carry_flag(gb->cpu->reg);
+            break;
+
+        case CC_Z:
+            will_ret = read_zero_flag(gb->cpu->reg);
+            break;
+
+        case CC_NZ:
+            will_ret = !read_zero_flag(gb->cpu->reg);
+            break;
+    }
+
+    if (will_ret)
+    {
+        gb->cpu->reg->pc = stack_pop(gb);
+        duration = inst->duration;
+    }
+    else
+    {
+        duration = inst->alt_duration;
+    }
+
+    return duration;
+}
