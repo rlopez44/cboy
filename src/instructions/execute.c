@@ -675,18 +675,26 @@ uint8_t execute_instruction(gameboy *gb)
             break;
 
         case RLCA:
+            rlca(gb);
+            curr_inst_duration = inst.duration;
             break;
 
         case RRCA:
-            break;
-
-        case STOP:
+            rrca(gb);
+            curr_inst_duration = inst.duration;
             break;
 
         case RLA:
+            rla(gb);
+            curr_inst_duration = inst.duration;
             break;
 
         case RRA:
+            rra(gb);
+            curr_inst_duration = inst.duration;
+            break;
+
+        case STOP:
             break;
 
         case DAA:

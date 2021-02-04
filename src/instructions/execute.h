@@ -28,6 +28,12 @@ void rst(gameboy *gb, gb_instruction *inst);
 uint8_t ret(gameboy *gb, gb_instruction *inst);
 void reti(gameboy *gb);
 
+// bit shift instructions
+void rrca(gameboy *gb);
+void rlca(gameboy *gb);
+void rra(gameboy *gb);
+void rla(gameboy *gb);
+
 // miscellaneous instructions
 void ei(gameboy *gb);
 void di(gameboy *gb);
