@@ -664,6 +664,16 @@ uint8_t execute_instruction(gameboy *gb)
             curr_inst_duration = inst.duration;
             break;
 
+        case POP:
+            pop(gb, &inst);
+            curr_inst_duration = inst.duration;
+            break;
+
+        case PUSH:
+            push(gb, &inst);
+            curr_inst_duration = inst.duration;
+            break;
+
         case RLCA:
             break;
 
@@ -692,12 +702,6 @@ uint8_t execute_instruction(gameboy *gb)
             break;
 
         case HALT:
-            break;
-
-        case POP:
-            break;
-
-        case PUSH:
             break;
 
         // CB Opcodes

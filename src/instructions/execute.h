@@ -31,5 +31,7 @@ void reti(gameboy *gb);
 // miscellaneous instructions
 void ei(gameboy *gb);
 void di(gameboy *gb);
+void push(gameboy *gb, gb_instruction *inst);
+void pop(gameboy *gb, gb_instruction *inst);
 
 #endif
