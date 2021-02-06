@@ -39,5 +39,9 @@ void ei(gameboy *gb);
 void di(gameboy *gb);
 void push(gameboy *gb, gb_instruction *inst);
 void pop(gameboy *gb, gb_instruction *inst);
+void daa(gameboy *gb);
+void scf(gameboy *gb);
+void ccf(gameboy *gb);
+void cpl(gameboy *gb);
 
 #endif

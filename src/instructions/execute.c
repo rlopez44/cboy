@@ -694,19 +694,27 @@ uint8_t execute_instruction(gameboy *gb)
             curr_inst_duration = inst.duration;
             break;
 
-        case STOP:
-            break;
-
         case DAA:
-            break;
-
-        case CPL:
+            daa(gb);
+            curr_inst_duration = inst.duration;
             break;
 
         case SCF:
+            scf(gb);
+            curr_inst_duration = inst.duration;
+            break;
+
+        case CPL:
+            cpl(gb);
+            curr_inst_duration = inst.duration;
             break;
 
         case CCF:
+            ccf(gb);
+            curr_inst_duration = inst.duration;
+            break;
+
+        case STOP:
             break;
 
         case HALT:
