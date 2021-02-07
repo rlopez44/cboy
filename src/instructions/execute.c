@@ -553,8 +553,16 @@ uint8_t execute_instruction(gameboy *gb)
     uint8_t inst_code = read_byte(gb->memory, (gb->cpu->reg->pc)++);
     gb_instruction inst = instruction_table[inst_code];
 
-    // check if we need to access a prefixed instruction
-    // TODO: account for duration of the prefix opcode
+    /* Check if we need to access a prefixed instruction.
+     *
+     * NOTE: Currently, all of the prefixed instructions
+     * account for the time needed to read the prefix byte
+     * in their duration. They also account for the prefix
+     * byte in their instruction length (though the length
+     * is not currently used explicitly for any instruction).
+     *
+     * TODO: maybe account for prefix duration separately.
+     */
     if (inst.opcode == PREFIX)
     {
         // read the prefixed instruction code and access instruction
@@ -726,15 +734,23 @@ uint8_t execute_instruction(gameboy *gb)
 
         // CB Opcodes
         case RLC:
+            rlc(gb, &inst);
+            curr_inst_duration = inst.duration;
             break;
 
         case RRC:
+            rrc(gb, &inst);
+            curr_inst_duration = inst.duration;
             break;
 
         case RL:
+            rl(gb, &inst);
+            curr_inst_duration = inst.duration;
             break;
 
         case RR:
+            rr(gb, &inst);
+            curr_inst_duration = inst.duration;
             break;
 
         case SLA:

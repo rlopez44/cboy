@@ -33,6 +33,10 @@ void rrca(gameboy *gb);
 void rlca(gameboy *gb);
 void rra(gameboy *gb);
 void rla(gameboy *gb);
+void rlc(gameboy *gb, gb_instruction *inst);
+void rrc(gameboy *gb, gb_instruction *inst);
+void rl(gameboy *gb, gb_instruction *inst);
+void rr(gameboy *gb, gb_instruction *inst);
 
 // miscellaneous instructions
 void ei(gameboy *gb);
