@@ -202,7 +202,7 @@ void pop(gameboy *gb, gb_instruction *inst)
  *   borrowing during the adjustments. Hence, the Carry Flag
  *   retains its value from the previous instruction.
  */
- void daa(gameboy *gb)
+void daa(gameboy *gb)
 {
     uint8_t carry = read_carry_flag(gb->cpu->reg),
             subtract = read_subtract_flag(gb->cpu->reg),
@@ -319,4 +319,41 @@ void cpl(gameboy *gb)
     // set flags
     set_subtract_flag(gb->cpu->reg, 1);
     set_half_carry_flag(gb->cpu->reg, 1);
+}
+
+/* The STOP instruction
+ * ====================
+ * Enters the CPU into a very low power standby mode.
+ *
+ * Here we only set a flag for the emulator that the
+ * GB has been STOPped. The actual exiting out of this
+ * state is handled via interrupts.
+ *
+ * Note that the STOP instruction is 2 bytes long,
+ * but the second byte of the instruction is ignored.
+ *
+ * TODO: see about inlining this function
+ */
+void stop(gameboy *gb)
+{
+    // ignore the second byte of the instruction
+    ++(gb->cpu->reg->pc);
+
+    // set the Game Boy's stopped flag
+    gb->is_stopped = true;
+}
+
+/* The HALT instruction
+ * ====================
+ * Enter the CPU into a low-power mode.
+ *
+ * Here we set a flag for the emulator that the
+ * GB has been HALTed. Exiting out of this state
+ * is handled via interrupts.
+ *
+ * TODO: see about inlining this function
+ */
+void halt(gameboy *gb)
+{
+    gb->is_halted = true;
 }

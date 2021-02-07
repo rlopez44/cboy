@@ -9,6 +9,8 @@
 typedef struct gameboy {
     gb_cpu *cpu;
     gb_memory *memory;
+
+    bool is_stopped, is_halted;
 } gameboy;
 
 // stack push and pop operations

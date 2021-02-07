@@ -715,9 +715,13 @@ uint8_t execute_instruction(gameboy *gb)
             break;
 
         case STOP:
+            stop(gb);
+            curr_inst_duration = inst.duration;
             break;
 
         case HALT:
+            halt(gb);
+            curr_inst_duration = inst.duration;
             break;
 
         // CB Opcodes

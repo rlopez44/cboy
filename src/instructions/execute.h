@@ -43,5 +43,7 @@ void daa(gameboy *gb);
 void scf(gameboy *gb);
 void ccf(gameboy *gb);
 void cpl(gameboy *gb);
+void stop(gameboy *gb);
+void halt(gameboy *gb);
 
 #endif
