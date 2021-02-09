@@ -37,6 +37,10 @@ void rlc(gameboy *gb, gb_instruction *inst);
 void rrc(gameboy *gb, gb_instruction *inst);
 void rl(gameboy *gb, gb_instruction *inst);
 void rr(gameboy *gb, gb_instruction *inst);
+void sla(gameboy *gb, gb_instruction *inst);
+void sra(gameboy *gb, gb_instruction *inst);
+void srl(gameboy *gb, gb_instruction *inst);
+void swap(gameboy *gb, gb_instruction *inst);
 
 // miscellaneous instructions
 void ei(gameboy *gb);

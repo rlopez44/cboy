@@ -754,15 +754,23 @@ uint8_t execute_instruction(gameboy *gb)
             break;
 
         case SLA:
+            sla(gb, &inst);
+            curr_inst_duration = inst.duration;
             break;
 
         case SRA:
+            sra(gb, &inst);
+            curr_inst_duration = inst.duration;
             break;
 
         case SWAP:
+            swap(gb, &inst);
+            curr_inst_duration = inst.duration;
             break;
 
         case SRL:
+            srl(gb, &inst);
+            curr_inst_duration = inst.duration;
             break;
 
         case BIT:
