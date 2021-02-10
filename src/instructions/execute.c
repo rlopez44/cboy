@@ -774,12 +774,18 @@ uint8_t execute_instruction(gameboy *gb)
             break;
 
         case BIT:
+            bit(gb, &inst);
+            curr_inst_duration = inst.duration;
             break;
 
         case RES:
+            res(gb, &inst);
+            curr_inst_duration = inst.duration;
             break;
 
         case SET:
+            set(gb, &inst);
+            curr_inst_duration = inst.duration;
             break;
 
         // invalid opcodes are just ignored

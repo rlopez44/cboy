@@ -42,6 +42,11 @@ void sra(gameboy *gb, gb_instruction *inst);
 void srl(gameboy *gb, gb_instruction *inst);
 void swap(gameboy *gb, gb_instruction *inst);
 
+// other bit operations
+void bit(gameboy *gb, gb_instruction *inst);
+void res(gameboy *gb, gb_instruction *inst);
+void set(gameboy *gb, gb_instruction *inst);
+
 // miscellaneous instructions
 void ei(gameboy *gb);
 void di(gameboy *gb);

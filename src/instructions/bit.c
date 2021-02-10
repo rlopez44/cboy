@@ -84,13 +84,14 @@ void rra(gameboy *gb)
 }
 
 /* Helper function for use by the RLC, RRC, RL, RR, SLA, SRA,
- * SRL, and SWAP instructions. Returns a pointer to one of the
- * CPU's 8-bit registers based on the instruction passed in.
+ * SRL, SWAP, RES, and SET instructions. Returns a pointer to
+ * one of the CPU's 8-bit registers based on the operand
+ * passed in.
  */
-static uint8_t *fetch_register(gameboy *gb, gb_instruction *inst)
+static uint8_t *fetch_register(gameboy *gb, enum operands op)
 {
     uint8_t *reg;
-    switch (inst->op1)
+    switch (op)
     {
         case REG_A:
             reg = &(gb->cpu->reg->a);
@@ -161,7 +162,7 @@ void rlc(gameboy *gb, gb_instruction *inst)
     }
     else
     {
-        uint8_t *reg = fetch_register(gb, inst); // the register to rotate
+        uint8_t *reg = fetch_register(gb, inst->op1); // the register to rotate
 
         // perform the rotation and set flags
         bit_seven = *reg >> 7;
@@ -208,7 +209,7 @@ void rrc(gameboy *gb, gb_instruction *inst)
     }
     else
     {
-        uint8_t *reg = fetch_register(gb, inst); // the register to rotate
+        uint8_t *reg = fetch_register(gb, inst->op1); // the register to rotate
 
         // perform the rotation and set flags
         bit_zero = *reg & 1;
@@ -258,7 +259,7 @@ void rl(gameboy *gb, gb_instruction *inst)
     }
     else
     {
-        uint8_t *reg = fetch_register(gb, inst); // the register to rotate
+        uint8_t *reg = fetch_register(gb, inst->op1); // the register to rotate
 
         // perform the rotation and set flags
         bit_seven = *reg >> 7;
@@ -308,7 +309,7 @@ void rr(gameboy *gb, gb_instruction *inst)
     }
     else
     {
-        uint8_t *reg = fetch_register(gb, inst); // the register to rotate
+        uint8_t *reg = fetch_register(gb, inst->op1); // the register to rotate
 
         // perform the rotation and set flags
         bit_zero = *reg & 1;
@@ -355,7 +356,7 @@ void sla(gameboy *gb, gb_instruction *inst)
     }
     else
     {
-        uint8_t *reg = fetch_register(gb, inst); // the register to shift
+        uint8_t *reg = fetch_register(gb, inst->op1); // the register to shift
 
         // Perform the shift and set flags.
         // Note that bit zero is reset by the left shift
@@ -404,7 +405,7 @@ void sra(gameboy *gb, gb_instruction *inst)
     }
     else
     {
-        uint8_t *reg = fetch_register(gb, inst); // the register to shift
+        uint8_t *reg = fetch_register(gb, inst->op1); // the register to shift
 
         // Perform the shift and set flags.
         bit_zero = *reg & 1;
@@ -451,7 +452,7 @@ void srl(gameboy *gb, gb_instruction *inst)
     }
     else
     {
-        uint8_t *reg = fetch_register(gb, inst); // the register to shift
+        uint8_t *reg = fetch_register(gb, inst->op1); // the register to shift
 
         // Perform the shift and set flags.
         // Bit seven is reset by the shift.
@@ -497,10 +498,152 @@ void swap(gameboy *gb, gb_instruction *inst)
     }
     else
     {
-        uint8_t *reg = fetch_register(gb, inst); // the register to swap
+        uint8_t *reg = fetch_register(gb, inst->op1); // the register to swap
 
         // swap nibbles
         *reg = (*reg << 4) | (*reg >> 4);
         set_flags(gb->cpu->reg, *reg == 0, 0, 0, 0);
     }
+}
+
+/* The BIT instruction
+ * ===================
+ *
+ * BIT n, r8
+ * ---------
+ * Test bit n of the given register and set
+ * the zero flag if that bit is not set.
+ *
+ * BIT n, [HL]
+ * ---------
+ * Test bit n of the byte pointed to by HL and
+ * set the zero flag if that bit is not set.
+ *
+ * Flags affected
+ * --------------
+ * Zero Flag:          set if selected bit is 0
+ * Subtract Flag:      reset
+ * Half Carry Flag:    set
+ */
+void bit(gameboy *gb, gb_instruction *inst)
+{
+    /* The BIT enum values of the opcodes enum are all
+     * adjacent to each other in ascending order, so we
+     * can determine which bit to use by offsetting from
+     * BIT_0.
+     */
+    uint8_t value, bit_number = inst->op1 - BIT_0;
+
+    // handle PTR_HL separately, since we need to read from memory
+    if (inst->op2 == PTR_HL)
+    {
+        value = read_byte(gb->memory, read_hl(gb->cpu->reg));
+    }
+    else
+    {
+        switch (inst->op2)
+        {
+            case REG_A:
+                value = gb->cpu->reg->a;
+                break;
+
+            case REG_B:
+                value = gb->cpu->reg->b;
+                break;
+
+            case REG_C:
+                value = gb->cpu->reg->c;
+                break;
+
+            case REG_D:
+                value = gb->cpu->reg->d;
+                break;
+
+            case REG_E:
+                value = gb->cpu->reg->e;
+                break;
+
+            case REG_H:
+                value = gb->cpu->reg->h;
+                break;
+
+            case REG_L:
+                value = gb->cpu->reg->l;
+                break;
+        }
+    }
+
+    set_zero_flag(gb->cpu->reg, value & (1 << bit_number) == 0);
+    set_subtract_flag(gb->cpu->reg, 0);
+    set_half_carry_flag(gb->cpu->reg, 1);
+}
+
+/* The RESet instruction
+ * =====================
+ *
+ * RES n, r8
+ * ---------
+ * Set bit n in the given register to 0.
+ *
+ * RES n, [HL]
+ * ---------
+ * Set bit n in the byte pointed to by HL to 0.
+ */
+void res(gameboy *gb, gb_instruction *inst)
+{
+    /* The BIT enum values of the opcodes enum are all
+     * adjacent to each other in ascending order, so we
+     * can determine which bit to use by offsetting from
+     * BIT_0.
+     */
+    uint8_t bit_number = inst->op1 - BIT_0;
+
+    // handle PTR_HL separately, since we read from memory
+    if (inst->op2 == PTR_HL)
+    {
+        uint16_t addr = read_hl(gb->cpu->reg);
+        uint8_t value = read_byte(gb->memory, addr);
+        write_byte(gb->memory, addr, value & ~(1 << bit_number));
+    }
+    else
+    {
+        uint8_t *reg = fetch_register(gb, inst->op2);
+        *reg &= ~(1 << bit_number);
+    }
+
+}
+
+/* The SET instruction
+ * ===================
+ *
+ * SET n, r8
+ * ---------
+ * Set bit n in the given register to 1.
+ *
+ * SET n, [HL]
+ * ---------
+ * Set bit n in the byte pointed to by HL to 1.
+ */
+void set(gameboy *gb, gb_instruction *inst)
+{
+    /* The BIT enum values of the opcodes enum are all
+     * adjacent to each other in ascending order, so we
+     * can determine which bit to use by offsetting from
+     * BIT_0.
+     */
+    uint8_t bit_number = inst->op1 - BIT_0;
+
+    // handle PTR_HL separately, since we read from memory
+    if (inst->op2 == PTR_HL)
+    {
+        uint16_t addr = read_hl(gb->cpu->reg);
+        uint8_t value = read_byte(gb->memory, addr);
+        write_byte(gb->memory, addr, value | (1 << bit_number));
+    }
+    else
+    {
+        uint8_t *reg = fetch_register(gb, inst->op2);
+        *reg |= 1 << bit_number;
+    }
+
 }
