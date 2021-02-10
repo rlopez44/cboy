@@ -83,6 +83,46 @@ void rra(gameboy *gb)
     set_flags(gb->cpu->reg, 0, 0, 0, bit_zero);
 }
 
+/* Helper function for use by the RLC, RRC, RL, RR, SLA, SRA,
+ * SRL, and SWAP instructions. Returns a pointer to one of the
+ * CPU's 8-bit registers based on the instruction passed in.
+ */
+static uint8_t *fetch_register(gameboy *gb, gb_instruction *inst)
+{
+    uint8_t *reg;
+    switch (inst->op1)
+    {
+        case REG_A:
+            reg = &(gb->cpu->reg->a);
+            break;
+
+        case REG_B:
+            reg = &(gb->cpu->reg->b);
+            break;
+
+        case REG_C:
+            reg = &(gb->cpu->reg->c);
+            break;
+
+        case REG_D:
+            reg = &(gb->cpu->reg->d);
+            break;
+
+        case REG_E:
+            reg = &(gb->cpu->reg->e);
+            break;
+
+        case REG_H:
+            reg = &(gb->cpu->reg->h);
+            break;
+
+        case REG_L:
+            reg = &(gb->cpu->reg->l);
+            break;
+    }
+    return reg;
+}
+
 /* the Rotate Left Circular instruction
  * ====================================
  *
@@ -121,37 +161,7 @@ void rlc(gameboy *gb, gb_instruction *inst)
     }
     else
     {
-        uint8_t *reg; // the register to rotate
-        switch (inst->op1)
-        {
-            case REG_A:
-                reg = &(gb->cpu->reg->a);
-                break;
-
-            case REG_B:
-                reg = &(gb->cpu->reg->b);
-                break;
-
-            case REG_C:
-                reg = &(gb->cpu->reg->c);
-                break;
-
-            case REG_D:
-                reg = &(gb->cpu->reg->d);
-                break;
-
-            case REG_E:
-                reg = &(gb->cpu->reg->e);
-                break;
-
-            case REG_H:
-                reg = &(gb->cpu->reg->h);
-                break;
-
-            case REG_L:
-                reg = &(gb->cpu->reg->l);
-                break;
-        }
+        uint8_t *reg = fetch_register(gb, inst); // the register to rotate
 
         // perform the rotation and set flags
         bit_seven = *reg >> 7;
@@ -198,37 +208,7 @@ void rrc(gameboy *gb, gb_instruction *inst)
     }
     else
     {
-        uint8_t *reg; // the register to rotate
-        switch (inst->op1)
-        {
-            case REG_A:
-                reg = &(gb->cpu->reg->a);
-                break;
-
-            case REG_B:
-                reg = &(gb->cpu->reg->b);
-                break;
-
-            case REG_C:
-                reg = &(gb->cpu->reg->c);
-                break;
-
-            case REG_D:
-                reg = &(gb->cpu->reg->d);
-                break;
-
-            case REG_E:
-                reg = &(gb->cpu->reg->e);
-                break;
-
-            case REG_H:
-                reg = &(gb->cpu->reg->h);
-                break;
-
-            case REG_L:
-                reg = &(gb->cpu->reg->l);
-                break;
-        }
+        uint8_t *reg = fetch_register(gb, inst); // the register to rotate
 
         // perform the rotation and set flags
         bit_zero = *reg & 1;
@@ -278,37 +258,7 @@ void rl(gameboy *gb, gb_instruction *inst)
     }
     else
     {
-        uint8_t *reg; // the register to rotate
-        switch (inst->op1)
-        {
-            case REG_A:
-                reg = &(gb->cpu->reg->a);
-                break;
-
-            case REG_B:
-                reg = &(gb->cpu->reg->b);
-                break;
-
-            case REG_C:
-                reg = &(gb->cpu->reg->c);
-                break;
-
-            case REG_D:
-                reg = &(gb->cpu->reg->d);
-                break;
-
-            case REG_E:
-                reg = &(gb->cpu->reg->e);
-                break;
-
-            case REG_H:
-                reg = &(gb->cpu->reg->h);
-                break;
-
-            case REG_L:
-                reg = &(gb->cpu->reg->l);
-                break;
-        }
+        uint8_t *reg = fetch_register(gb, inst); // the register to rotate
 
         // perform the rotation and set flags
         bit_seven = *reg >> 7;
@@ -358,37 +308,7 @@ void rr(gameboy *gb, gb_instruction *inst)
     }
     else
     {
-        uint8_t *reg; // the register to rotate
-        switch (inst->op1)
-        {
-            case REG_A:
-                reg = &(gb->cpu->reg->a);
-                break;
-
-            case REG_B:
-                reg = &(gb->cpu->reg->b);
-                break;
-
-            case REG_C:
-                reg = &(gb->cpu->reg->c);
-                break;
-
-            case REG_D:
-                reg = &(gb->cpu->reg->d);
-                break;
-
-            case REG_E:
-                reg = &(gb->cpu->reg->e);
-                break;
-
-            case REG_H:
-                reg = &(gb->cpu->reg->h);
-                break;
-
-            case REG_L:
-                reg = &(gb->cpu->reg->l);
-                break;
-        }
+        uint8_t *reg = fetch_register(gb, inst); // the register to rotate
 
         // perform the rotation and set flags
         bit_zero = *reg & 1;
@@ -435,37 +355,7 @@ void sla(gameboy *gb, gb_instruction *inst)
     }
     else
     {
-        uint8_t *reg; // the register to shift
-        switch (inst->op1)
-        {
-            case REG_A:
-                reg = &(gb->cpu->reg->a);
-                break;
-
-            case REG_B:
-                reg = &(gb->cpu->reg->b);
-                break;
-
-            case REG_C:
-                reg = &(gb->cpu->reg->c);
-                break;
-
-            case REG_D:
-                reg = &(gb->cpu->reg->d);
-                break;
-
-            case REG_E:
-                reg = &(gb->cpu->reg->e);
-                break;
-
-            case REG_H:
-                reg = &(gb->cpu->reg->h);
-                break;
-
-            case REG_L:
-                reg = &(gb->cpu->reg->l);
-                break;
-        }
+        uint8_t *reg = fetch_register(gb, inst); // the register to shift
 
         // Perform the shift and set flags.
         // Note that bit zero is reset by the left shift
@@ -514,37 +404,7 @@ void sra(gameboy *gb, gb_instruction *inst)
     }
     else
     {
-        uint8_t *reg; // the register to shift
-        switch (inst->op1)
-        {
-            case REG_A:
-                reg = &(gb->cpu->reg->a);
-                break;
-
-            case REG_B:
-                reg = &(gb->cpu->reg->b);
-                break;
-
-            case REG_C:
-                reg = &(gb->cpu->reg->c);
-                break;
-
-            case REG_D:
-                reg = &(gb->cpu->reg->d);
-                break;
-
-            case REG_E:
-                reg = &(gb->cpu->reg->e);
-                break;
-
-            case REG_H:
-                reg = &(gb->cpu->reg->h);
-                break;
-
-            case REG_L:
-                reg = &(gb->cpu->reg->l);
-                break;
-        }
+        uint8_t *reg = fetch_register(gb, inst); // the register to shift
 
         // Perform the shift and set flags.
         bit_zero = *reg & 1;
@@ -591,37 +451,7 @@ void srl(gameboy *gb, gb_instruction *inst)
     }
     else
     {
-        uint8_t *reg; // the register to shift
-        switch (inst->op1)
-        {
-            case REG_A:
-                reg = &(gb->cpu->reg->a);
-                break;
-
-            case REG_B:
-                reg = &(gb->cpu->reg->b);
-                break;
-
-            case REG_C:
-                reg = &(gb->cpu->reg->c);
-                break;
-
-            case REG_D:
-                reg = &(gb->cpu->reg->d);
-                break;
-
-            case REG_E:
-                reg = &(gb->cpu->reg->e);
-                break;
-
-            case REG_H:
-                reg = &(gb->cpu->reg->h);
-                break;
-
-            case REG_L:
-                reg = &(gb->cpu->reg->l);
-                break;
-        }
+        uint8_t *reg = fetch_register(gb, inst); // the register to shift
 
         // Perform the shift and set flags.
         // Bit seven is reset by the shift.
@@ -667,37 +497,7 @@ void swap(gameboy *gb, gb_instruction *inst)
     }
     else
     {
-        uint8_t *reg; // the register to swap
-        switch (inst->op1)
-        {
-            case REG_A:
-                reg = &(gb->cpu->reg->a);
-                break;
-
-            case REG_B:
-                reg = &(gb->cpu->reg->b);
-                break;
-
-            case REG_C:
-                reg = &(gb->cpu->reg->c);
-                break;
-
-            case REG_D:
-                reg = &(gb->cpu->reg->d);
-                break;
-
-            case REG_E:
-                reg = &(gb->cpu->reg->e);
-                break;
-
-            case REG_H:
-                reg = &(gb->cpu->reg->h);
-                break;
-
-            case REG_L:
-                reg = &(gb->cpu->reg->l);
-                break;
-        }
+        uint8_t *reg = fetch_register(gb, inst); // the register to swap
 
         // swap nibbles
         *reg = (*reg << 4) | (*reg >> 4);
