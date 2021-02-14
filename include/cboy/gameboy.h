@@ -20,4 +20,10 @@ void stack_push(gameboy *gb, uint16_t value);
 
 uint16_t stack_pop(gameboy *gb);
 
+// initialize the Game Boy
+gameboy *init_gameboy(void);
+
+// free the Game Boy
+void free_gameboy(gameboy *gb);
+
 #endif

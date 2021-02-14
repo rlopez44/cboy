@@ -20,10 +20,13 @@ typedef struct gb_cartridge {
     uint16_t num_banks;
 } gb_cartridge;
 
+/* free the memory allocated for the cartridge */
 void unload_cartridge(gb_cartridge *cart);
 
+/* initialize the cartridge struct */
 gb_cartridge *init_cartridge(void);
 
+/* load a ROM file into the cartridge struct */
 ROM_LOAD_STATUS load_rom(gb_cartridge *cart, FILE *rom_file);
 
 #endif

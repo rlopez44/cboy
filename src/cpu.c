@@ -1,4 +1,7 @@
+#include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <stdbool.h>
 #include "cboy/cpu.h"
 
 /* bc register contains the b register in the
@@ -121,4 +124,78 @@ uint8_t read_carry_flag(gb_registers *reg)
 {
     // fourth bit of the flags register
     return (reg->f >> 4) & 1;
+}
+
+// utility function for printing out the CPU register contents
+void print_registers(gb_cpu *cpu)
+{
+    const char *message = "Register Contents:\n"
+                          "------------------\n"
+                          "AF: 0x%04x\n"
+                          "BC: 0x%04x\n"
+                          "DE: 0x%04x\n"
+                          "HL: 0x%04x\n"
+                          "SP: 0x%04x\n"
+                          "PC: 0x%04x\n";
+    printf(message,
+           read_af(cpu->reg),
+           read_bc(cpu->reg),
+           read_de(cpu->reg),
+           read_hl(cpu->reg),
+           cpu->reg->sp,
+           cpu->reg->pc);
+}
+
+/* Allocate memory for the CPU struct
+ * and initialize its components.
+ *
+ * CPU register initial values
+ * ---------------------------
+ *  AF:    0x01b0
+ *  BC:    0x0013
+ *  DE:    0x00d8
+ *  HL:    0x014d
+ *  SP:    0xfffe
+ *  PC:    0x0100
+ *
+ * Returns NULL if the allocation fails.
+ */
+gb_cpu *init_cpu(void)
+{
+    gb_cpu *cpu = malloc(sizeof(gb_cpu));
+
+    if (cpu == NULL)
+    {
+        return NULL;
+    }
+
+    // TODO: see if correct initial value is true
+    cpu->ime_flag = true;
+    cpu->ime_delayed_set = false;
+
+    // allocate the registers
+    cpu->reg = malloc(sizeof(gb_registers));
+
+    if (cpu->reg == NULL)
+    {
+        free(cpu);
+        return NULL;
+    }
+
+    // set the initial register values
+    write_af(cpu->reg, 0x01b0);
+    write_bc(cpu->reg, 0x0013);
+    write_de(cpu->reg, 0x00d8);
+    write_hl(cpu->reg, 0x014d);
+    cpu->reg->sp = 0xfffe;
+    cpu->reg->pc = 0x0100;
+
+    return cpu;
+}
+
+/* Free the allocated memory for the CPU struct */
+void free_cpu(gb_cpu *cpu)
+{
+    free(cpu->reg);
+    free(cpu);
 }
