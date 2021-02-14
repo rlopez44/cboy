@@ -1,10 +1,9 @@
 CC = gcc
 CFLAGS = -I./include/
 DEBUG_CFLAG = -g
-OBJS = obj/main.o obj/gameboy.o obj/cpu.o obj/memory.o
-OBJS += obj/instructions/execute.o obj/instructions/load.o
-OBJS += obj/instructions/arithmetic.o obj/instructions/subroutine.o
-OBJS += obj/instructions/misc.o obj/instructions/bit.o
+
+SRC = $(wildcard src/*.c) $(wildcard src/instructions/*.c)
+OBJS = $(patsubst src/%.c, obj/%.o, $(SRC))
 
 all: directories cboy
 
@@ -16,13 +15,13 @@ directories:
 	@mkdir -p ./obj/instructions/
 
 cboy: $(OBJS)
-	$(CC) $(CFLAGS) -o bin/$@ $^
+	$(CC) $(CFLAGS) $^ -o bin/$@
 
 cboy-debug: $(OBJS)
-	$(CC) $(CFLAGS) $(DEBUG_CFLAG) -o bin/cboy $^
+	$(CC) $(CFLAGS) $(DEBUG_CFLAG) $^ -o bin/cboy
 
 obj/%.o: src/%.c
-	$(CC) $(CFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) -c $< -o $@
 
 # clean object files directory
 clean:
