@@ -21,7 +21,7 @@ cboy-debug: $(OBJS)
 	$(CC) $(CFLAGS) $(DEBUG_CFLAG) $^ -o bin/cboy
 
 obj/%.o: src/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) $(DEBUG_CFLAG) -c $< -o $@
 
 # clean object files directory
 clean:
