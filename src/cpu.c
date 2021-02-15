@@ -169,8 +169,13 @@ gb_cpu *init_cpu(void)
         return NULL;
     }
 
-    // TODO: see if correct initial value is true
-    cpu->ime_flag = true;
+    /* The GiiBiiAdvance emulator (see References section
+     * of my README for a link) sets this flag to zero
+     * during initialization, so I will too.
+     */
+    cpu->ime_flag = false;
+
+    // only true when a EI instruction is executed
     cpu->ime_delayed_set = false;
 
     // allocate the registers
