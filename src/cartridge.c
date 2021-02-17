@@ -223,6 +223,12 @@ ROM_LOAD_STATUS load_rom(gb_cartridge *cart, FILE *rom_file)
      */
     if (num_banks != MAX_ROM_BANKS)
     {
+        // free the unused banks before resizing the banks array
+        for (int i = num_banks; i < MAX_ROM_BANKS; ++i)
+        {
+            free((cart->rom_banks)[i]);
+        }
+
         uint8_t **tmp = realloc(cart->rom_banks, num_banks * sizeof(uint8_t *));
 
         if (tmp == NULL)
