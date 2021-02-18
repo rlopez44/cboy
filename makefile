@@ -1,10 +1,8 @@
 CC = gcc
 CFLAGS = -I./include/
-DEBUG_CFLAG = -g
-
 OBJ_DIR = obj
 BIN_DIR = bin
-
+DEBUG_DIR = debug
 BIN = cboy
 
 # so we can reference all our source files without directories
@@ -12,32 +10,32 @@ vpath %.c src/ src/instructions/
 
 # list of all our source files without directories
 SRC = $(notdir $(wildcard src/*.c) $(wildcard src/instructions/*.c))
-# list of object file names without directories
+
+# list of object file names for debug and regular builds
 OBJS = $(patsubst %.c, $(OBJ_DIR)/%.o, $(SRC))
+DEBUG_OBJS = $(patsubst %.c, $(OBJ_DIR)/$(DEBUG_DIR)/%.o, $(SRC))
 
-all: build-emulator
+all: $(BIN_DIR)/$(BIN)
 
-# compile with debug symbols
-debug: build-emulator-debug
+debug: CFLAGS += -g
+debug: $(BIN_DIR)/$(DEBUG_DIR)/$(BIN)
 
 # rules for making required directories
-$(BIN_DIR):
-	mkdir -p $(BIN_DIR)/
+$(BIN_DIR) $(OBJ_DIR) $(BIN_DIR)/$(DEBUG_DIR) $(OBJ_DIR)/$(DEBUG_DIR):
+	mkdir -p $@/
 
-$(OBJ_DIR):
-	mkdir -p $(OBJ_DIR)/
+# regular build
+$(BIN_DIR)/$(BIN): $(OBJS) | $(BIN_DIR)
+	$(CC) $(CFLAGS) $^ -o $@
 
-# strip debug symbols from the executable after compiling
-build-emulator: $(OBJS) | $(BIN_DIR)
-	$(CC) $(CFLAGS) $^ -o $(BIN_DIR)/$(BIN)
-	strip $(DEBUG_CFLAG) $(BIN_DIR)/$(BIN) -o $(BIN_DIR)/$(BIN)
+# debug build
+$(BIN_DIR)/$(DEBUG_DIR)/$(BIN): $(DEBUG_OBJS) | $(BIN_DIR)/$(DEBUG_DIR)
+	$(CC) $(CFLAGS) $^ -o $@
 
-build-emulator-debug: $(OBJS) | $(BIN_DIR)
-	$(CC) $(CFLAGS) $(DEBUG_CFLAG) $^ -o $(BIN_DIR)/$(BIN)
-
-# add debug symbols to the object files
-$(OBJ_DIR)/%.o: %.c | $(OBJ_DIR)
-	$(CC) $(CFLAGS) $(DEBUG_CFLAG) -c $< -o $@
+# object files
+.SECONDEXPANSION:
+%.o: $$(*F).c | $$(@D)
+	$(CC) $(CFLAGS) -c $< -o $@
 
 # clean object files directory
 clean:
