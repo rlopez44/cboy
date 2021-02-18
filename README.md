@@ -1,17 +1,27 @@
 # CBoy
 A Nintendo Game Boy emulator written in C.
-I've never made an emulator before, and I've also never programmed anything substantial
-using C, so I'm kinda jumping off the deep end here. Below you'll find the references
-I'm using as I build this out.
+This is the first emulator I've ever tried to build and
+also the first substantial project I've written using C.
 
 # Compiling the Emulator
-To compile the emulator, run `make` in the project's root directory. To compile with debug symbols,
-run `make debug` instead. The emulator will be compiled in the `bin/` subdirectory.
+To compile the emulator, run `make` in the project's root directory.
+This will compile the emulator in the `bin/` subdirectory. The
+corresponding object files will be stored in the `obj/` subdirectory.
+To compile with debug symbols, run `make debug` instead. This debug
+emulator will be compiled in the `bin/debug/` subdirectory and the
+corresponding object files will be stored in the `obj/debug/`
+subdirectory.
+
+# Running the Emulator
+To run the emulator, simply execute the following: `bin/cboy <rom_file_path>`.
+If you want to run the emulator with debug symbols, then use `bin/debug/cboy`
+instead.
 
 # Clean Up
-The `make` and `make debug` commands create `obj/` and `bin/` subdirectories for storing object files
-and the emulator, respectively. To clean up the `obj/` directory, run `make clean`. To clean up the
-`obj/` and `bin/` directories, run `make full-clean`.
+To clean up object files used in prior compilations, run `make clean`.
+To clean up both object files and the emulator from prior compilations,
+run `make full-clean`. These commands are useful if you want to compile
+completely from scratch at any point.
 
 # References
 * [*DMG-01: How to Emulate a Game Boy*](https://rylev.github.io/DMG-01/public/book/)
