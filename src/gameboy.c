@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -39,17 +40,20 @@ uint16_t stack_pop(gameboy *gb)
 }
 
 /* Allocates memory for the Game Boy struct
- * and initializes the Game Boy and its components
+ * and initializes the Game Boy and its components.
+ * Loads the ROM file into the emulator.
  *
- * Returns NULL if the allocation fails
+ * If initialization fails then NULL is returned
+ * and an error message is printed out.
  */
-gameboy *init_gameboy(void)
+gameboy *init_gameboy(const char *rom_file_path)
 {
     // allocate the Game Boy struct
     gameboy *gb = malloc(sizeof(gameboy));
 
     if (gb == NULL)
     {
+        fprintf(stderr, "Not enough memory to initialize the emulator\n");
         return NULL;
     }
     gb->is_halted = false;
@@ -85,6 +89,36 @@ gameboy *init_gameboy(void)
         return NULL;
     }
 
+    // open the ROM file to load it into the emulator
+    FILE *rom_file = fopen(rom_file_path, "rb");
+
+    if (rom_file == NULL)
+    {
+        fprintf(stderr, "Failed to open the ROM file (incorrect path?)\n");
+        free_gameboy(gb);
+        return NULL;
+    }
+
+    // load the ROM file into the emulator
+    ROM_LOAD_STATUS load_status = load_rom(gb->cart, rom_file);
+    fclose(rom_file);
+
+    if (load_status != ROM_LOAD_SUCCESS)
+    {
+        if (load_status == MALFORMED_ROM)
+        {
+            fprintf(stderr, "ROM file is incorrectly formatted\n");
+        }
+        else if (load_status == ROM_LOAD_ERROR)
+        {
+            fprintf(stderr, "Failed to load the ROM into the emulator (I/O or memory error)\n");
+        }
+
+        free_gameboy(gb);
+        return NULL;
+    }
+
+    // init successful and ROM loaded
     return gb;
 }
 
