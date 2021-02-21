@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 #include "cboy/gameboy.h"
 #include "cboy/memory.h"
 #include "cboy/cartridge.h"
@@ -37,6 +38,44 @@ uint16_t stack_pop(gameboy *gb)
     uint8_t hi = read_byte(gb->memory, (gb->cpu->reg->sp)++);
 
     return (uint16_t)(hi << 8) | (uint16_t)lo;
+}
+
+/* Verifies the Nintendo logo bitmap located in the
+ * ROM file. If this bitmap is incorrect, an error
+ * is printed out indicating this game wouldn't
+ * run on an actual Game Boy. However, the emulator
+ * doesn't actually care if the bitmap is correct.
+ */
+static bool verify_logo(gameboy *gb)
+{
+    // The correct bytes for the Game Boy logo
+    // See: https://gbdev.io/pandocs/#the-cartridge-header
+    const uint8_t nintendo_logo[48] = {
+        0xce, 0xed, 0x66, 0x66, 0xcc, 0x0d, 0x00, 0x0b,
+        0x03, 0x73, 0x00, 0x83, 0x00, 0x0c, 0x00, 0x0d,
+        0x00, 0x08, 0x11, 0x1f, 0x88, 0x89, 0x00, 0x0e,
+        0xdc, 0xcc, 0x6e, 0xe6, 0xdd, 0xdd, 0xd9, 0x99,
+        0xbb, 0xbb, 0x67, 0x63, 0x6e, 0x0e, 0xec, 0xcc,
+        0xdd, 0xdc, 0x99, 0x9f, 0xbb, 0xb9, 0x33, 0x3e,
+    };
+
+    // The logo bitmap is located at bytes 0x104-0x133 in the ROM
+    uint8_t rom_nintendo_logo[48];
+    uint8_t *logo_addr = gb->cart->rom_banks[0] + 0x104;
+    memcpy(rom_nintendo_logo, logo_addr, sizeof rom_nintendo_logo);
+
+    // check the bitmap
+    bool valid_bitmap = !memcmp(nintendo_logo,
+                                rom_nintendo_logo,
+                                sizeof nintendo_logo);
+
+    if (!valid_bitmap)
+    {
+        fprintf(stderr, "NOTE: The ROM Nintendo logo bitmap is incorrect."
+                        " This ROM wouldn't run on a real Game Boy\n\n");
+    }
+
+    return valid_bitmap;
 }
 
 /* Allocates memory for the Game Boy struct
@@ -117,6 +156,9 @@ gameboy *init_gameboy(const char *rom_file_path)
         free_gameboy(gb);
         return NULL;
     }
+
+    // verify the ROM's Nintendo logo bitmap
+    verify_logo(gb);
 
     // init successful and ROM loaded
     return gb;
