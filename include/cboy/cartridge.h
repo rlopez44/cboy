@@ -54,4 +54,7 @@ gb_cartridge *init_cartridge(void);
 /* load a ROM file into the cartridge struct */
 ROM_LOAD_STATUS load_rom(gb_cartridge *cart, FILE *rom_file);
 
+/* utility function for printing out the cartridge MBC type */
+void print_mbc_type(gb_cartridge *cart);
+
 #endif

@@ -472,3 +472,58 @@ ROM_LOAD_STATUS load_rom(gb_cartridge *cart, FILE *rom_file)
 
     return ROM_LOAD_SUCCESS;
 }
+
+/* print out the cartridge MBC type */
+void print_mbc_type(gb_cartridge *cart)
+{
+    const char *mbc_type;
+
+    switch (cart->mbc)
+    {
+        case UNKNOWN_MBC:
+            mbc_type = "Unknown MBC";
+            break;
+
+        case NO_MBC:
+            mbc_type = "No MBC";
+            break;
+
+        case MBC1:
+            mbc_type = "MBC1";
+            break;
+
+        case MBC2:
+            mbc_type = "MBC2";
+            break;
+
+        case MBC3:
+            mbc_type = "MBC3";
+            break;
+
+        case MBC5:
+            mbc_type = "MBC5";
+            break;
+
+        case MBC6:
+            mbc_type = "MBC6";
+            break;
+
+        case MBC7:
+            mbc_type = "MBC7";
+            break;
+
+        case MMM01:
+            mbc_type = "MMM01";
+            break;
+
+        case HuC1:
+            mbc_type = "HuC1";
+            break;
+
+        case HuC3:
+            mbc_type = "HuC3";
+            break;
+    }
+
+    printf("MBC Type: %s\n", mbc_type);
+}

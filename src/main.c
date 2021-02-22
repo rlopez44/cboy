@@ -31,10 +31,12 @@ int main(int argc, const char *argv[])
            gb->cart->num_rom_banks,
            gb->cart->num_ram_banks,
            gb->cart->ram_bank_size,
-           read_byte(gb->memory, 0xff50)); 
+           read_byte(gb->memory, 0xff50));
 
     // initial register contents
     print_registers(gb->cpu);
+
+    print_mbc_type(gb->cart);
 
     free_gameboy(gb);
     return 0;
