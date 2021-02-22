@@ -78,6 +78,42 @@ static bool verify_logo(gameboy *gb)
     return valid_bitmap;
 }
 
+/* Verifies the cartridge header checksum in
+ * the ROM file. Prints out an error if the
+ * checksum fails. However, the emulator
+ * doesn't actually care if the checksum fails.
+ */
+static bool verify_checksum(gameboy *gb)
+{
+    // header checksum is at byte 0x14d of the zeroth ROM bank
+    uint8_t *rom0 = gb->cart->rom_banks[0],
+            header_checksum = rom0[0x14d];
+
+    // calculate checksum of bytes at addresses 0x134-0x14c
+    // See: https://gbdev.io/pandocs/#the-cartridge-header
+    int calculated_checksum = 0;
+    for (int i = 0x134; i <= 0x14c; ++i)
+    {
+        calculated_checksum -= rom0[i] + 1;
+    }
+    // lower byte of the result is compared to the checksum
+    calculated_checksum &= 0xff;
+
+    bool valid_checksum = calculated_checksum == header_checksum;
+
+    if (!valid_checksum)
+    {
+        fprintf(stderr, "NOTE: The ROM header checksum failed.\n"
+                        "Expected: %d\n"
+                        "Actual: %d\n"
+                        "This ROM wouldn't run on a real Game Boy\n\n",
+                        header_checksum,
+                        calculated_checksum);
+    }
+
+    return valid_checksum;
+}
+
 /* Allocates memory for the Game Boy struct
  * and initializes the Game Boy and its components.
  * Loads the ROM file into the emulator.
@@ -159,6 +195,9 @@ gameboy *init_gameboy(const char *rom_file_path)
 
     // verify the ROM's Nintendo logo bitmap
     verify_logo(gb);
+
+    // verify the ROM's header checksum
+    verify_checksum(gb);
 
     // init successful and ROM loaded
     return gb;
