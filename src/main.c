@@ -24,11 +24,14 @@ int main(int argc, const char *argv[])
         return 1;
     }
 
-    // should be 512, since this is default value during initialization
-    printf("Number of banks in the ROM: %d\n", gb->cart->num_banks);
-
-    // should be 1, since the boot ROM is disabled during initialization
-    printf("Boot ROM disabled bit: %d\n", read_byte(gb->memory, 0xff50));
+    printf("Number of banks in the ROM: %d\n"
+           "Number of external RAM banks: %d\n"
+           "RAM bank size: %d bytes\n"
+           "Boot ROM disabled bit: %d\n\n",
+           gb->cart->num_rom_banks,
+           gb->cart->num_ram_banks,
+           gb->cart->ram_bank_size,
+           read_byte(gb->memory, 0xff50)); 
 
     // initial register contents
     print_registers(gb->cpu);

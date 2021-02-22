@@ -11,13 +11,38 @@ typedef enum ROM_LOAD_STATUS {
     ROM_LOAD_ERROR,
 } ROM_LOAD_STATUS;
 
+/* Memory Bank Controller types.
+ * See: https://gbdev.io/pandocs/#the-cartridge-header
+ */
+typedef enum MBC_TYPE {
+    UNKNOWN_MBC,
+    NO_MBC,
+    MBC1,
+    MBC2,
+    MBC3,
+    MBC5,
+    MBC6,
+    MBC7,
+    MMM01,
+    HuC1,
+    HuC3,
+} MBC_TYPE;
+
 typedef struct gb_cartridge {
     /* The cartridge's ROM banks. There are a
      * minimum of 2 banks and a max of 512 banks.
      */
     uint8_t **rom_banks;
+    uint16_t num_rom_banks;
 
-    uint16_t num_banks;
+    /* the cartridge's RAM banks */
+    uint8_t **ram_banks;
+
+    /* the number of RAM banks and their size in bytes */
+    uint16_t num_ram_banks, ram_bank_size;
+
+    /* the cartridge's MBC */
+    MBC_TYPE mbc;
 } gb_cartridge;
 
 /* free the memory allocated for the cartridge */
