@@ -38,6 +38,12 @@ int main(int argc, const char *argv[])
 
     print_mbc_type(gb->cart);
 
+    if (gb->cart->mbc != NO_MBC)
+    {
+        fprintf(stderr, "NOTE: MBCs are not yet supported."
+                        " This game will not run correctly\n");
+    }
+
     free_gameboy(gb);
     return 0;
 }

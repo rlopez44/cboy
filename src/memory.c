@@ -1,6 +1,8 @@
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include "cboy/memory.h"
+#include "cboy/cartridge.h"
 
 /* for now simply read and write to the byte at the given memory address.
  * as more components of the emulator are implemented, these functions
@@ -44,23 +46,39 @@ static void init_io_registers(gb_memory *memory)
     write_byte(memory, 0xff49, 0xff); // OBP1
 }
 
-/* Allocate memory for the Game Boy's memory
- * map and initialize it to zero.
+/* Allocate memory for the Game Boy's memory map and
+ * initialize it to zero. Then, mount the zeroth and first
+ * ROM banks from the cartridge into the appropriate locations
+ * (see Memory Map below). Lastly, initialize the I/O registers.
  *
- * NOTE: the byte at memory address 0xff50 is
- * used to disable the Game Boy's internal
- * boot ROM. Setting this byte to 1 disables
- * the boot ROM and allows the cartridge
- * to take over. Because we will start
- * the emulator in the state right after
- * the boot ROM has executed, we will set
- * this byte to 1. Once this byte has been
- * set to 1 it cannot be changed and can
+ * Memory Map (see: https://gbdev.io/pandocs/#memory-map)
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * Start     End       Description
+ * 0x0000    0x3fff    16KB ROM bank 00
+ * 0x4000    0x7fff    16KB ROM bank 01-NN, switchable via MBC, if any
+ * 0x8000    0x9fff    8KB Video RAM (VRAM)
+ * 0xa000    0xbfff    8KB External RAM, in cartridge, switchable bank if any
+ * 0xc000    0xcfff    4KB Work RAM (WRAM) bank 0
+ * 0xd000    0xdfff    4KB Work RAM (WRAM) bank 1
+ * 0xe000    0xfdff    Mirror of 0xc000-0xddff (ECHO RAM)
+ * 0xfe00    0xfe9f    Sprite attribute table (OAM)
+ * 0xfea0    0xfeff    Not Usable
+ * 0xff00    0xff7f    I/O Registers
+ * 0xff80    0xfffe    High RAM (HRAM)
+ * 0xffff    0xffff    Interrupts Enable Register (IE)
+ *
+ *
+ * NOTE: the byte at memory address 0xff50 is used to disable
+ * the Game Boy's internal boot ROM. Setting this byte to 1
+ * disables the boot ROM and allows the cartridge to take over.
+ * Because we will start the emulator in the state right after
+ * the boot ROM has executed, we will set this byte to 1. Once
+ * this byte has been set to 1 it cannot be changed and can
  * only be reset by resetting the Game Boy.
  *
  * Returns NULL if the allocation fails.
  */
-gb_memory *init_memory_map(void)
+gb_memory *init_memory_map(gb_cartridge *cart)
 {
     gb_memory *memory = malloc(sizeof(gb_memory));
 
@@ -72,12 +90,16 @@ gb_memory *init_memory_map(void)
     // init all array values to 0
     for (int i = 0; i < MEMORY_MAP_SIZE; ++i)
     {
-        (memory->memory)[i] = 0;
+        memory->memory[i] = 0;
     }
 
     // disable the boot ROM
     // TODO: make this byte unchangeable
     write_byte(memory, 0xff50, 1);
+
+    // mount the zeroth and first ROM banks
+    memcpy(memory->memory, cart->rom_banks[0], ROM_BANK_SIZE * sizeof(uint8_t));
+    memcpy(memory->memory + ROM_BANK_SIZE, cart->rom_banks[1], ROM_BANK_SIZE * sizeof(uint8_t));
 
     init_io_registers(memory);
 

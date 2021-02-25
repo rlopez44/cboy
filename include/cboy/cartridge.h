@@ -4,6 +4,16 @@
 #include <stdio.h>
 #include <stdint.h>
 
+/* 16 KB (2^14 bytes) */
+#define ROM_BANK_SIZE 16384
+
+#define MAX_ROM_BANKS 512
+
+#define MAX_RAM_BANKS 16
+
+/* 1 KB = 2^10 bytes */
+#define KB 1024
+
 /* cartridge errors during init process */
 typedef enum ROM_LOAD_STATUS {
     ROM_LOAD_SUCCESS,

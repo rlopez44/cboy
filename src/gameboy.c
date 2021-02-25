@@ -143,22 +143,22 @@ gameboy *init_gameboy(const char *rom_file_path)
         return NULL;
     }
 
-    // allocate and init the memory map
-    gb->memory = init_memory_map();
+    // allocate and init the cartridge
+    gb->cart = init_cartridge();
 
-    if (gb->memory == NULL)
+    if (gb->cart == NULL)
     {
         free_cpu(gb->cpu);
         free(gb);
         return NULL;
     }
 
-    // Allocate and init the cartridge
-    gb->cart = init_cartridge();
+    // allocate and init the memory map
+    gb->memory = init_memory_map(gb->cart);
 
-    if (gb->cart == NULL)
+    if (gb->memory == NULL)
     {
-        free_memory_map(gb->memory);
+        unload_cartridge(gb->cart);
         free_cpu(gb->cpu);
         free(gb);
         return NULL;
