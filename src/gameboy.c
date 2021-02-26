@@ -153,24 +153,15 @@ gameboy *init_gameboy(const char *rom_file_path)
         return NULL;
     }
 
-    // allocate and init the memory map
-    gb->memory = init_memory_map(gb->cart);
-
-    if (gb->memory == NULL)
-    {
-        unload_cartridge(gb->cart);
-        free_cpu(gb->cpu);
-        free(gb);
-        return NULL;
-    }
-
     // open the ROM file to load it into the emulator
     FILE *rom_file = fopen(rom_file_path, "rb");
 
     if (rom_file == NULL)
     {
         fprintf(stderr, "Failed to open the ROM file (incorrect path?)\n");
-        free_gameboy(gb);
+        unload_cartridge(gb->cart);
+        free_cpu(gb->cpu);
+        free(gb);
         return NULL;
     }
 
@@ -189,7 +180,20 @@ gameboy *init_gameboy(const char *rom_file_path)
             fprintf(stderr, "Failed to load the ROM into the emulator (I/O or memory error)\n");
         }
 
-        free_gameboy(gb);
+        unload_cartridge(gb->cart);
+        free_cpu(gb->cpu);
+        free(gb);
+        return NULL;
+    }
+
+    // allocate and init the memory map
+    gb->memory = init_memory_map(gb->cart);
+
+    if (gb->memory == NULL)
+    {
+        unload_cartridge(gb->cart);
+        free_cpu(gb->cpu);
+        free(gb);
         return NULL;
     }
 
