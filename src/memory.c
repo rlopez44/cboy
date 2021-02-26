@@ -4,18 +4,98 @@
 #include "cboy/memory.h"
 #include "cboy/cartridge.h"
 
-/* for now simply read and write to the byte at the given memory address.
- * as more components of the emulator are implemented, these functions
- * will likely become more complex.
+/* Reads a byte from the Game Boy's memory map at the given
+ * address. Because a read can be requested from any address,
+ * we have to implement certain checks on the address so that
+ * the developer is not allowed to perform illegal reads.
+ * See below.
+ *
+ * Constraints on memory reads
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *  > Echo RAM: reads from the memory range 0xe000-0xfdff are
+ *    mapped to 0xc000-0xddff (an area of WRAM). Nintendo
+ *    prohibits the use of this memory range by developers.
+ *
+ *  > Reads from the memory range 0xfea0-0xfeff are prohibited
+ *    by Nintendo.
+ *      >> 0xff is returned when OAM is blocked (TODO: implement)
+ *         Otherwise, 0x00 is returned.
  */
 uint8_t read_byte(gb_memory *memory, uint16_t address)
 {
-    return (memory->memory)[address];
+    // attempted read from the prohibited memory range
+    if (0xfea0 <= address && address <= 0xfeff)
+    {
+        if (0) // OAM blocked. TODO: implement OAM blocked check
+        {
+            return 0xff;
+        }
+        else // OAM not blocked
+        {
+            return 0x00;
+        }
+    }
+
+    // attempted read from Echo RAM
+    if (0xe000 <= address && address <= 0xfdff)
+    {
+        // map to the appropriate address in WRAM
+        // the offset is 0xe000 - 0xc000 = 0x2000
+        address -= 0x2000;
+    }
+
+    return memory->memory[address];
 }
 
+/* Writes the given value to the byte at the given address in the
+ * Game Boy's memory map. Because writes can be requested to any
+ * address, we have to implement checks on the address to make sure
+ * the developer is not allowed to perform illegal writes.
+ * See below.
+ *
+ * Constraints on memory reads
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *  > Address 0xff50 contains the boot ROM disable bit. This bit
+ *    is set to 1 when the Game Boy's boot ROM finishes executing,
+ *    and can only be reset by restarting the Game Boy. Because this
+ *    emulator's initial state is that of the Game Boy after the boot
+ *    ROM has finished executing, the boot ROM disable bit will be set
+ *    and will not be allowed to change.
+ *
+ *  > Writes to the ROM area of the memory map (0x0000-0x7fff) are
+ *    intercepted by the cartridge's Memory Bank Controller, if any.
+ *    TODO: add support for MBCs.
+ *
+ *  > Echo RAM: writes to the memory range 0xe000-0xfdff are mapped
+ *    to 0xc000-0xddff (an area of WRAM). Nintendo prohibits the use
+ *    of this memory range by developers.
+ *
+ *  > Writes to the memory range 0xfea0-0xfeff are prohibited by
+ *    Nintendo.
+ */
 void write_byte(gb_memory *memory, uint16_t address, uint8_t value)
 {
-    (memory->memory)[address] = value;
+    // attempted writes to the boot ROM disabled bit or the prohibited memory range are ignored
+    if (address == 0xff50 || (0xfea0 <= address && address <= 0xfeff))
+    {
+        return;
+    }
+    // attempted write to the ROM area
+    else if (0x0000 <= address && address <= 0x7fff)
+    {
+        // TODO: once MBCs are supported, redirect these writes to the MBC
+        return;
+    }
+
+    // attempted write to Echo RAM
+    if (0xe000 <= address && address <= 0xfdff)
+    {
+        // map to the appropriate address in WRAM
+        // the offset is 0xe000 - 0xc000 = 0x2000
+        address -= 0x2000;
+    }
+
+    memory->memory[address] = value;
 }
 
 /* Initialize the I/O registers of the Game Boy
@@ -94,8 +174,7 @@ gb_memory *init_memory_map(gb_cartridge *cart)
     }
 
     // disable the boot ROM
-    // TODO: make this byte unchangeable
-    write_byte(memory, 0xff50, 1);
+    memory->memory[0xff50] = 1;
 
     // mount the zeroth and first ROM banks
     memcpy(memory->memory, cart->rom_banks[0], ROM_BANK_SIZE * sizeof(uint8_t));
