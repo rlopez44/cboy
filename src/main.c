@@ -4,6 +4,7 @@
 #include "cboy/instructions.h"
 #include "cboy/cartridge.h"
 #include "cboy/memory.h"
+#include "cboy/interrupts.h"
 
 int main(int argc, const char *argv[])
 {
@@ -16,7 +17,6 @@ int main(int argc, const char *argv[])
         return 1;
     }
 
-    // TODO: actually do stuff
     gameboy *gb = init_gameboy(argv[1]);
 
     if (gb == NULL)
@@ -27,11 +27,15 @@ int main(int argc, const char *argv[])
     printf("Number of banks in the ROM: %d\n"
            "Number of external RAM banks: %d\n"
            "RAM bank size: %d bytes\n"
-           "Boot ROM disabled bit: %d\n\n",
+           "IME flag: %d\n"
+           "IE register: 0x%02x\n"
+           "IF register: 0x%02x\n\n",
            gb->cart->num_rom_banks,
            gb->cart->num_ram_banks,
            gb->cart->ram_bank_size,
-           read_byte(gb->memory, 0xff50));
+           gb->cpu->ime_flag,
+           read_byte(gb->memory, IE_REGISTER),
+           read_byte(gb->memory, IF_REGISTER));
 
     // initial register contents
     print_registers(gb->cpu);
@@ -43,6 +47,44 @@ int main(int argc, const char *argv[])
         fprintf(stderr, "NOTE: MBCs are not yet supported."
                         " This game will not run correctly\n");
     }
+
+    // check if interrupts work
+    printf("\nEnabling and requesting all interrupts\n");
+
+    gb->cpu->ime_flag = true;
+
+    enable_interrupt(gb, VBLANK);
+    enable_interrupt(gb, LCD_STAT);
+    enable_interrupt(gb, TIMER);
+    enable_interrupt(gb, SERIAL);
+    enable_interrupt(gb, JOYPAD);
+
+    request_interrupt(gb, VBLANK);
+    request_interrupt(gb, LCD_STAT);
+    request_interrupt(gb, TIMER);
+    request_interrupt(gb, SERIAL);
+    request_interrupt(gb, JOYPAD);
+
+    printf("IME flag: %d (should be 1)\n"
+           "IE register: 0x%02x (should be 0x1f)\n"
+           "IF register: 0x%02x (should be 0x1f)\n\n",
+           gb->cpu->ime_flag,
+           read_byte(gb->memory, IE_REGISTER),
+           read_byte(gb->memory, IF_REGISTER));
+
+    // service an interrupt to see if PC is updated correctly
+    service_interrupt(gb);
+
+    printf("Servicing interrupt. VBLANK should have been serviced\n"
+           "IME flag: %d (should be 0)\n"
+           "IE register: 0x%02x (should not change)\n"
+           "IF register: 0x%02x (should be 0x1e because VBLANK should have been serviced)\n\n",
+           gb->cpu->ime_flag,
+           read_byte(gb->memory, IE_REGISTER),
+           read_byte(gb->memory, IF_REGISTER));
+
+    printf("PC should be 0x0040 because VBLANK should have been serviced\n");
+    print_registers(gb->cpu);
 
     free_gameboy(gb);
     return 0;

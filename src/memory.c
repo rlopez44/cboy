@@ -95,6 +95,12 @@ void write_byte(gb_memory *memory, uint16_t address, uint8_t value)
         address -= 0x2000;
     }
 
+    // make sure the IF and IE registers' upper three bits are always zero
+    if (address == 0xff0f || address == 0xffff)
+    {
+        value &= 0x1f;
+    }
+
     memory->memory[address] = value;
 }
 
