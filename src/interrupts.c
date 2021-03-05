@@ -10,8 +10,8 @@ void request_interrupt(gameboy *gb, INTERRUPT_TYPE interrupt)
     uint8_t mask = 1 << interrupt;
 
     // set the bit
-    uint8_t old_if_register = read_byte(gb->memory, IF_REGISTER);
-    write_byte(gb->memory, IF_REGISTER, old_if_register | mask);
+    uint8_t old_if_register = read_byte(gb, IF_REGISTER);
+    write_byte(gb, IF_REGISTER, old_if_register | mask);
 }
 
 // set the appropriate bit in the IE register to enable the given interrupt
@@ -21,8 +21,8 @@ void enable_interrupt(gameboy *gb, INTERRUPT_TYPE interrupt)
     uint8_t mask = 1 << interrupt;
 
     // set the bit
-    uint8_t old_ie_register = read_byte(gb->memory, IE_REGISTER);
-    write_byte(gb->memory, IE_REGISTER, old_ie_register | mask);
+    uint8_t old_ie_register = read_byte(gb, IE_REGISTER);
+    write_byte(gb, IE_REGISTER, old_ie_register | mask);
 }
 
 /* Service an interrupt, if any needs to be serviced.
@@ -44,8 +44,8 @@ uint8_t service_interrupt(gameboy *gb)
 {
     uint8_t handler_addr, // the address of the interrupt handler
             duration = 0, // number of M-cycles taken to service the interrupt
-            if_register = read_byte(gb->memory, IF_REGISTER),
-            ie_register = read_byte(gb->memory, IE_REGISTER);
+            if_register = read_byte(gb, IF_REGISTER),
+            ie_register = read_byte(gb, IE_REGISTER);
 
     // masks for the interrupt bits
     uint8_t vblank_mask = (1 << VBLANK),
@@ -111,7 +111,7 @@ uint8_t service_interrupt(gameboy *gb)
         gb->cpu->ime_flag = false;
 
         // store the IF register's new value
-        write_byte(gb->memory, IF_REGISTER, if_register);
+        write_byte(gb, IF_REGISTER, if_register);
 
         // servicing the interrupt takes 5 M-cycles
         duration += 5;

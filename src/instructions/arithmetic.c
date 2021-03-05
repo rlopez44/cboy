@@ -92,8 +92,8 @@ void inc(gameboy *gb, gb_instruction *inst)
         case PTR_HL:
         {
             uint16_t addr = read_hl(gb->cpu->reg);
-            uint8_t old_val = read_byte(gb->memory, addr);
-            write_byte(gb->memory, addr, old_val + 1);
+            uint8_t old_val = read_byte(gb, addr);
+            write_byte(gb, addr, old_val + 1);
 
             set_zero_flag(gb->cpu->reg, old_val + 1 == 0);
             set_subtract_flag(gb->cpu->reg, 0);
@@ -204,8 +204,8 @@ void dec(gameboy *gb, gb_instruction *inst)
         case PTR_HL:
         {
             uint16_t addr = read_hl(gb->cpu->reg);
-            uint8_t old_val = read_byte(gb->memory, addr);
-            write_byte(gb->memory, addr, old_val - 1);
+            uint8_t old_val = read_byte(gb, addr);
+            write_byte(gb, addr, old_val - 1);
 
             set_zero_flag(gb->cpu->reg, old_val - 1 == 0);
             set_subtract_flag(gb->cpu->reg, 1);
@@ -292,11 +292,11 @@ void add(gameboy *gb, gb_instruction *inst)
                     break;
 
                 case PTR_HL:
-                    to_add = read_byte(gb->memory, read_hl(gb->cpu->reg));
+                    to_add = read_byte(gb, read_hl(gb->cpu->reg));
                     break;
 
                 case IMM_8:
-                    to_add = read_byte(gb->memory, (gb->cpu->reg->sp)++);
+                    to_add = read_byte(gb, (gb->cpu->reg->sp)++);
                     break;
             }
             uint8_t old_a = gb->cpu->reg->a;
@@ -340,7 +340,7 @@ void add(gameboy *gb, gb_instruction *inst)
         case REG_SP: // single case, add signed 8-bit offset
         {
             // cast is safe since we don't change integer width
-            int8_t offset = (int8_t)read_byte(gb->memory, (gb->cpu->reg->pc)++);
+            int8_t offset = (int8_t)read_byte(gb, (gb->cpu->reg->pc)++);
             // explicit casts to avoid bugs due to implicit integer conversions
             gb->cpu->reg->sp = (int32_t)gb->cpu->reg->sp + (int32_t)offset;
 
@@ -402,11 +402,11 @@ void adc(gameboy *gb, gb_instruction *inst)
             break;
 
         case PTR_HL:
-            to_add += read_byte(gb->memory, read_hl(gb->cpu->reg));
+            to_add += read_byte(gb, read_hl(gb->cpu->reg));
             break;
 
         case IMM_8:
-            to_add += read_byte(gb->memory, (gb->cpu->reg->pc)++);
+            to_add += read_byte(gb, (gb->cpu->reg->pc)++);
             break;
     }
     uint8_t old_a = gb->cpu->reg->a;
@@ -500,11 +500,11 @@ void sub(gameboy *gb, gb_instruction *inst)
             break;
 
         case PTR_HL:
-            to_sub = read_byte(gb->memory, read_hl(gb->cpu->reg));
+            to_sub = read_byte(gb, read_hl(gb->cpu->reg));
             break;
 
         case IMM_8:
-            to_sub = read_byte(gb->memory, (gb->cpu->reg->pc)++);
+            to_sub = read_byte(gb, (gb->cpu->reg->pc)++);
             break;
     }
 
@@ -557,11 +557,11 @@ void sbc(gameboy *gb, gb_instruction *inst)
             break;
 
         case PTR_HL:
-            to_sub += read_byte(gb->memory, read_hl(gb->cpu->reg));
+            to_sub += read_byte(gb, read_hl(gb->cpu->reg));
             break;
 
         case IMM_8:
-            to_sub += read_byte(gb->memory, (gb->cpu->reg->pc)++);
+            to_sub += read_byte(gb, (gb->cpu->reg->pc)++);
             break;
     }
 
@@ -616,11 +616,11 @@ void cp(gameboy *gb, gb_instruction *inst)
             break;
 
         case PTR_HL:
-            to_sub = read_byte(gb->memory, read_hl(gb->cpu->reg));
+            to_sub = read_byte(gb, read_hl(gb->cpu->reg));
             break;
 
         case IMM_8:
-            to_sub = read_byte(gb->memory, (gb->cpu->reg->pc)++);
+            to_sub = read_byte(gb, (gb->cpu->reg->pc)++);
             break;
     }
 
@@ -673,11 +673,11 @@ void and(gameboy *gb, gb_instruction *inst)
             break;
 
         case PTR_HL:
-            to_and = read_byte(gb->memory, read_hl(gb->cpu->reg));
+            to_and = read_byte(gb, read_hl(gb->cpu->reg));
             break;
 
         case IMM_8:
-            to_and = read_byte(gb->memory, (gb->cpu->reg->pc)++);
+            to_and = read_byte(gb, (gb->cpu->reg->pc)++);
             break;
     }
     gb->cpu->reg->a &= to_and;
@@ -729,11 +729,11 @@ void or(gameboy *gb, gb_instruction *inst)
             break;
 
         case PTR_HL:
-            to_or = read_byte(gb->memory, read_hl(gb->cpu->reg));
+            to_or = read_byte(gb, read_hl(gb->cpu->reg));
             break;
 
         case IMM_8:
-            to_or = read_byte(gb->memory, (gb->cpu->reg->pc)++);
+            to_or = read_byte(gb, (gb->cpu->reg->pc)++);
             break;
     }
     gb->cpu->reg->a |= to_or;
@@ -786,11 +786,11 @@ void xor(gameboy *gb, gb_instruction *inst)
             break;
 
         case PTR_HL:
-            to_xor = read_byte(gb->memory, read_hl(gb->cpu->reg));
+            to_xor = read_byte(gb, read_hl(gb->cpu->reg));
             break;
 
         case IMM_8:
-            to_xor = read_byte(gb->memory, (gb->cpu->reg->pc)++);
+            to_xor = read_byte(gb, (gb->cpu->reg->pc)++);
             break;
     }
     gb->cpu->reg->a ^= to_xor;

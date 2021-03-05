@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include "cboy/gameboy.h"
 #include "cboy/memory.h"
 #include "cboy/cartridge.h"
 
@@ -21,7 +22,7 @@
  *      >> 0xff is returned when OAM is blocked (TODO: implement)
  *         Otherwise, 0x00 is returned.
  */
-uint8_t read_byte(gb_memory *memory, uint16_t address)
+uint8_t read_byte(gameboy *gb, uint16_t address)
 {
     // attempted read from the prohibited memory range
     if (0xfea0 <= address && address <= 0xfeff)
@@ -44,7 +45,7 @@ uint8_t read_byte(gb_memory *memory, uint16_t address)
         address -= 0x2000;
     }
 
-    return memory->memory[address];
+    return gb->memory->mmap[address];
 }
 
 /* Writes the given value to the byte at the given address in the
@@ -73,7 +74,7 @@ uint8_t read_byte(gb_memory *memory, uint16_t address)
  *  > Writes to the memory range 0xfea0-0xfeff are prohibited by
  *    Nintendo.
  */
-void write_byte(gb_memory *memory, uint16_t address, uint8_t value)
+void write_byte(gameboy *gb, uint16_t address, uint8_t value)
 {
     // attempted writes to the boot ROM disabled bit or the prohibited memory range are ignored
     if (address == 0xff50 || (0xfea0 <= address && address <= 0xfeff))
@@ -101,7 +102,7 @@ void write_byte(gb_memory *memory, uint16_t address, uint8_t value)
         value &= 0x1f;
     }
 
-    memory->memory[address] = value;
+    gb->memory->mmap[address] = value;
 }
 
 /* Initialize the I/O registers of the Game Boy
@@ -111,25 +112,25 @@ void write_byte(gb_memory *memory, uint16_t address, uint8_t value)
  */
 static void init_io_registers(gb_memory *memory)
 {
-    write_byte(memory, 0xff10, 0x80); // NR10
-    write_byte(memory, 0xff11, 0xbf); // NR11
-    write_byte(memory, 0xff12, 0xf3); // NR12
-    write_byte(memory, 0xff14, 0xbf); // NR14
-    write_byte(memory, 0xff16, 0x3f); // NR21
-    write_byte(memory, 0xff19, 0xbf); // NR24
-    write_byte(memory, 0xff1a, 0x7f); // NR30
-    write_byte(memory, 0xff1b, 0xff); // NR31
-    write_byte(memory, 0xff1c, 0x9f); // NR32
-    write_byte(memory, 0xff1e, 0xbf); // NR34
-    write_byte(memory, 0xff20, 0xff); // NR41
-    write_byte(memory, 0xff23, 0xbf); // NR44
-    write_byte(memory, 0xff24, 0x77); // NR50
-    write_byte(memory, 0xff25, 0xf3); // NR51
-    write_byte(memory, 0xff26, 0xf1); // NR52
-    write_byte(memory, 0xff40, 0x91); // LCDC
-    write_byte(memory, 0xff47, 0xfc); // BGP
-    write_byte(memory, 0xff48, 0xff); // OBP0
-    write_byte(memory, 0xff49, 0xff); // OBP1
+    memory->mmap[0xff10] = 0x80; // NR10
+    memory->mmap[0xff11] = 0xbf; // NR11
+    memory->mmap[0xff12] = 0xf3; // NR12
+    memory->mmap[0xff14] = 0xbf; // NR14
+    memory->mmap[0xff16] = 0x3f; // NR21
+    memory->mmap[0xff19] = 0xbf; // NR24
+    memory->mmap[0xff1a] = 0x7f; // NR30
+    memory->mmap[0xff1b] = 0xff; // NR31
+    memory->mmap[0xff1c] = 0x9f; // NR32
+    memory->mmap[0xff1e] = 0xbf; // NR34
+    memory->mmap[0xff20] = 0xff; // NR41
+    memory->mmap[0xff23] = 0xbf; // NR44
+    memory->mmap[0xff24] = 0x77; // NR50
+    memory->mmap[0xff25] = 0xf3; // NR51
+    memory->mmap[0xff26] = 0xf1; // NR52
+    memory->mmap[0xff40] = 0x91; // LCDC
+    memory->mmap[0xff47] = 0xfc; // BGP
+    memory->mmap[0xff48] = 0xff; // OBP0
+    memory->mmap[0xff49] = 0xff; // OBP1
 }
 
 /* Allocate memory for the Game Boy's memory map and
@@ -176,15 +177,15 @@ gb_memory *init_memory_map(gb_cartridge *cart)
     // init all array values to 0
     for (int i = 0; i < MEMORY_MAP_SIZE; ++i)
     {
-        memory->memory[i] = 0;
+        memory->mmap[i] = 0;
     }
 
     // disable the boot ROM
-    memory->memory[0xff50] = 1;
+    memory->mmap[0xff50] = 1;
 
     // mount the zeroth and first ROM banks
-    memcpy(memory->memory, cart->rom_banks[0], ROM_BANK_SIZE * sizeof(uint8_t));
-    memcpy(memory->memory + ROM_BANK_SIZE, cart->rom_banks[1], ROM_BANK_SIZE * sizeof(uint8_t));
+    memcpy(memory->mmap, cart->rom_banks[0], ROM_BANK_SIZE * sizeof(uint8_t));
+    memcpy(memory->mmap + ROM_BANK_SIZE, cart->rom_banks[1], ROM_BANK_SIZE * sizeof(uint8_t));
 
     init_io_registers(memory);
 

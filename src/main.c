@@ -34,8 +34,8 @@ int main(int argc, const char *argv[])
            gb->cart->num_ram_banks,
            gb->cart->ram_bank_size,
            gb->cpu->ime_flag,
-           read_byte(gb->memory, IE_REGISTER),
-           read_byte(gb->memory, IF_REGISTER));
+           read_byte(gb, IE_REGISTER),
+           read_byte(gb, IF_REGISTER));
 
     // initial register contents
     print_registers(gb->cpu);
@@ -69,8 +69,8 @@ int main(int argc, const char *argv[])
            "IE register: 0x%02x (should be 0x1f)\n"
            "IF register: 0x%02x (should be 0x1f)\n\n",
            gb->cpu->ime_flag,
-           read_byte(gb->memory, IE_REGISTER),
-           read_byte(gb->memory, IF_REGISTER));
+           read_byte(gb, IE_REGISTER),
+           read_byte(gb, IF_REGISTER));
 
     // service an interrupt to see if PC is updated correctly
     service_interrupt(gb);
@@ -80,8 +80,8 @@ int main(int argc, const char *argv[])
            "IE register: 0x%02x (should not change)\n"
            "IF register: 0x%02x (should be 0x1e because VBLANK should have been serviced)\n\n",
            gb->cpu->ime_flag,
-           read_byte(gb->memory, IE_REGISTER),
-           read_byte(gb->memory, IF_REGISTER));
+           read_byte(gb, IE_REGISTER),
+           read_byte(gb, IF_REGISTER));
 
     printf("PC should be 0x0040 because VBLANK should have been serviced\n");
     print_registers(gb->cpu);

@@ -153,11 +153,11 @@ void rlc(gameboy *gb, gb_instruction *inst)
     {
         // value to rotate from memory
         uint16_t addr = read_hl(gb->cpu->reg);
-        uint8_t val = read_byte(gb->memory, addr);
+        uint8_t val = read_byte(gb, addr);
 
         // rotate and set flags
         bit_seven = val >> 7;
-        write_byte(gb->memory, addr, (val << 1) | bit_seven);
+        write_byte(gb, addr, (val << 1) | bit_seven);
         set_flags(gb->cpu->reg, (val << 1) | bit_seven == 0, 0, 0, bit_seven);
     }
     else
@@ -200,11 +200,11 @@ void rrc(gameboy *gb, gb_instruction *inst)
     {
         // value to rotate from memory
         uint16_t addr = read_hl(gb->cpu->reg);
-        uint8_t val = read_byte(gb->memory, addr);
+        uint8_t val = read_byte(gb, addr);
 
         // rotate and set flags
         bit_zero = val & 1;
-        write_byte(gb->memory, addr, (bit_zero << 7) | (val >> 1));
+        write_byte(gb, addr, (bit_zero << 7) | (val >> 1));
         set_flags(gb->cpu->reg, (bit_zero << 7) | (val >> 1), 0, 0, bit_zero);
     }
     else
@@ -250,11 +250,11 @@ void rl(gameboy *gb, gb_instruction *inst)
     {
         // value to rotate from memory
         uint16_t addr = read_hl(gb->cpu->reg);
-        uint8_t val = read_byte(gb->memory, addr);
+        uint8_t val = read_byte(gb, addr);
 
         // rotate and set flags
         bit_seven = val >> 7;
-        write_byte(gb->memory, addr, (val << 1) | carry);
+        write_byte(gb, addr, (val << 1) | carry);
         set_flags(gb->cpu->reg, (val << 1) | carry == 0, 0, 0, bit_seven);
     }
     else
@@ -300,11 +300,11 @@ void rr(gameboy *gb, gb_instruction *inst)
     {
         // value to rotate from memory
         uint16_t addr = read_hl(gb->cpu->reg);
-        uint8_t val = read_byte(gb->memory, addr);
+        uint8_t val = read_byte(gb, addr);
 
         // rotate and set flags
         bit_zero = val & 1;
-        write_byte(gb->memory, addr, (carry << 7) | (val >> 1));
+        write_byte(gb, addr, (carry << 7) | (val >> 1));
         set_flags(gb->cpu->reg, (carry << 7) | (val >> 1), 0, 0, bit_zero);
     }
     else
@@ -347,11 +347,11 @@ void sla(gameboy *gb, gb_instruction *inst)
     {
         // value to shift from memory
         uint16_t addr = read_hl(gb->cpu->reg);
-        uint8_t val = read_byte(gb->memory, addr);
+        uint8_t val = read_byte(gb, addr);
 
         // Shift and set flags. Note that bit zero is reset by the left shift
         bit_seven = val >> 7;
-        write_byte(gb->memory, addr, val << 1);
+        write_byte(gb, addr, val << 1);
         set_flags(gb->cpu->reg, (val << 1) == 0, 0, 0, bit_seven);
     }
     else
@@ -396,11 +396,11 @@ void sra(gameboy *gb, gb_instruction *inst)
     {
         // value to shift from memory
         uint16_t addr = read_hl(gb->cpu->reg);
-        uint8_t val = read_byte(gb->memory, addr);
+        uint8_t val = read_byte(gb, addr);
 
         // Shift and set flags.
         bit_zero = val & 1;
-        write_byte(gb->memory, addr, (val & 0x80) | (val >> 1));
+        write_byte(gb, addr, (val & 0x80) | (val >> 1));
         set_flags(gb->cpu->reg, (val & 0x80) | (val >> 1) == 0, 0, 0, bit_zero);
     }
     else
@@ -443,11 +443,11 @@ void srl(gameboy *gb, gb_instruction *inst)
     {
         // value to shift from memory
         uint16_t addr = read_hl(gb->cpu->reg);
-        uint8_t val = read_byte(gb->memory, addr);
+        uint8_t val = read_byte(gb, addr);
 
         // Shift and set flags. Bit seven reset by the shift
         bit_zero = val & 1;
-        write_byte(gb->memory, addr, val >> 1);
+        write_byte(gb, addr, val >> 1);
         set_flags(gb->cpu->reg, val >> 1 == 0, 0, 0, bit_zero);
     }
     else
@@ -489,11 +489,11 @@ void swap(gameboy *gb, gb_instruction *inst)
     {
         // value to swap from memory
         uint16_t addr = read_hl(gb->cpu->reg);
-        uint8_t val = read_byte(gb->memory, addr);
+        uint8_t val = read_byte(gb, addr);
 
         // swap nibbles
         uint8_t result = (val << 4) | (val >> 4);
-        write_byte(gb->memory, addr, result);
+        write_byte(gb, addr, result);
         set_flags(gb->cpu->reg, result == 0, 0, 0, 0);
     }
     else
@@ -537,7 +537,7 @@ void bit(gameboy *gb, gb_instruction *inst)
     // handle PTR_HL separately, since we need to read from memory
     if (inst->op2 == PTR_HL)
     {
-        value = read_byte(gb->memory, read_hl(gb->cpu->reg));
+        value = read_byte(gb, read_hl(gb->cpu->reg));
     }
     else
     {
@@ -602,8 +602,8 @@ void res(gameboy *gb, gb_instruction *inst)
     if (inst->op2 == PTR_HL)
     {
         uint16_t addr = read_hl(gb->cpu->reg);
-        uint8_t value = read_byte(gb->memory, addr);
-        write_byte(gb->memory, addr, value & ~(1 << bit_number));
+        uint8_t value = read_byte(gb, addr);
+        write_byte(gb, addr, value & ~(1 << bit_number));
     }
     else
     {
@@ -637,8 +637,8 @@ void set(gameboy *gb, gb_instruction *inst)
     if (inst->op2 == PTR_HL)
     {
         uint16_t addr = read_hl(gb->cpu->reg);
-        uint8_t value = read_byte(gb->memory, addr);
-        write_byte(gb->memory, addr, value | (1 << bit_number));
+        uint8_t value = read_byte(gb, addr);
+        write_byte(gb, addr, value | (1 << bit_number));
     }
     else
     {

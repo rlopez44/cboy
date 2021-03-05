@@ -20,8 +20,8 @@ void stack_push(gameboy *gb, uint16_t value)
      *  DEC SP
      *  LD [SP], LOW_BYTE(value)
      */
-    write_byte(gb->memory, --(gb->cpu->reg->sp), (uint8_t)(value >> 8));
-    write_byte(gb->memory, --(gb->cpu->reg->sp), (uint8_t)(value & 0xff));
+    write_byte(gb, --(gb->cpu->reg->sp), (uint8_t)(value >> 8));
+    write_byte(gb, --(gb->cpu->reg->sp), (uint8_t)(value & 0xff));
 }
 
 uint16_t stack_pop(gameboy *gb)
@@ -34,8 +34,8 @@ uint16_t stack_pop(gameboy *gb)
      *  LD HIGH_BYTE(value), [SP]
      *  INC SP
      */
-    uint8_t lo = read_byte(gb->memory, (gb->cpu->reg->sp)++);
-    uint8_t hi = read_byte(gb->memory, (gb->cpu->reg->sp)++);
+    uint8_t lo = read_byte(gb, (gb->cpu->reg->sp)++);
+    uint8_t hi = read_byte(gb, (gb->cpu->reg->sp)++);
 
     return (uint16_t)(hi << 8) | (uint16_t)lo;
 }

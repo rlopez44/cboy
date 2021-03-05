@@ -30,9 +30,9 @@ uint8_t jp(gameboy *gb, gb_instruction *inst)
                 case IMM_16:
                 {
                     // little-endian
-                    uint8_t lo = read_byte(gb->memory, (gb->cpu->reg->pc)++);
+                    uint8_t lo = read_byte(gb, (gb->cpu->reg->pc)++);
                     // no need to increment PC here since we're going to jump anyway
-                    uint8_t hi = read_byte(gb->memory, gb->cpu->reg->pc);
+                    uint8_t hi = read_byte(gb, gb->cpu->reg->pc);
 
                     gb->cpu->reg->pc = ((uint16_t)hi << 8) | ((uint16_t)lo);
                     break;
@@ -47,12 +47,12 @@ uint8_t jp(gameboy *gb, gb_instruction *inst)
 
         case IMM_16:
         {
-            uint8_t lo = read_byte(gb->memory, (gb->cpu->reg->pc)++);
+            uint8_t lo = read_byte(gb, (gb->cpu->reg->pc)++);
             // increment the PC after reading the hi byte of the
             // address because we might not be jumping, in which
             // case we need the PC to be pointing to the instruction
             // immediately after this one.
-            uint8_t hi = read_byte(gb->memory, (gb->cpu->reg->pc)++);
+            uint8_t hi = read_byte(gb, (gb->cpu->reg->pc)++);
 
             uint16_t addr = ((uint16_t)hi << 8) | ((uint16_t)lo);
 
@@ -100,7 +100,7 @@ uint8_t jr(gameboy *gb, gb_instruction *inst)
 {
     uint8_t duration;
     // the offset for the jump
-    int8_t offset = (int8_t)read_byte(gb->memory, (gb->cpu->reg->pc)++);
+    int8_t offset = (int8_t)read_byte(gb, (gb->cpu->reg->pc)++);
 
     // check the second operand first. If it's NONE, we have
     // the only unconditional jump out of the 5 instructions
@@ -171,8 +171,8 @@ uint8_t call(gameboy *gb, gb_instruction *inst)
     uint8_t duration;
 
     // get the address to call
-    uint8_t lo = read_byte(gb->memory, (gb->cpu->reg->pc)++);
-    uint8_t hi = read_byte(gb->memory, (gb->cpu->reg->pc)++);
+    uint8_t lo = read_byte(gb, (gb->cpu->reg->pc)++);
+    uint8_t hi = read_byte(gb, (gb->cpu->reg->pc)++);
     uint16_t addr = ((uint16_t)hi << 8) | ((uint16_t)lo);
 
     // check the second operand first. If it's NONE, we have

@@ -550,7 +550,7 @@ uint8_t execute_instruction(gameboy *gb)
     // the instruction's duration
     uint8_t curr_inst_duration;
 
-    uint8_t inst_code = read_byte(gb->memory, (gb->cpu->reg->pc)++);
+    uint8_t inst_code = read_byte(gb, (gb->cpu->reg->pc)++);
     gb_instruction inst = instruction_table[inst_code];
 
     /* Check if we need to access a prefixed instruction.
@@ -566,7 +566,7 @@ uint8_t execute_instruction(gameboy *gb)
     if (inst.opcode == PREFIX)
     {
         // read the prefixed instruction code and access instruction
-        inst_code = read_byte(gb->memory, (gb->cpu->reg->pc)++);
+        inst_code = read_byte(gb, (gb->cpu->reg->pc)++);
         inst = instruction_table[0x100 + inst_code];
     }
 
