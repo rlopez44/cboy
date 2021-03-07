@@ -6,6 +6,7 @@
 #include "cboy/gameboy.h"
 #include "cboy/memory.h"
 #include "cboy/cartridge.h"
+#include "cboy/interrupts.h"
 
 // Stack pop and push operations
 void stack_push(gameboy *gb, uint16_t value)
@@ -133,6 +134,7 @@ gameboy *init_gameboy(const char *rom_file_path)
     }
     gb->is_halted = false;
     gb->is_stopped = false;
+    gb->clock_counter = 0;
 
     // allocate and init the CPU
     gb->cpu = init_cpu();
@@ -214,4 +216,104 @@ void free_gameboy(gameboy *gb)
     free_cpu(gb->cpu);
     unload_cartridge(gb->cart);
     free(gb);
+}
+
+/* Increment the TIMA register, including handling its
+ * overflow behavior. When TIMA overflows the value of
+ * TMA is loaded and a timer interrupt is requested.
+ *
+ * TODO: when TIMA overflows, it's value should actually
+ * be set to 0x00 for one m-cycle (four CPU clocks) before
+ * loading the value of TMA and requesting a timer interrupt.
+ */
+void increment_tima(gameboy *gb)
+{
+    uint8_t tma = read_byte(gb, TMA_REGISTER),
+            incremented_tima = read_byte(gb, TIMA_REGISTER) + 1;
+
+    if (!incremented_tima) // TIMA overflowed
+    {
+        incremented_tima = tma;
+        request_interrupt(gb, TIMER);
+    }
+
+    write_byte(gb, TIMA_REGISTER, incremented_tima);
+}
+
+/* Increment the Game Boy's internal clock counter
+ * by the given number of clocks. Also handles
+ * updating the DIV and TIMA registers as needed.
+ *
+ * Because the DIV register is simply the upper
+ * byte of this internal counter mapped to memory
+ * address 0xff04, incrementing the counter also
+ * increments the DIV register as needed (every 256
+ * clock cycles).
+ *
+ * Because the TIMA register (memory address 0xff05)
+ * is also a timer, we must increment it as needed
+ * when the internal clock counter is incremented. The
+ * TIMA register can be enabled/disabled via bit 2 of
+ * the TAC register (memory address 0xff07). If enabled,
+ * The frequency at which this timer increments is
+ * specified by bits 1 and 0 of TAC. These frequencies
+ * are specified below:
+ *
+ * TIMA update frequencies
+ * ~~~~~~~~~~~~~~~~~~~~~~~
+ * Bits 1 and 0 of TAC:
+ *     00: CPU Clock / 1024
+ *     01: CPU Clock / 16
+ *     10: CPU Clock / 64
+ *     11: CPU Clock / 256
+ *
+ * When TIMA overflows, its value is reset to the value
+ * specified in the TMA register (memory address 0xff06)
+ * and the Timer Interrupt bit in the IF register is set.
+ *
+ * NOTE: because this emulation is currently not cycle-accurate,
+ * the timings of these increments are not exact. This might
+ * cause some bugs for timer-related events in the games
+ * being played.
+ *
+ * TODO: explore ways to improve the timing of these increments
+ */
+void increment_clock_counter(gameboy *gb, uint16_t num_clocks)
+{
+    uint8_t tima = read_byte(gb, TIMA_REGISTER),
+            tma = read_byte(gb, TMA_REGISTER),
+            tac = read_byte(gb, TAC_REGISTER);
+
+    bool tima_enabled = tac & 0x4;
+
+    // the number of CPU clock ticks between TIMA increments
+    uint16_t tima_tick_interval;
+    switch (tac & 0x3)
+    {
+        case 0x0:
+            tima_tick_interval = 0x400;
+            break;
+        case 0x1:
+            tima_tick_interval = 0x10;
+            break;
+        case 0x2:
+            tima_tick_interval = 0x40;
+            break;
+        case 0x3:
+            tima_tick_interval = 0x100;
+            break;
+    }
+
+    // increment the internal clock counter one tick at a time
+    while (num_clocks)
+    {
+        ++(gb->clock_counter);
+        --num_clocks;
+
+        // check if TIMA needs incrementing
+        if (tima_enabled && !(gb->clock_counter % tima_tick_interval))
+        {
+            increment_tima(gb);
+        }
+    }
 }

@@ -332,7 +332,9 @@ void cpl(gameboy *gb)
  * Note that the STOP instruction is 2 bytes long,
  * but the second byte of the instruction is ignored.
  *
- * TODO: see about inlining this function
+ * TODO: handle clock counter reset and disable when
+ * entering STOP mode, as well as clock counter enable
+ * when leaving STOP mode.
  */
 void stop(gameboy *gb)
 {

@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include "cboy/gameboy.h"
 #include "cboy/memory.h"
 #include "cboy/cartridge.h"
@@ -36,6 +37,11 @@ uint8_t read_byte(gameboy *gb, uint16_t address)
             return 0x00;
         }
     }
+    else if (address == DIV_REGISTER)
+    {
+        // DIV is the upper byte of the internal clock counter
+        return (uint8_t)(gb->clock_counter >> 8);
+    }
 
     // attempted read from Echo RAM
     if (0xe000 <= address && address <= 0xfdff)
@@ -46,6 +52,105 @@ uint8_t read_byte(gameboy *gb, uint16_t address)
     }
 
     return gb->memory->mmap[address];
+}
+
+/* Handle writes to the timing-related registers (DIV, TIMA, TMA, TAC)
+ * -------------------------------------------------------------------
+ * To determine when to increment TIMA, the Game Boy's timer circuit
+ * selects a certain bit of the internal clock counter (see below),
+ * performs a logical AND between this bit and the TIMA enable bit of
+ * TAC (bit 2), then monitors when this signal switches from 1 to 0.
+ *
+ * The internal clock counter bit is selected based on the value of
+ * bits 1-0 of TAC, such that its flips from 1 to 0 occur at the
+ * current TIMA increment frequency:
+ *
+ *     > Bits 1 and 0 of TAC:
+ *           00: Bit 9 of internal clock counter (freq = CPU Clock / 1024)
+ *           01: Bit 3 of internal clock counter (freq = CPU Clock / 16)
+ *           10: Bit 5 of internal clock counter (freq = CPU Clock / 64)
+ *           11: Bit 7 of internal clock counter (freq = CPU Clock / 256)
+ *
+ * Given the manner in which the monitored signal is constructed, the
+ * following conditions cause the 1 -> 0 signal switch to occur:
+ *
+ *    1. The selected bit of the internal clock counter flips from
+ *       1 to 0 while TIMA is enabled (bit 2 of TAC is 1), either
+ *       because the clock counter incremented or the DIV register
+ *       was written to (here we're interested in the latter).
+ *
+ *    2. TIMA is currently enabled and a write to TAC occurs that
+ *       disables it (i.e. bit 2 of TAC flips from 1 to 0) while the
+ *       selected bit of the internal clock counter is 1.
+ *
+ *    3. TIMA is currently enabled, a write to TAC occurs that switches
+ *       the TIMA increment frequency, and this causes the circuit to
+ *       switch from a selected bit that is 1, to one that is 0.
+ *
+ * In this function we check if any of these conditions occur so
+ * that we increment TIMA appropriately during the write to memory.
+ *
+ * See: https://gbdev.io/pandocs/#timer-and-divider-registers
+ */
+static void timing_related_write(gameboy *gb, uint16_t address, uint8_t value)
+{
+    /* Bit masks to select a bit out of the internal clock
+     * counter based on the value of bits 1-0 of TAC. These
+     * are arranged such that each value is the index of the
+     * appropriate bit mask.
+     */
+    uint16_t timer_circuit_bitmasks[4] = {1 << 9, 1 << 3, 1 << 5, 1 << 7};
+
+    uint8_t tac = read_byte(gb, TAC_REGISTER);
+
+    // the bit mask used by the timer circuit
+    uint16_t bitmask = timer_circuit_bitmasks[tac & 0x3];
+
+    bool selected_bit_is_set = gb->clock_counter & bitmask,      // Selected bit of the internal clock counter is 1
+         tima_enabled        = tac & 0x4,                        // TIMA is currently enabled
+         writing_to_tac      = address == TAC_REGISTER,          // writing to TAC (TIMA frequency might change)
+         disabling_tima      = writing_to_tac && !(value & 0x4), // writing to TAC and TIMA will be disabled
+         resetting_counter   = address == DIV_REGISTER;          // writing to DIV (resetting internal clock counter)
+
+
+    /********** Check if we need to increment TIMA **********/
+
+    // condition 1 or condition 2 for TIMA increment is met
+    if ((disabling_tima || resetting_counter) && tima_enabled && selected_bit_is_set)
+    {
+        increment_tima(gb);
+    }
+    // check if condition 3 for TIMA increment is met
+    else if (tima_enabled && writing_to_tac)
+    {
+        // condition 3 is met if we're switching from
+        // a bit that is 1 to one that is 0
+        bitmask = timer_circuit_bitmasks[value & 0x3];
+        bool new_selected_bit_is_set = gb->clock_counter & bitmask;
+
+        if (selected_bit_is_set && !new_selected_bit_is_set)
+        {
+            increment_tima(gb);
+        }
+    }
+
+    /********** Perform the actual writes **********/
+
+    // writing to DIV resets the internal clock counter
+    if (address == DIV_REGISTER)
+    {
+        gb->clock_counter = 0;
+    }
+    // only the lower 3 bits of TAC can be written to
+    else if (address == TAC_REGISTER)
+    {
+        gb->memory->mmap[TAC_REGISTER] = value & 0x7;
+    }
+    // writing to TIMA or TMA
+    else
+    {
+        gb->memory->mmap[address] = value;
+    }
 }
 
 /* Writes the given value to the byte at the given address in the
@@ -85,6 +190,12 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
     else if (0x0000 <= address && address <= 0x7fff)
     {
         // TODO: once MBCs are supported, redirect these writes to the MBC
+        return;
+    }
+    // writing to the timing-related registers
+    else if (0xff04 <= address && address <= 0xff07)
+    {
+        timing_related_write(gb, address, value);
         return;
     }
 
