@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -I./include/
+CFLAGS = -Wall -I./include/
 OBJ_DIR = obj
 BIN_DIR = bin
 DEBUG_DIR = debug
