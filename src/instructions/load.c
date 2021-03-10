@@ -90,6 +90,9 @@ void ld(gameboy *gb, gb_instruction *inst)
                     gb->cpu->reg->a = read_byte(gb, addr);
                     break;
                 }
+
+                default: // shouldn't get here
+                    break;
             }
             break;
 
@@ -130,6 +133,9 @@ void ld(gameboy *gb, gb_instruction *inst)
 
                 case IMM_8:
                     gb->cpu->reg->b = read_byte(gb, (gb->cpu->reg->pc)++);
+                    break;
+
+                default: // shouldn't get here
                     break;
             }
             break;
@@ -172,6 +178,9 @@ void ld(gameboy *gb, gb_instruction *inst)
                 case IMM_8:
                     gb->cpu->reg->c = read_byte(gb, (gb->cpu->reg->pc)++);
                     break;
+
+                default: // shouldn't get here
+                    break;
             }
             break;
 
@@ -212,6 +221,9 @@ void ld(gameboy *gb, gb_instruction *inst)
 
                 case IMM_8:
                     gb->cpu->reg->d = read_byte(gb, (gb->cpu->reg->pc)++);
+                    break;
+
+                default: // shouldn't get here
                     break;
             }
             break;
@@ -254,6 +266,9 @@ void ld(gameboy *gb, gb_instruction *inst)
                 case IMM_8:
                     gb->cpu->reg->e = read_byte(gb, (gb->cpu->reg->pc)++);
                     break;
+
+                default: // shouldn't get here
+                    break;
             }
             break;
 
@@ -294,6 +309,9 @@ void ld(gameboy *gb, gb_instruction *inst)
 
                 case IMM_8:
                     gb->cpu->reg->h = read_byte(gb, (gb->cpu->reg->pc)++);
+                    break;
+
+                default: // shouldn't get here
                     break;
             }
             break;
@@ -336,6 +354,9 @@ void ld(gameboy *gb, gb_instruction *inst)
                 case IMM_8:
                     gb->cpu->reg->l = read_byte(gb, (gb->cpu->reg->pc)++);
                     break;
+
+                default: // shouldn't get here
+                    break;
             }
             break;
 
@@ -377,6 +398,9 @@ void ld(gameboy *gb, gb_instruction *inst)
                     write_byte(gb, read_hl(gb->cpu->reg), value);
                     break;
                 }
+
+                default: // shouldn't get here
+                    break;
             }
             break;
 
@@ -471,6 +495,9 @@ void ld(gameboy *gb, gb_instruction *inst)
                     set_flags(gb->cpu->reg, 0, 0, half_carry, carry);
                     break;
                 }
+
+                default: // shouldn't get here
+                    break;
             }
 
         case REG_SP:
@@ -486,6 +513,9 @@ void ld(gameboy *gb, gb_instruction *inst)
 
                 case REG_HL:
                     gb->cpu->reg->sp = read_hl(gb->cpu->reg);
+                    break;
+
+                default: // shouldn't get here
                     break;
             }
             break;
@@ -509,9 +539,15 @@ void ld(gameboy *gb, gb_instruction *inst)
                     write_byte(gb, addr, (uint8_t)(gb->cpu->reg->sp & 0xff));
                     write_byte(gb, addr + 1, (uint8_t)(gb->cpu->reg->sp >> 8));
                     break;
+
+                default: // shouldn't get here
+                    break;
             }
             break;
         }
+
+        default: // shouldn't get here
+            break;
     }
 }
 
@@ -536,6 +572,9 @@ void ldh(gameboy *gb, gb_instruction *inst)
                     // low byte + 0xff00 gives full address
                     addr = 0xff00 + (uint16_t)read_byte(gb, (gb->cpu->reg->pc)++);
                     break;
+
+                default: // shouldn't get here
+                    break;
             }
             gb->cpu->reg->a = read_byte(gb, addr);
             break;
@@ -551,6 +590,9 @@ void ldh(gameboy *gb, gb_instruction *inst)
             // the low byte added to 0xff00 gives the full 16-bit address
             addr = 0xff00 + (uint16_t)read_byte(gb, (gb->cpu->reg->pc)++);
             write_byte(gb, addr, gb->cpu->reg->a);
+            break;
+
+        default: // shouldn't get here
             break;
     }
 }

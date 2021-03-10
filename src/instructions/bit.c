@@ -120,6 +120,9 @@ static uint8_t *fetch_register(gameboy *gb, enum operands op)
         case REG_L:
             reg = &(gb->cpu->reg->l);
             break;
+
+        default: // shouldn't get here
+            break;
     }
     return reg;
 }
@@ -569,6 +572,9 @@ void bit(gameboy *gb, gb_instruction *inst)
 
             case REG_L:
                 value = gb->cpu->reg->l;
+                break;
+
+            default: // shouldn't get here
                 break;
         }
     }

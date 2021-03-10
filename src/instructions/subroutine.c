@@ -42,6 +42,9 @@ uint8_t jp(gameboy *gb, gb_instruction *inst)
                 case REG_HL:
                     gb->cpu->reg->pc = read_hl(gb->cpu->reg);
                     break;
+
+                default: // shouldn't get here
+                    break;
             }
             break;
 
@@ -74,6 +77,9 @@ uint8_t jp(gameboy *gb, gb_instruction *inst)
                 case CC_NZ:
                     will_jump = !read_zero_flag(gb->cpu->reg);
                     break;
+
+                default: // shouldn't get here
+                    break;
             }
 
             if (will_jump)
@@ -87,6 +93,9 @@ uint8_t jp(gameboy *gb, gb_instruction *inst)
             }
             break;
         }
+
+        default: // shouldn't get here
+            break;
     }
     return duration;
 }
@@ -144,6 +153,9 @@ uint8_t jr(gameboy *gb, gb_instruction *inst)
                 case CC_NZ:
                     will_jump = !read_zero_flag(gb->cpu->reg);
                     break;
+
+                default: // shouldn't get here
+                    break;
             }
 
             if (will_jump)
@@ -157,6 +169,9 @@ uint8_t jr(gameboy *gb, gb_instruction *inst)
             }
             break;
         }
+
+        default: // shouldn't get here
+            break;
     }
     return duration;
 }
@@ -210,6 +225,9 @@ uint8_t call(gameboy *gb, gb_instruction *inst)
                 case CC_NZ:
                     will_jump = !read_zero_flag(gb->cpu->reg);
                     break;
+
+                default: // shouldn't get here
+                    break;
             }
 
             if (will_jump)
@@ -228,6 +246,9 @@ uint8_t call(gameboy *gb, gb_instruction *inst)
             }
             break;
         }
+
+        default: // shouldn't get here
+            break;
     }
     return duration;
 }
@@ -276,6 +297,9 @@ void rst(gameboy *gb, gb_instruction *inst)
         case PTR_0x38:
             addr = 0x38;
             break;
+
+        default: // shouldn't get here
+            break;
     }
 
     // perform the call
@@ -315,6 +339,9 @@ uint8_t ret(gameboy *gb, gb_instruction *inst)
 
         case CC_NZ:
             will_ret = !read_zero_flag(gb->cpu->reg);
+            break;
+
+        default: // shouldn't get here
             break;
     }
 

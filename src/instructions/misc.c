@@ -58,6 +58,9 @@ void push(gameboy *gb, gb_instruction *inst)
         case REG_AF:
             to_push = read_af(gb->cpu->reg);
             break;
+
+        default: // shouldn't get here
+            break;
     }
 
     stack_push(gb, to_push);
@@ -105,6 +108,9 @@ void pop(gameboy *gb, gb_instruction *inst)
                       (lo >> 4) & 1);  // Carry
             break;
         }
+
+        default: // shouldn't get here
+            break;
     }
 }
 

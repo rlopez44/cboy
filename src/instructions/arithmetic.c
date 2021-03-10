@@ -116,6 +116,9 @@ void inc(gameboy *gb, gb_instruction *inst)
         case REG_SP:
             ++(gb->cpu->reg->sp);
             break;
+
+        default: // shouldn't get here
+            break;
     }
 }
 
@@ -228,6 +231,9 @@ void dec(gameboy *gb, gb_instruction *inst)
         case REG_SP:
             --(gb->cpu->reg->sp);
             break;
+
+        default: // shouldn't get here
+            break;
     }
 }
 
@@ -298,6 +304,9 @@ void add(gameboy *gb, gb_instruction *inst)
                 case IMM_8:
                     to_add = read_byte(gb, (gb->cpu->reg->sp)++);
                     break;
+
+                default: // shouldn't get here
+                    break;
             }
             uint8_t old_a = gb->cpu->reg->a;
             gb->cpu->reg->a += to_add;
@@ -328,6 +337,9 @@ void add(gameboy *gb, gb_instruction *inst)
 
                 case REG_SP:
                     to_add = gb->cpu->reg->sp;
+
+                default: // shouldn't get here
+                    break;
             }
             uint16_t old_hl = read_hl(gb->cpu->reg);
             write_hl(gb->cpu->reg, old_hl + to_add);
@@ -354,6 +366,9 @@ void add(gameboy *gb, gb_instruction *inst)
             set_flags(gb->cpu->reg, 0, 0, half_carry, carry);
             break;
         }
+
+        default: // shouldn't get here
+            break;
     }
 }
 
@@ -407,6 +422,9 @@ void adc(gameboy *gb, gb_instruction *inst)
 
         case IMM_8:
             to_add += read_byte(gb, (gb->cpu->reg->pc)++);
+            break;
+
+        default: // shouldn't get here
             break;
     }
     uint8_t old_a = gb->cpu->reg->a;
@@ -506,6 +524,9 @@ void sub(gameboy *gb, gb_instruction *inst)
         case IMM_8:
             to_sub = read_byte(gb, (gb->cpu->reg->pc)++);
             break;
+
+        default: // shouldn't get here
+            break;
     }
 
     // calculate and store the difference and set flags
@@ -562,6 +583,9 @@ void sbc(gameboy *gb, gb_instruction *inst)
 
         case IMM_8:
             to_sub += read_byte(gb, (gb->cpu->reg->pc)++);
+            break;
+
+        default: // shouldn't get here
             break;
     }
 
@@ -622,6 +646,9 @@ void cp(gameboy *gb, gb_instruction *inst)
         case IMM_8:
             to_sub = read_byte(gb, (gb->cpu->reg->pc)++);
             break;
+
+        default: // shouldn't get here
+            break;
     }
 
     // calculate the difference (without storing the result) and set flags
@@ -679,6 +706,9 @@ void and(gameboy *gb, gb_instruction *inst)
         case IMM_8:
             to_and = read_byte(gb, (gb->cpu->reg->pc)++);
             break;
+
+        default: // shouldn't get here
+            break;
     }
     gb->cpu->reg->a &= to_and;
     set_flags(gb->cpu->reg, gb->cpu->reg->a == 0, 0, 1, 0);
@@ -734,6 +764,9 @@ void or(gameboy *gb, gb_instruction *inst)
 
         case IMM_8:
             to_or = read_byte(gb, (gb->cpu->reg->pc)++);
+            break;
+
+        default: // shouldn't get here
             break;
     }
     gb->cpu->reg->a |= to_or;
@@ -791,6 +824,9 @@ void xor(gameboy *gb, gb_instruction *inst)
 
         case IMM_8:
             to_xor = read_byte(gb, (gb->cpu->reg->pc)++);
+            break;
+
+        default: // shouldn't get here
             break;
     }
     gb->cpu->reg->a ^= to_xor;
