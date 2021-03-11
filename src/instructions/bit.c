@@ -162,7 +162,7 @@ void rlc(gameboy *gb, gb_instruction *inst)
         // rotate and set flags
         bit_seven = val >> 7;
         write_byte(gb, addr, (val << 1) | bit_seven);
-        set_flags(gb->cpu->reg, (val << 1) | bit_seven == 0, 0, 0, bit_seven);
+        set_flags(gb->cpu->reg, ((val << 1) | bit_seven) == 0, 0, 0, bit_seven);
     }
     else
     {
@@ -209,7 +209,7 @@ void rrc(gameboy *gb, gb_instruction *inst)
         // rotate and set flags
         bit_zero = val & 1;
         write_byte(gb, addr, (bit_zero << 7) | (val >> 1));
-        set_flags(gb->cpu->reg, (bit_zero << 7) | (val >> 1), 0, 0, bit_zero);
+        set_flags(gb->cpu->reg, ((bit_zero << 7) | (val >> 1)) == 0, 0, 0, bit_zero);
     }
     else
     {
@@ -259,7 +259,7 @@ void rl(gameboy *gb, gb_instruction *inst)
         // rotate and set flags
         bit_seven = val >> 7;
         write_byte(gb, addr, (val << 1) | carry);
-        set_flags(gb->cpu->reg, (val << 1) | carry == 0, 0, 0, bit_seven);
+        set_flags(gb->cpu->reg, ((val << 1) | carry) == 0, 0, 0, bit_seven);
     }
     else
     {
@@ -309,7 +309,7 @@ void rr(gameboy *gb, gb_instruction *inst)
         // rotate and set flags
         bit_zero = val & 1;
         write_byte(gb, addr, (carry << 7) | (val >> 1));
-        set_flags(gb->cpu->reg, (carry << 7) | (val >> 1), 0, 0, bit_zero);
+        set_flags(gb->cpu->reg, ((carry << 7) | (val >> 1)) == 0, 0, 0, bit_zero);
     }
     else
     {
@@ -405,7 +405,7 @@ void sra(gameboy *gb, gb_instruction *inst)
         // Shift and set flags.
         bit_zero = val & 1;
         write_byte(gb, addr, (val & 0x80) | (val >> 1));
-        set_flags(gb->cpu->reg, (val & 0x80) | (val >> 1) == 0, 0, 0, bit_zero);
+        set_flags(gb->cpu->reg, ((val & 0x80) | (val >> 1)) == 0, 0, 0, bit_zero);
     }
     else
     {
@@ -580,7 +580,7 @@ void bit(gameboy *gb, gb_instruction *inst)
         }
     }
 
-    set_zero_flag(gb->cpu->reg, value & (1 << bit_number) == 0);
+    set_zero_flag(gb->cpu->reg, (value & (1 << bit_number)) == 0);
     set_subtract_flag(gb->cpu->reg, 0);
     set_half_carry_flag(gb->cpu->reg, 1);
 }
