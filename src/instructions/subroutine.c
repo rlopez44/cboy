@@ -16,7 +16,7 @@
  */
 uint8_t jp(gameboy *gb, gb_instruction *inst)
 {
-    uint8_t duration;
+    uint8_t duration = 0;
 
     // check the second operand first. If it's NONE, we have one
     // of the two unconditional jumps out of the 6 instructions
@@ -59,7 +59,7 @@ uint8_t jp(gameboy *gb, gb_instruction *inst)
 
             uint16_t addr = ((uint16_t)hi << 8) | ((uint16_t)lo);
 
-            uint8_t will_jump; // the condition for the jump
+            uint8_t will_jump = 0; // the condition for the jump
             switch (inst->op1)
             {
                 case CC_C:
@@ -107,7 +107,7 @@ uint8_t jp(gameboy *gb, gb_instruction *inst)
  */
 uint8_t jr(gameboy *gb, gb_instruction *inst)
 {
-    uint8_t duration;
+    uint8_t duration = 0;
     // the offset for the jump
     int8_t offset = (int8_t)read_byte(gb, (gb->cpu->reg->pc)++);
 
@@ -135,7 +135,7 @@ uint8_t jr(gameboy *gb, gb_instruction *inst)
         {
             // Same jump logic as the unconditional JR, but
             // here we also check if the jump condition is met
-            uint8_t will_jump; // the condition for the jump
+            uint8_t will_jump = 0; // the condition for the jump
             switch (inst->op1)
             {
                 case CC_C:
@@ -183,7 +183,7 @@ uint8_t jr(gameboy *gb, gb_instruction *inst)
  */
 uint8_t call(gameboy *gb, gb_instruction *inst)
 {
-    uint8_t duration;
+    uint8_t duration = 0;
 
     // get the address to call
     uint8_t lo = read_byte(gb, (gb->cpu->reg->pc)++);
@@ -207,7 +207,7 @@ uint8_t call(gameboy *gb, gb_instruction *inst)
 
         case IMM_16: // first operand is the condition
         {
-            uint8_t will_jump; // the condition for the jump
+            uint8_t will_jump = 0; // the condition for the jump
             switch (inst->op1)
             {
                 case CC_C:
@@ -263,7 +263,7 @@ uint8_t call(gameboy *gb, gb_instruction *inst)
  */
 void rst(gameboy *gb, gb_instruction *inst)
 {
-    uint16_t addr; // the target address
+    uint16_t addr = 0; // the target address
     switch (inst->op1)
     {
         case PTR_0x00:
@@ -317,8 +317,8 @@ void rst(gameboy *gb, gb_instruction *inst)
  */
 uint8_t ret(gameboy *gb, gb_instruction *inst)
 {
-    uint8_t duration;
-    uint8_t will_ret; // whether the instruction will return
+    uint8_t duration = 0,
+            will_ret = 0; // whether the instruction will return
     switch (inst->op1)
     {
         case NONE: // the unconditional RET

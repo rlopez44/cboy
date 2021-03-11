@@ -556,7 +556,7 @@ void ldh(gameboy *gb, gb_instruction *inst)
 {
     // address that will be used in the instructions,
     // either to read from or write to memory
-    uint16_t addr;
+    uint16_t addr = 0;
     switch (inst->op1)
     {
         case REG_A:

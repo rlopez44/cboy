@@ -40,7 +40,7 @@ void di(gameboy *gb)
  */
 void push(gameboy *gb, gb_instruction *inst)
 {
-    uint16_t to_push; // the value to push onto the stack
+    uint16_t to_push = 0; // the value to push onto the stack
     switch (inst->op1)
     {
         case REG_BC:

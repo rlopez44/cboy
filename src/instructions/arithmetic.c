@@ -266,7 +266,7 @@ void add(gameboy *gb, gb_instruction *inst)
     {
         case REG_A:
         {
-            uint8_t to_add; // value to add
+            uint8_t to_add = 0; // value to add
             switch (inst->op2)
             {
                 case REG_A:
@@ -320,7 +320,7 @@ void add(gameboy *gb, gb_instruction *inst)
 
         case REG_HL:
         {
-            uint16_t to_add; // value to add
+            uint16_t to_add = 0; // value to add
             switch (inst->op2)
             {
                 case REG_BC:
@@ -486,7 +486,7 @@ void sub(gameboy *gb, gb_instruction *inst)
      *  NOTE: SUB A, A will always set the zero flag
      */
 
-    uint8_t to_sub; // the value to subtract
+    uint8_t to_sub = 0; // the value to subtract
     switch (inst->op2)
     {
         case REG_A:
@@ -608,7 +608,7 @@ void cp(gameboy *gb, gb_instruction *inst)
      * NOTE: CP A, A will always set the zero flag
      */
 
-    uint8_t to_sub; // the value to subtract
+    uint8_t to_sub = 0; // the value to subtract
     switch (inst->op2)
     {
         case REG_A:
@@ -668,7 +668,7 @@ void and(gameboy *gb, gb_instruction *inst)
      *  Carry Flag:        reset
      */
 
-    uint8_t to_and; // value to bitwise and with register A
+    uint8_t to_and = 0; // value to bitwise and with register A
     switch (inst->op2)
     {
         case REG_A:
@@ -727,7 +727,7 @@ void or(gameboy *gb, gb_instruction *inst)
      *  Carry Flag:        reset
      */
 
-    uint8_t to_or; // value to bitwise or with register A
+    uint8_t to_or = 0; // value to bitwise or with register A
     switch (inst->op2)
     {
         case REG_A:
@@ -787,7 +787,7 @@ void xor(gameboy *gb, gb_instruction *inst)
      *  Carry Flag:        reset
      */
 
-    uint8_t to_xor; // value to bitwise xor with register A
+    uint8_t to_xor = 0; // value to bitwise xor with register A
     switch (inst->op2)
     {
         case REG_A:

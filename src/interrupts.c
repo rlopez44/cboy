@@ -42,7 +42,7 @@ void enable_interrupt(gameboy *gb, INTERRUPT_TYPE interrupt)
  */
 uint8_t service_interrupt(gameboy *gb)
 {
-    uint8_t handler_addr, // the address of the interrupt handler
+    uint8_t handler_addr = 0, // the address of the interrupt handler
             duration = 0, // number of M-cycles taken to service the interrupt
             if_register = read_byte(gb, IF_REGISTER),
             ie_register = read_byte(gb, IE_REGISTER);
@@ -101,6 +101,7 @@ uint8_t service_interrupt(gameboy *gb)
             if_register &= ~joypad_mask;
             handler_addr = 0x60;
         }
+        else {} // shouldn't get here
 
         // set the high byte of the PC to zero and the low
         // byte to the address of the interrupt handler

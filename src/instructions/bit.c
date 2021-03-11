@@ -1,6 +1,7 @@
 // Implementation of the bit shift instructions
 
 #include <stdint.h>
+#include <stddef.h>
 #include "cboy/instructions.h"
 #include "cboy/gameboy.h"
 #include "execute.h"
@@ -90,7 +91,7 @@ void rra(gameboy *gb)
  */
 static uint8_t *fetch_register(gameboy *gb, enum operands op)
 {
-    uint8_t *reg;
+    uint8_t *reg = NULL;
     switch (op)
     {
         case REG_A:
@@ -535,7 +536,7 @@ void bit(gameboy *gb, gb_instruction *inst)
      * can determine which bit to use by offsetting from
      * BIT_0.
      */
-    uint8_t value, bit_number = inst->op1 - BIT_0;
+    uint8_t value = 0, bit_number = inst->op1 - BIT_0;
 
     // handle PTR_HL separately, since we need to read from memory
     if (inst->op2 == PTR_HL)
