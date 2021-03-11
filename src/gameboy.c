@@ -280,9 +280,7 @@ void increment_tima(gameboy *gb)
  */
 void increment_clock_counter(gameboy *gb, uint16_t num_clocks)
 {
-    uint8_t tima = read_byte(gb, TIMA_REGISTER),
-            tma = read_byte(gb, TMA_REGISTER),
-            tac = read_byte(gb, TAC_REGISTER);
+    uint8_t tac = read_byte(gb, TAC_REGISTER);
 
     bool tima_enabled = tac & 0x4;
 
