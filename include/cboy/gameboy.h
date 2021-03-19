@@ -17,7 +17,7 @@ typedef struct gameboy {
     gb_memory *memory;
     gb_cartridge *cart;
 
-    bool is_stopped, is_halted;
+    bool is_stopped, is_halted, dma_requested;
 
     /* The Game Boy's internal 16-bit clock counter.
      * The DIV register at memory address 0xff04 is
@@ -25,6 +25,12 @@ typedef struct gameboy {
      * to memory.
      */
     uint16_t clock_counter;
+
+    /* A counter to track the number of clocks since
+     * a DMA transfer was requested so that we can
+     * emulate the DMA transfer timing.
+     */
+    uint16_t dma_counter;
 } gameboy;
 
 // stack push and pop operations
@@ -46,5 +52,8 @@ void increment_tima(gameboy *gb);
  * incrementing the DIV and TIMA registers as needed.
  */
 void increment_clock_counter(gameboy *gb, uint16_t num_clocks);
+
+// the emulator's game loop
+void run_gameboy(gameboy *gb);
 
 #endif

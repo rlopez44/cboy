@@ -3,10 +3,12 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include "cboy/gameboy.h"
 #include "cboy/memory.h"
 #include "cboy/cartridge.h"
 #include "cboy/interrupts.h"
+#include "cboy/instructions.h"
 
 // Stack pop and push operations
 void stack_push(gameboy *gb, uint16_t value)
@@ -134,7 +136,9 @@ gameboy *init_gameboy(const char *rom_file_path)
     }
     gb->is_halted = false;
     gb->is_stopped = false;
+    gb->dma_requested = false;
     gb->clock_counter = 0;
+    gb->dma_counter = 0;
 
     // allocate and init the CPU
     gb->cpu = init_cpu();
@@ -228,8 +232,8 @@ void free_gameboy(gameboy *gb)
  */
 void increment_tima(gameboy *gb)
 {
-    uint8_t tma = read_byte(gb, TMA_REGISTER),
-            incremented_tima = read_byte(gb, TIMA_REGISTER) + 1;
+    uint8_t tma = gb->memory->mmap[TMA_REGISTER],
+            incremented_tima = gb->memory->mmap[TIMA_REGISTER] + 1;
 
     if (!incremented_tima) // TIMA overflowed
     {
@@ -237,7 +241,7 @@ void increment_tima(gameboy *gb)
         request_interrupt(gb, TIMER);
     }
 
-    write_byte(gb, TIMA_REGISTER, incremented_tima);
+    gb->memory->mmap[TIMA_REGISTER] = incremented_tima;
 }
 
 /* Increment the Game Boy's internal clock counter
@@ -280,7 +284,7 @@ void increment_tima(gameboy *gb)
  */
 void increment_clock_counter(gameboy *gb, uint16_t num_clocks)
 {
-    uint8_t tac = read_byte(gb, TAC_REGISTER);
+    uint8_t tac = gb->memory->mmap[TAC_REGISTER];
 
     bool tima_enabled = tac & 0x4;
 
@@ -314,4 +318,54 @@ void increment_clock_counter(gameboy *gb, uint16_t num_clocks)
             increment_tima(gb);
         }
     }
+}
+
+// run the emulator
+// TODO: add a running flag to gameboy struct
+void run_gameboy(gameboy *gb)
+{
+    printf("Executing 20 intructions from the ROM as a test:\n");
+
+    // simulate a DMA transfer request
+    write_byte(gb, 0xff46, 0x00);
+
+    // begin execution (just 20 iterations)
+    uint8_t num_clocks;
+    for (int i = 0; i < 2000; ++i)
+    {
+        // number of clock ticks, given number of m-cycles
+        num_clocks = 4 * execute_instruction(gb);
+        increment_clock_counter(gb, num_clocks);
+
+        /* Check if DMA needs to be performed
+         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+         * To emulate the DMA transfer timing, we wait until the
+         * number of clocks that a DMA takes has elapsed since
+         * the DMA register was written to, then perform the DMA
+         * transfer all at once. This works because the CPU only
+         * has access to HRAM while the DMA process is supposed
+         * to be occuring.
+         *
+         * The transfer takes 160 m-cycles (640 clocks)
+         */
+        if (gb->dma_requested)
+        {
+            printf("***DMA check***\n");
+            gb->dma_counter += num_clocks;
+            if (gb->dma_counter >= 640)
+            {
+                printf("***Performing DMA transfer***\n");
+                dma_transfer(gb);
+                gb->dma_requested = false;
+                gb->dma_counter = 0;
+            }
+        }
+
+        print_registers(gb->cpu);
+
+        printf("Internal Clock Counter: 0x%04x\n\n", gb->clock_counter);
+        // sleep for 0.25 sec
+        usleep(250000);
+    }
+
 }

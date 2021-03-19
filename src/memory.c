@@ -25,8 +25,13 @@
  */
 uint8_t read_byte(gameboy *gb, uint16_t address)
 {
+    // during a DMA transfer we can only access HRAM
+    if (gb->dma_requested && (address < 0xff80 || address > 0xfffe))
+    {
+        return 0xff;
+    }
     // attempted read from the prohibited memory range
-    if (0xfea0 <= address && address <= 0xfeff)
+    else if (0xfea0 <= address && address <= 0xfeff)
     {
         if (0) // OAM blocked. TODO: implement OAM blocked check
         {
@@ -52,6 +57,37 @@ uint8_t read_byte(gameboy *gb, uint16_t address)
     }
 
     return gb->memory->mmap[address];
+}
+
+/* Perform a DMA transfer from ROM or RAM to OAM
+ * ---------------------------------------------
+ * On hardware, the DMA transfer takes 160 m-cycles to complete,
+ * but this function performs the transfer all at once. As such,
+ * emulating the timing of the transfer should be handled by the
+ * caller.
+ *
+ * The DMA source address is really the upper byte of the full
+ * 16-bit starting address for the transfer (See below).
+ *
+ * Source and Destination
+ * ~~~~~~~~~~~~~~~~~~~~~~
+ * DMA source address: XX
+ * Source:          0xXX00 - 0xXX9f
+ * Destination:     0xfe00 - 0xfe9f
+ *
+ */
+void dma_transfer(gameboy *gb)
+{
+    uint8_t source_hi = gb->memory->mmap[0xff46];
+    uint16_t source, dest;
+
+    for (uint16_t lo = 0x0000; lo <= 0x009f; ++lo)
+    {
+        source = ((uint16_t)source_hi << 8) | lo;
+        dest = 0xfe00 | lo;
+
+        gb->memory->mmap[dest] = gb->memory->mmap[source];
+    }
 }
 
 /* Handle writes to the timing-related registers (DIV, TIMA, TMA, TAC)
@@ -101,7 +137,7 @@ static void timing_related_write(gameboy *gb, uint16_t address, uint8_t value)
      */
     uint16_t timer_circuit_bitmasks[4] = {1 << 9, 1 << 3, 1 << 5, 1 << 7};
 
-    uint8_t tac = read_byte(gb, TAC_REGISTER);
+    uint8_t tac = gb->memory->mmap[TAC_REGISTER];
 
     // the bit mask used by the timer circuit
     uint16_t bitmask = timer_circuit_bitmasks[tac & 0x3];
@@ -181,8 +217,13 @@ static void timing_related_write(gameboy *gb, uint16_t address, uint8_t value)
  */
 void write_byte(gameboy *gb, uint16_t address, uint8_t value)
 {
+    // during a DMA transfer we can only access HRAM
+    if (gb->dma_requested && (address < 0xff80 || address > 0xfffe))
+    {
+        return;
+    }
     // attempted writes to the boot ROM disabled bit or the prohibited memory range are ignored
-    if (address == 0xff50 || (0xfea0 <= address && address <= 0xfeff))
+    else if (address == 0xff50 || (0xfea0 <= address && address <= 0xfeff))
     {
         return;
     }
@@ -196,6 +237,20 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
     else if (0xff04 <= address && address <= 0xff07)
     {
         timing_related_write(gb, address, value);
+        return;
+    }
+    else if (address == 0xff46)
+    {
+        /* Begin the DMA transfer process by requesting it.
+         * The written value must be between 0x00 and 0xdf,
+         * otherwise no DMA transfer will occur.
+         */
+        if (value <= 0xdf) // valid value
+        {
+            gb->dma_requested = true;
+        }
+
+        gb->memory->mmap[address] = value;
         return;
     }
 

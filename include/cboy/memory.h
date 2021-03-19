@@ -24,6 +24,9 @@ typedef struct gb_memory {
 uint8_t read_byte(gameboy *gb, uint16_t address);
 void write_byte(gameboy *gb, uint16_t address, uint8_t value);
 
+// perform a DMA transfer
+void dma_transfer(gameboy *gb);
+
 // function to initialize the memory struct
 gb_memory *init_memory_map(gb_cartridge *cart);
 
