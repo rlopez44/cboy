@@ -5,6 +5,7 @@
 #include "cboy/gameboy.h"
 #include "cboy/memory.h"
 #include "cboy/cartridge.h"
+#include "cboy/ppu.h"
 
 /* Reads a byte from the Game Boy's memory map at the given
  * address. Because a read can be requested from any address,
@@ -20,11 +21,16 @@
  *
  *  > Reads from the memory range 0xfea0-0xfeff are prohibited
  *    by Nintendo.
- *      >> 0xff is returned when OAM is blocked (TODO: implement)
+ *      >> 0xff is returned when OAM is blocked
  *         Otherwise, 0x00 is returned.
  */
 uint8_t read_byte(gameboy *gb, uint16_t address)
 {
+    uint8_t ppu_status   = gb->memory->mmap[STAT_REGISTER] & 0x3,
+            oam_blocked  = (ppu_status == 3) || (ppu_status == 2),
+            vram_blocked = ppu_status == 3;
+
+    /**************** BEGIN: Special reads where we return early **************/
     // during a DMA transfer we can only access HRAM
     if (gb->dma_requested && (address < 0xff80 || address > 0xfffe))
     {
@@ -33,7 +39,7 @@ uint8_t read_byte(gameboy *gb, uint16_t address)
     // attempted read from the prohibited memory range
     else if (0xfea0 <= address && address <= 0xfeff)
     {
-        if (0) // OAM blocked. TODO: implement OAM blocked check
+        if (oam_blocked)
         {
             return 0xff;
         }
@@ -42,11 +48,43 @@ uint8_t read_byte(gameboy *gb, uint16_t address)
             return 0x00;
         }
     }
+    // attempted read from OAM when it's blocked by the PPU
+    else if (oam_blocked && 0xfe00 <= address && address <= 0xfe9f)
+    {
+        return 0xff;
+    }
+    // attempted read from VRAM when it's blocked by the PPU
+    else if (vram_blocked && 0x8000 <= address && address <= 0x9fff)
+    {
+        return 0xff;
+    }
     else if (address == DIV_REGISTER)
     {
         // DIV is the upper byte of the internal clock counter
         return (uint8_t)(gb->clock_counter >> 8);
     }
+    else if (address == SCY_REGISTER)
+    {
+        return gb->ppu->scy;
+    }
+    else if (address == SCX_REGISTER)
+    {
+        return gb->ppu->scx;
+    }
+    else if (address == LY_REGISTER)
+    {
+        return gb->ppu->ly;
+    }
+    else if (address == WY_REGISTER)
+    {
+        return gb->ppu->wy;
+    }
+    else if (address == WX_REGISTER)
+    {
+        return gb->ppu->wx;
+    }
+    /**************** END: Special reads where we return early **************/
+
 
     // attempted read from Echo RAM
     if (0xe000 <= address && address <= 0xfdff)
@@ -78,7 +116,7 @@ uint8_t read_byte(gameboy *gb, uint16_t address)
  */
 void dma_transfer(gameboy *gb)
 {
-    uint8_t source_hi = gb->memory->mmap[0xff46];
+    uint8_t source_hi = gb->memory->mmap[DMA_REGISTER];
     uint16_t source, dest;
 
     for (uint16_t lo = 0x0000; lo <= 0x009f; ++lo)
@@ -217,6 +255,11 @@ static void timing_related_write(gameboy *gb, uint16_t address, uint8_t value)
  */
 void write_byte(gameboy *gb, uint16_t address, uint8_t value)
 {
+    uint8_t ppu_status   = gb->memory->mmap[STAT_REGISTER] & 0x3,
+            oam_blocked  = (ppu_status == 3) || (ppu_status == 2),
+            vram_blocked = ppu_status == 3;
+
+    /**************** BEGIN: Special writes where we return early **************/
     // during a DMA transfer we can only access HRAM
     if (gb->dma_requested && (address < 0xff80 || address > 0xfffe))
     {
@@ -224,6 +267,16 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
     }
     // attempted writes to the boot ROM disabled bit or the prohibited memory range are ignored
     else if (address == 0xff50 || (0xfea0 <= address && address <= 0xfeff))
+    {
+        return;
+    }
+    // attempted write to OAM when it's blocked by the PPU
+    else if (oam_blocked && 0xfe00 <= address && address <= 0xfe9f)
+    {
+        return;
+    }
+    // attempted write to VRAM when it's blocked by the PPU
+    else if (vram_blocked && 0x8000 <= address && address <= 0x9fff)
     {
         return;
     }
@@ -239,7 +292,50 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
         timing_related_write(gb, address, value);
         return;
     }
-    else if (address == 0xff46)
+    else if (address == LY_REGISTER) // cannot write to LY register
+    {
+        return;
+    }
+    else if (address == SCY_REGISTER)
+    {
+        gb->ppu->scy = value;
+    }
+    else if (address == SCX_REGISTER)
+    {
+        gb->ppu->scx = value;
+    }
+    else if (address == WY_REGISTER)
+    {
+        gb->ppu->wy = value;
+    }
+    else if (address == WX_REGISTER)
+    {
+        gb->ppu->wx = value;
+    }
+    /**************** END: Special writes where we return early **************/
+
+
+    // attempted write to Echo RAM
+    if (0xe000 <= address && address <= 0xfdff)
+    {
+        // map to the appropriate address in WRAM
+        // the offset is 0xe000 - 0xc000 = 0x2000
+        address -= 0x2000;
+    }
+    // make sure the IF and IE registers' upper three bits are always zero
+    else if (address == 0xff0f || address == 0xffff)
+    {
+        value &= 0x1f;
+    }
+    // can only write to bits 3-6 of the STAT register
+    else if (address == STAT_REGISTER)
+    {
+        uint8_t old_stat = gb->memory->mmap[address],
+                mask     = 0x78; // mask for bits 3-6
+
+        value = (value & mask) | (old_stat & ~mask);
+    }
+    else if (address == DMA_REGISTER)
     {
         /* Begin the DMA transfer process by requesting it.
          * The written value must be between 0x00 and 0xdf,
@@ -249,23 +345,6 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
         {
             gb->dma_requested = true;
         }
-
-        gb->memory->mmap[address] = value;
-        return;
-    }
-
-    // attempted write to Echo RAM
-    if (0xe000 <= address && address <= 0xfdff)
-    {
-        // map to the appropriate address in WRAM
-        // the offset is 0xe000 - 0xc000 = 0x2000
-        address -= 0x2000;
-    }
-
-    // make sure the IF and IE registers' upper three bits are always zero
-    if (address == 0xff0f || address == 0xffff)
-    {
-        value &= 0x1f;
     }
 
     gb->memory->mmap[address] = value;

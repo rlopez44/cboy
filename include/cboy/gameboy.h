@@ -6,18 +6,26 @@
 #include "cboy/cpu.h"
 #include "cboy/memory.h"
 #include "cboy/cartridge.h"
+#include "cboy/ppu.h"
 
 #define DIV_REGISTER 0xff04
 #define TIMA_REGISTER 0xff05
 #define TMA_REGISTER 0xff06
 #define TAC_REGISTER 0xff07
 
+/* frame duration is 16.74 ms */
+#define GB_FRAME_DURATION 17
+
 typedef struct gameboy {
     gb_cpu *cpu;
     gb_memory *memory;
     gb_cartridge *cart;
+    gb_ppu *ppu;
 
     bool is_stopped, is_halted, dma_requested;
+
+    // to maintain the appropriate frame rate
+    uint32_t next_frame_time;
 
     /* The Game Boy's internal 16-bit clock counter.
      * The DIV register at memory address 0xff04 is
@@ -31,6 +39,11 @@ typedef struct gameboy {
      * emulate the DMA transfer timing.
      */
     uint16_t dma_counter;
+
+    // our Game Boy screen
+    SDL_Window *window;
+    SDL_Renderer *renderer;
+    SDL_Texture *screen;
 } gameboy;
 
 // stack push and pop operations

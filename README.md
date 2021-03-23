@@ -4,6 +4,12 @@ This is the first emulator I've ever tried to build and
 also the first substantial project I've written using C.
 
 # Compiling the Emulator
+In order to compile the emulator, you must have [SDL2](https://www.libsdl.org/)
+installed on your machine (the library and development files). 
+For example, to install SDL2 on Debian/Ubuntu, run:
+
+    `sudo apt install libsdl2-dev`
+
 To compile the emulator, run `make` in the project's root directory.
 This will compile the emulator in the `bin/` subdirectory. The
 corresponding object files will be stored in the `obj/` subdirectory.

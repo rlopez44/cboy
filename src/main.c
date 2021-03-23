@@ -3,7 +3,7 @@
 
 int main(int argc, const char *argv[])
 {
-    printf("CBoy - A Game Boy Emulator\n"
+    printf("CBoy -- A Game Boy Emulator\n"
            "--------------------------\n");
 
     if (argc != 2)

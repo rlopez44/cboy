@@ -1,5 +1,6 @@
 CC = gcc
-CFLAGS = -Wall -I./include/
+CFLAGS = -Wall -I./include/ -I/usr/include/SDL2/
+LDLIBS = -lSDL2
 OBJ_DIR = obj
 BIN_DIR = bin
 DEBUG_DIR = debug
@@ -27,11 +28,11 @@ $(BIN_DIR) $(OBJ_DIR) $(BIN_DIR)/$(DEBUG_DIR) $(OBJ_DIR)/$(DEBUG_DIR):
 
 # regular build
 $(BIN_DIR)/$(BIN): $(OBJS) | $(BIN_DIR)
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $^ $(LDLIBS) -o $@
 
 # debug build
 $(BIN_DIR)/$(DEBUG_DIR)/$(BIN): $(DEBUG_OBJS) | $(BIN_DIR)/$(DEBUG_DIR)
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $^ $(LDLIBS) -o $@
 
 # object files
 .SECONDEXPANSION:

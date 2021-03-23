@@ -3,12 +3,15 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include "cboy/gameboy.h"
 #include "cboy/memory.h"
 #include "cboy/cartridge.h"
+#include "cboy/ppu.h"
 #include "cboy/interrupts.h"
 #include "cboy/instructions.h"
+
+/* 3 seems like a good scale factor */
+#define WINDOW_SCALE 3
 
 // Stack pop and push operations
 void stack_push(gameboy *gb, uint16_t value)
@@ -117,6 +120,62 @@ static bool verify_checksum(gameboy *gb)
     return valid_checksum;
 }
 
+// Initialize the Game Boy's screen
+static bool init_screen(gameboy *gb)
+{
+    if (SDL_Init(SDL_INIT_VIDEO) < 0)
+    {
+        return false;
+    }
+
+    // We upscale our window dimensions from the Game Boy's
+    // pixel dimensions so that our window isn't super small.
+    gb->window = SDL_CreateWindow("Cboy -- A Game Boy Emulator",
+                                  SDL_WINDOWPOS_UNDEFINED,
+                                  SDL_WINDOWPOS_UNDEFINED,
+                                  WINDOW_SCALE * FRAME_WIDTH,
+                                  WINDOW_SCALE * FRAME_HEIGHT,
+                                  SDL_WINDOW_SHOWN);
+
+    if (gb->window == NULL)
+    {
+        return false;
+    }
+
+    gb->renderer = SDL_CreateRenderer(gb->window, -1, 0);
+
+    if (gb->renderer == NULL)
+    {
+        SDL_DestroyWindow(gb->window);
+        return false;
+    }
+
+    /* NOTE: even though we upscaled our window dimensions,
+     * we can maintain the correct number of pixels in this
+     * texture. This just means that each pixel will be
+     * upscaled in size to fill the window.
+     */
+    gb->screen = SDL_CreateTexture(gb->renderer,
+                                   SDL_PIXELFORMAT_ARGB8888,
+                                   SDL_TEXTUREACCESS_STREAMING,
+                                   FRAME_WIDTH,
+                                   FRAME_HEIGHT);
+
+    if (gb->screen == NULL)
+    {
+        SDL_DestroyRenderer(gb->renderer);
+        SDL_DestroyWindow(gb->window);
+        return false;
+    }
+
+    SDL_UpdateTexture(gb->screen, NULL, gb->ppu->frame_buffer, FRAME_WIDTH * sizeof(uint32_t));
+    SDL_RenderClear(gb->renderer);
+    SDL_RenderCopy(gb->renderer, gb->screen, NULL, NULL);
+    SDL_RenderPresent(gb->renderer);
+
+    return true;
+}
+
 /* Allocates memory for the Game Boy struct
  * and initializes the Game Boy and its components.
  * Loads the ROM file into the emulator.
@@ -139,6 +198,10 @@ gameboy *init_gameboy(const char *rom_file_path)
     gb->dma_requested = false;
     gb->clock_counter = 0;
     gb->dma_counter = 0;
+    gb->window = NULL;
+    gb->renderer = NULL;
+    gb->screen = NULL;
+    gb->next_frame_time = GB_FRAME_DURATION;
 
     // allocate and init the CPU
     gb->cpu = init_cpu();
@@ -159,6 +222,17 @@ gameboy *init_gameboy(const char *rom_file_path)
         return NULL;
     }
 
+    // allocate and init the PPU
+    gb->ppu = init_ppu();
+
+    if (gb->ppu == NULL)
+    {
+        free_cpu(gb->cpu);
+        unload_cartridge(gb->cart);
+        free(gb);
+        return NULL;
+    }
+
     // open the ROM file to load it into the emulator
     FILE *rom_file = fopen(rom_file_path, "rb");
 
@@ -167,6 +241,7 @@ gameboy *init_gameboy(const char *rom_file_path)
         fprintf(stderr, "Failed to open the ROM file (incorrect path?)\n");
         unload_cartridge(gb->cart);
         free_cpu(gb->cpu);
+        free_ppu(gb->ppu);
         free(gb);
         return NULL;
     }
@@ -188,6 +263,7 @@ gameboy *init_gameboy(const char *rom_file_path)
 
         unload_cartridge(gb->cart);
         free_cpu(gb->cpu);
+        free_ppu(gb->ppu);
         free(gb);
         return NULL;
     }
@@ -199,7 +275,15 @@ gameboy *init_gameboy(const char *rom_file_path)
     {
         unload_cartridge(gb->cart);
         free_cpu(gb->cpu);
+        free_ppu(gb->ppu);
         free(gb);
+        return NULL;
+    }
+
+    // initialize the screen after all other components
+    if (!init_screen(gb))
+    {
+        free_gameboy(gb);
         return NULL;
     }
 
@@ -219,6 +303,11 @@ void free_gameboy(gameboy *gb)
     free_memory_map(gb->memory);
     free_cpu(gb->cpu);
     unload_cartridge(gb->cart);
+    free_ppu(gb->ppu);
+    SDL_DestroyTexture(gb->screen);
+    SDL_DestroyRenderer(gb->renderer);
+    SDL_DestroyWindow(gb->window);
+    SDL_Quit();
     free(gb);
 }
 
@@ -320,52 +409,67 @@ void increment_clock_counter(gameboy *gb, uint16_t num_clocks)
     }
 }
 
-// run the emulator
-// TODO: add a running flag to gameboy struct
-void run_gameboy(gameboy *gb)
+/* Check if a DMA transfer needs to be performed
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * To emulate the DMA transfer timing, we wait until the
+ * number of clocks that a DMA transfer takes has elapsed
+ * since the DMA register was written to, then we perform
+ * the DMA transfer all at once. This works because the
+ * CPU only has access to HRAM while the DMA process is
+ * supposed to be occurring.
+ *
+ * The transfer takes 160 m-cycles (640 clocks)
+ */
+static void dma_transfer_check(gameboy *gb, uint8_t num_clocks)
 {
-    printf("Executing 20 intructions from the ROM as a test:\n");
-
-    // simulate a DMA transfer request
-    write_byte(gb, 0xff46, 0x00);
-
-    // begin execution (just 20 iterations)
-    uint8_t num_clocks;
-    for (int i = 0; i < 2000; ++i)
+    if (gb->dma_requested)
     {
-        // number of clock ticks, given number of m-cycles
-        num_clocks = 4 * execute_instruction(gb);
-        increment_clock_counter(gb, num_clocks);
-
-        /* Check if DMA needs to be performed
-         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-         * To emulate the DMA transfer timing, we wait until the
-         * number of clocks that a DMA takes has elapsed since
-         * the DMA register was written to, then perform the DMA
-         * transfer all at once. This works because the CPU only
-         * has access to HRAM while the DMA process is supposed
-         * to be occuring.
-         *
-         * The transfer takes 160 m-cycles (640 clocks)
-         */
-        if (gb->dma_requested)
+        gb->dma_counter += num_clocks;
+        if (gb->dma_counter >= 640)
         {
-            printf("***DMA check***\n");
-            gb->dma_counter += num_clocks;
-            if (gb->dma_counter >= 640)
-            {
-                printf("***Performing DMA transfer***\n");
-                dma_transfer(gb);
-                gb->dma_requested = false;
-                gb->dma_counter = 0;
-            }
+            dma_transfer(gb);
+            gb->dma_requested = false;
+            gb->dma_counter = 0;
         }
-
-        print_registers(gb->cpu);
-
-        printf("Internal Clock Counter: 0x%04x\n\n", gb->clock_counter);
-        // sleep for 0.25 sec
-        usleep(250000);
     }
 
+}
+
+// run the emulator
+void run_gameboy(gameboy *gb)
+{
+    uint8_t num_clocks;
+    uint32_t curr_time;
+    SDL_Event event;
+
+    while (true)
+    {
+        SDL_PollEvent(&event);
+        if (event.type == SDL_QUIT)
+        {
+            return;
+        }
+
+        // number of clock ticks, given number of m-cycles
+        num_clocks = 4 * execute_instruction(gb);
+        num_clocks += service_interrupt(gb);
+
+        increment_clock_counter(gb, num_clocks);
+
+        dma_transfer_check(gb, num_clocks);
+
+        run_ppu(gb, num_clocks);
+
+        // delay as needed after each frame to
+        // maintain the appropriate frame rate
+        if (gb->ppu->ly == 153)
+        {
+            curr_time = SDL_GetTicks();
+            if (!SDL_TICKS_PASSED(curr_time, gb->next_frame_time))
+            {
+                SDL_Delay(gb->next_frame_time - curr_time);
+            }
+            gb->next_frame_time += GB_FRAME_DURATION;
+        }
+    }
 }
