@@ -364,11 +364,9 @@ void run_ppu(gameboy *gb, uint8_t num_clocks)
     // check if we're done with the current scanline
     if (gb->ppu->dot_clock - 456 * gb->ppu->ly > 456)
     {
-        //printf("Here, %u\n", gb->ppu->ly);
         // make sure we wrap around from scanline 153 to scanline 0
         gb->ppu->ly = (gb->ppu->ly + 1) % 154;
         gb->ppu->curr_scanline_rendered = false;
-        //printf("Here2, %u\n", gb->ppu->ly);
     }
 
     // reset the dot clock after cycling through all 154
