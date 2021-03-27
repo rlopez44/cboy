@@ -31,6 +31,7 @@ gb_ppu *init_ppu(void)
     ppu->scx = 0;
     ppu->scy = 0;
     ppu->ly = 0;
+    ppu->wx = 0;
     ppu->wy = 0;
     ppu->curr_scanline_rendered = false;
     ppu->curr_frame_displayed = false;
@@ -180,6 +181,72 @@ static void load_bg_tiles(gameboy *gb, bool tile_data_area_bit, bool tile_map_ar
     }
 }
 
+// load appropriate window tiles into the frame buffer for a single scanline
+static void load_window_tiles(gameboy *gb, bool tile_data_area_bit, bool tile_map_area_bit)
+{
+    // the window is only visible if WX is in 0..166 and WY is in 0..143
+    bool window_is_visible = gb->ppu->wx <= 166 && gb->ppu->wy <= 143;
+
+    // we only need to draw if the current scanline overlaps the window
+    bool scanline_overlaps_window = gb->ppu->ly >= gb->ppu->wy;
+
+    if (window_is_visible && scanline_overlaps_window)
+    {
+        uint16_t base_map_addr = tile_map_area_bit ? 0x9c00 : 0x9800;
+
+        /* The window is not scrollable, it is always loaded from
+         * the top left tile of its tilemap. We can only adjust
+         * the position of the window on the screen.
+         */
+        uint16_t tile_addr,
+                 pixel_yoffset      = gb->ppu->ly - gb->ppu->wy, // offset from top of window
+                 tile_yoffset       = pixel_yoffset / 8,
+                 tile_pixel_yoffset = pixel_yoffset % 8;
+
+        uint32_t scanline_buff[FRAME_WIDTH] = {0};
+        uint8_t tile_index;
+
+        /* Load window pixels for the full scanline one tile at a time.
+         * We read from 20 tiles to load one scanline (20 * 8 = FRAME_WIDTH).
+         * These tiles are on a single row of the 32x32 tilemap.
+         * Because we start at the top left of the tilemap, we don't need
+         * to worry about wrapping around the map when loading the 20 tiles.
+         */
+        for (uint8_t tile_xoffset = 0; tile_xoffset < FRAME_WIDTH / 8; ++tile_xoffset)
+        {
+            tile_index = read_byte(gb, base_map_addr + tile_yoffset * 32 + tile_xoffset);
+            tile_addr = tile_addr_from_index(tile_data_area_bit, tile_index);
+
+            // load one line (8 pixels) from the tile into the scanline buffer
+            load_tile_pixels(gb, tile_addr, tile_pixel_yoffset, scanline_buff + 8 * tile_xoffset);
+        }
+
+        /* Copy the visible portion of the completed scanline buffer to the
+         * frame buffer. Because WX is the x coordinate + 7 of the top left
+         * point of the window, WX < 7 means the window is shifted left,
+         * rather than right, so we need to handle this case separately.
+         */
+        uint16_t frame_buffer_offset;
+        uint8_t scanline_buffer_offset, visible_pixel_count;
+        if (gb->ppu->wx < 7)
+        {
+            visible_pixel_count = FRAME_WIDTH - (7 - gb->ppu->wx);
+            scanline_buffer_offset = 7 - gb->ppu->wx;
+            frame_buffer_offset = gb->ppu->ly * FRAME_WIDTH;
+        }
+        else
+        {
+            visible_pixel_count = FRAME_WIDTH - (gb->ppu->wx - 7);
+            scanline_buffer_offset = 0;
+            frame_buffer_offset = gb->ppu->ly * FRAME_WIDTH + gb->ppu->wx - 7;
+        }
+
+        memcpy(gb->ppu->frame_buffer + frame_buffer_offset,
+               scanline_buff + scanline_buffer_offset,
+               visible_pixel_count * sizeof(uint32_t));
+    }
+}
+
 // Render a single scanline into the frame buffer
 void render_scanline(gameboy *gb)
 {
@@ -211,7 +278,12 @@ void render_scanline(gameboy *gb)
         }
     }
 
-    // TODO: render the window, if enabled
+    // Render the window, if enabled. The background and
+    // window enable bit overrides the window enable bit
+    if (bg_and_window_enable_bit && window_enable_bit)
+    {
+        load_window_tiles(gb, bg_win_tile_data_area_bit, window_tile_map_area_bit);
+    }
 
     // TODO: render the sprites, if enabled
 }
