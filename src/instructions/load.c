@@ -499,6 +499,7 @@ void ld(gameboy *gb, gb_instruction *inst)
                 default: // shouldn't get here
                     break;
             }
+            break;
 
         case REG_SP:
             switch (inst->op2)
