@@ -59,7 +59,7 @@ uint8_t jp(gameboy *gb, gb_instruction *inst)
 
             uint16_t addr = ((uint16_t)hi << 8) | ((uint16_t)lo);
 
-            uint8_t will_jump = 0; // the condition for the jump
+            bool will_jump = 0; // the condition for the jump
             switch (inst->op1)
             {
                 case CC_C:
@@ -135,7 +135,7 @@ uint8_t jr(gameboy *gb, gb_instruction *inst)
         {
             // Same jump logic as the unconditional JR, but
             // here we also check if the jump condition is met
-            uint8_t will_jump = 0; // the condition for the jump
+            bool will_jump = 0; // the condition for the jump
             switch (inst->op1)
             {
                 case CC_C:
@@ -207,7 +207,7 @@ uint8_t call(gameboy *gb, gb_instruction *inst)
 
         case IMM_16: // first operand is the condition
         {
-            uint8_t will_jump = 0; // the condition for the jump
+            bool will_jump = 0; // the condition for the jump
             switch (inst->op1)
             {
                 case CC_C:
@@ -317,8 +317,8 @@ void rst(gameboy *gb, gb_instruction *inst)
  */
 uint8_t ret(gameboy *gb, gb_instruction *inst)
 {
-    uint8_t duration = 0,
-            will_ret = 0; // whether the instruction will return
+    uint8_t duration = 0;
+    bool will_ret = 0; // whether the instruction will return
     switch (inst->op1)
     {
         case NONE: // the unconditional RET

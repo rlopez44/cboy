@@ -58,8 +58,8 @@ void write_hl(gb_registers *reg, uint16_t value)
 }
 
 // set all flags at once
-void set_flags(gb_registers *reg, uint8_t zero, uint8_t subtract,
-               uint8_t half_carry, uint8_t carry)
+void set_flags(gb_registers *reg, bool zero, bool subtract,
+               bool half_carry, bool carry)
 {
     uint8_t new_flags = zero << 7
                         | subtract << 6
@@ -72,55 +72,55 @@ void set_flags(gb_registers *reg, uint8_t zero, uint8_t subtract,
 }
 
 // set individual flags
-void set_zero_flag(gb_registers *reg, uint8_t value)
+void set_zero_flag(gb_registers *reg, bool value)
 {
     // zero flag is the seventh bit of the flag register
     uint8_t mask = 1 << 7;
-    reg->f = (reg->f & ~mask) | (value & mask);
+    reg->f = (reg->f & ~mask) | (value << 7);
 }
 
-void set_subtract_flag(gb_registers *reg, uint8_t value)
+void set_subtract_flag(gb_registers *reg, bool value)
 {
     // subtract flag is the sixth bit of the flag register
     uint8_t mask = 1 << 6;
-    reg->f = (reg->f & ~mask) | (value & mask);
+    reg->f = (reg->f & ~mask) | (value << 6);
 }
 
-void set_half_carry_flag(gb_registers *reg, uint8_t value)
+void set_half_carry_flag(gb_registers *reg, bool value)
 {
     // half carry flag is the fifth bit of the flag register
     uint8_t mask = 1 << 5;
-    reg->f = (reg->f & ~mask) | (value & mask);
+    reg->f = (reg->f & ~mask) | (value << 5);
 }
 
-void set_carry_flag(gb_registers *reg, uint8_t value)
+void set_carry_flag(gb_registers *reg, bool value)
 {
     // carry flag is the fourth bit of the flag register
     uint8_t mask = 1 << 4;
-    reg->f = (reg->f & ~mask) | (value & mask);
+    reg->f = (reg->f & ~mask) | (value << 4);
 }
 
 // TODO: see about inlining these functions
 // read individual flags
-uint8_t read_zero_flag(gb_registers *reg)
+bool read_zero_flag(gb_registers *reg)
 {
     // seventh bit of the flags register
     return (reg->f >> 7) & 1;
 }
 
-uint8_t read_subtract_flag(gb_registers *reg)
+bool read_subtract_flag(gb_registers *reg)
 {
     // sixth bit of the flags register
     return (reg->f >> 6) & 1;
 }
 
-uint8_t read_half_carry_flag(gb_registers *reg)
+bool read_half_carry_flag(gb_registers *reg)
 {
     // fifth bit of the flags register
     return (reg->f >> 5) & 1;
 }
 
-uint8_t read_carry_flag(gb_registers *reg)
+bool read_carry_flag(gb_registers *reg)
 {
     // fourth bit of the flags register
     return (reg->f >> 4) & 1;

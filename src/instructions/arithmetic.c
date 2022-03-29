@@ -302,7 +302,7 @@ void add(gameboy *gb, gb_instruction *inst)
                     break;
 
                 case IMM_8:
-                    to_add = read_byte(gb, (gb->cpu->reg->sp)++);
+                    to_add = read_byte(gb, (gb->cpu->reg->pc)++);
                     break;
 
                 default: // shouldn't get here
@@ -343,7 +343,7 @@ void add(gameboy *gb, gb_instruction *inst)
             }
             uint16_t old_hl = read_hl(gb->cpu->reg);
             write_hl(gb->cpu->reg, old_hl + to_add);
-            set_zero_flag(gb->cpu->reg, 0);
+            set_subtract_flag(gb->cpu->reg, 0);
             set_half_carry_flag(gb->cpu->reg, (old_hl & 0xfff) + (to_add & 0xfff) > 0xfff);
             set_carry_flag(gb->cpu->reg, (uint32_t)old_hl + (uint32_t)to_add > 0xffff);
             break;
@@ -356,7 +356,7 @@ void add(gameboy *gb, gb_instruction *inst)
             // explicit casts to avoid bugs due to implicit integer conversions
             gb->cpu->reg->sp = (int32_t)gb->cpu->reg->sp + (int32_t)offset;
 
-            uint8_t half_carry = 0, carry = 0;
+            bool half_carry = 0, carry = 0;
             // overflow can occur only if offset > 0
             if (offset > 0)
             {

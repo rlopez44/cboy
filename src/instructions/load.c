@@ -1,6 +1,7 @@
 // Implementation of the LD and LDH instruction sets
 
 #include <stdint.h>
+#include <stdbool.h>
 #include "cboy/instructions.h"
 #include "cboy/gameboy.h"
 #include "cboy/cpu.h"
@@ -483,7 +484,7 @@ void ld(gameboy *gb, gb_instruction *inst)
                      *
                      * NOTE: overflow can only occur if offset > 0
                      */
-                    uint8_t half_carry = 0, carry = 0;
+                    bool half_carry = 0, carry = 0;
                     if (offset > 0)
                     {
                         // lowest nibbles must add to value bigger than 0xf to overflow

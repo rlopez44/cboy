@@ -210,9 +210,9 @@ void pop(gameboy *gb, gb_instruction *inst)
  */
 void daa(gameboy *gb)
 {
-    uint8_t carry = read_carry_flag(gb->cpu->reg),
-            subtract = read_subtract_flag(gb->cpu->reg),
-            half_carry = read_half_carry_flag(gb->cpu->reg);
+    bool carry = read_carry_flag(gb->cpu->reg),
+         subtract = read_subtract_flag(gb->cpu->reg),
+         half_carry = read_half_carry_flag(gb->cpu->reg);
 
     if (!subtract) // previous instruction was addition
     {

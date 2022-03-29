@@ -67,25 +67,25 @@ uint16_t read_hl(gb_registers *reg);
 void write_hl(gb_registers *reg, uint16_t value);
 
 // utility function for setting all flags at once
-void set_flags(gb_registers *reg, uint8_t zero, uint8_t subtract,
-               uint8_t half_carry, uint8_t carry);
+void set_flags(gb_registers *reg, bool zero, bool subtract,
+               bool half_carry, bool carry);
 
 // utility functions for setting individual flags
-void set_zero_flag(gb_registers *reg, uint8_t value);
+void set_zero_flag(gb_registers *reg, bool value);
 
-void set_subtract_flag(gb_registers *reg, uint8_t value);
+void set_subtract_flag(gb_registers *reg, bool value);
 
-void set_half_carry_flag(gb_registers *reg, uint8_t value);
+void set_half_carry_flag(gb_registers *reg, bool value);
 
-void set_carry_flag(gb_registers *reg, uint8_t value);
+void set_carry_flag(gb_registers *reg, bool value);
 
 // utility functions for reading indiidual flags
-uint8_t read_zero_flag(gb_registers *reg);
+bool read_zero_flag(gb_registers *reg);
 
-uint8_t read_subtract_flag(gb_registers *reg);
+bool read_subtract_flag(gb_registers *reg);
 
-uint8_t read_half_carry_flag(gb_registers *reg);
+bool read_half_carry_flag(gb_registers *reg);
 
-uint8_t read_carry_flag(gb_registers *reg);
+bool read_carry_flag(gb_registers *reg);
 
 #endif
