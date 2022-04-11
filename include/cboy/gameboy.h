@@ -69,4 +69,9 @@ void increment_clock_counter(gameboy *gb, uint16_t num_clocks);
 // the emulator's game loop
 void run_gameboy(gameboy *gb);
 
-#endif
+#ifdef DEBUG
+// dump the Game Boy's memory contents
+void dump_memory(gameboy *gb);
+#endif /* DEBUG */
+
+#endif /* GAME_BOY_H */

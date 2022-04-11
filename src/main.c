@@ -27,6 +27,10 @@ int main(int argc, const char *argv[])
 
     run_gameboy(gb);
 
+#ifdef DEBUG
+    dump_memory(gb);
+#endif
+
     free_gameboy(gb);
     return 0;
 }

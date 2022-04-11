@@ -20,7 +20,7 @@ DEBUG_OBJS = $(patsubst %.c, $(OBJ_DIR)/$(DEBUG_DIR)/%.o, $(SRC))
 all: CFLAGS += -O3
 all: $(BIN_DIR)/$(BIN)
 
-debug: CFLAGS += -g
+debug: CFLAGS += -g -DDEBUG
 debug: $(BIN_DIR)/$(DEBUG_DIR)/$(BIN)
 
 # rules for making required directories
