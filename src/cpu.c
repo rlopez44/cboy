@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include "cboy/cpu.h"
+#include "cboy/log.h"
 
 /* bc register contains the b register in the
  * high byte and the c register in the low byte
@@ -137,13 +138,13 @@ void print_registers(gb_cpu *cpu)
                           "HL: 0x%04x\n"
                           "SP: 0x%04x\n"
                           "PC: 0x%04x\n";
-    printf(message,
-           read_af(cpu->reg),
-           read_bc(cpu->reg),
-           read_de(cpu->reg),
-           read_hl(cpu->reg),
-           cpu->reg->sp,
-           cpu->reg->pc);
+    LOG_INFO(message,
+             read_af(cpu->reg),
+             read_bc(cpu->reg),
+             read_de(cpu->reg),
+             read_hl(cpu->reg),
+             cpu->reg->sp,
+             cpu->reg->pc);
 }
 
 /* Allocate memory for the CPU struct

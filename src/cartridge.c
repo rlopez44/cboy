@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "cboy/cartridge.h"
+#include "cboy/log.h"
 
 /* free the allocated memory for the cartridge struct */
 void unload_cartridge(gb_cartridge *cart)
@@ -515,5 +516,5 @@ void print_mbc_type(gb_cartridge *cart)
             break;
     }
 
-    printf("MBC Type: %s\n", mbc_type);
+    LOG_INFO("MBC Type: %s\n", mbc_type);
 }

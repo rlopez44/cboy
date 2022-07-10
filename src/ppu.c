@@ -7,6 +7,7 @@
 #include "cboy/ppu.h"
 #include "cboy/memory.h"
 #include "cboy/interrupts.h"
+#include "cboy/log.h"
 
 /* gray shade color codes in ARGB8888 format */
 #define WHITE       0xffffffff
@@ -296,7 +297,7 @@ void display_frame(gameboy *gb)
 
     if (SDL_LockTexture(gb->screen, NULL, &texture_pixels, &pitch) < 0)
     {
-        fprintf(stderr, "Error drawing to screen\n");
+        LOG_ERROR("Error drawing to screen\n");
         exit(1);
     }
 

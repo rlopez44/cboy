@@ -9,6 +9,7 @@
 #include "cboy/ppu.h"
 #include "cboy/interrupts.h"
 #include "cboy/instructions.h"
+#include "cboy/log.h"
 
 /* 3 seems like a good scale factor */
 #define WINDOW_SCALE 3
@@ -77,8 +78,8 @@ static bool verify_logo(gameboy *gb)
 
     if (!valid_bitmap)
     {
-        fprintf(stderr, "NOTE: The ROM Nintendo logo bitmap is incorrect."
-                        " This ROM wouldn't run on a real Game Boy\n\n");
+        LOG_INFO("NOTE: The ROM Nintendo logo bitmap is incorrect."
+                 " This ROM wouldn't run on a real Game Boy\n\n");
     }
 
     return valid_bitmap;
@@ -109,12 +110,12 @@ static bool verify_checksum(gameboy *gb)
 
     if (!valid_checksum)
     {
-        fprintf(stderr, "NOTE: The ROM header checksum failed.\n"
-                        "Expected: %d\n"
-                        "Actual: %d\n"
-                        "This ROM wouldn't run on a real Game Boy\n\n",
-                        header_checksum,
-                        calculated_checksum);
+        LOG_INFO("NOTE: The ROM header checksum failed.\n"
+                 "Expected: %d\n"
+                 "Actual: %d\n"
+                 "This ROM wouldn't run on a real Game Boy\n\n",
+                 header_checksum,
+                 calculated_checksum);
     }
 
     return valid_checksum;
@@ -190,7 +191,7 @@ gameboy *init_gameboy(const char *rom_file_path)
 
     if (gb == NULL)
     {
-        fprintf(stderr, "Not enough memory to initialize the emulator\n");
+        LOG_ERROR("Not enough memory to initialize the emulator\n");
         return NULL;
     }
     gb->is_halted = false;
@@ -238,7 +239,7 @@ gameboy *init_gameboy(const char *rom_file_path)
 
     if (rom_file == NULL)
     {
-        fprintf(stderr, "Failed to open the ROM file (incorrect path?)\n");
+        LOG_ERROR("Failed to open the ROM file (incorrect path?)\n");
         unload_cartridge(gb->cart);
         free_cpu(gb->cpu);
         free_ppu(gb->ppu);
@@ -254,11 +255,11 @@ gameboy *init_gameboy(const char *rom_file_path)
     {
         if (load_status == MALFORMED_ROM)
         {
-            fprintf(stderr, "ROM file is incorrectly formatted\n");
+            LOG_ERROR("ROM file is incorrectly formatted\n");
         }
         else if (load_status == ROM_LOAD_ERROR)
         {
-            fprintf(stderr, "Failed to load the ROM into the emulator (I/O or memory error)\n");
+            LOG_ERROR("Failed to load the ROM into the emulator (I/O or memory error)\n");
         }
 
         unload_cartridge(gb->cart);

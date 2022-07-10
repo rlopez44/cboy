@@ -1,7 +1,6 @@
 #include "cboy/log.h"
 
 #ifdef DEBUG
-#include <stdio.h>
 #include "cboy/gameboy.h"
 
 // dump the Game Boy's memory contents
@@ -12,7 +11,7 @@ void dump_memory(gameboy *gb)
 
     if (dumpfile == NULL)
     {
-        fprintf(stderr, "DEBUG: Error opening Game Boy memory dumpfile (%s)\n", dumpfile_path);
+        LOG_DEBUG("Error opening Game Boy memory dumpfile (%s)\n", dumpfile_path);
         return;
     }
 
@@ -20,11 +19,11 @@ void dump_memory(gameboy *gb)
 
     if (bytes_written != MEMORY_MAP_SIZE * sizeof(uint8_t))
     {
-        fprintf(stderr, "DEBUG: Error dumping Game Boy memory into %s\n", dumpfile_path);
+        LOG_DEBUG("Error dumping Game Boy memory into %s\n", dumpfile_path);
     }
     else
     {
-        printf("DEBUG: Game Boy memory dumped to %s\n", dumpfile_path);
+        LOG_DEBUG("Game Boy memory dumped to %s\n", dumpfile_path);
     }
 
     fclose(dumpfile);
