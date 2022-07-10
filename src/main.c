@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "cboy/gameboy.h"
+#include "cboy/log.h"
 
 int main(int argc, const char *argv[])
 {
