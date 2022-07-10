@@ -471,10 +471,6 @@ void print_mbc_type(gb_cartridge *cart)
 
     switch (cart->mbc)
     {
-        case UNKNOWN_MBC:
-            mbc_type = "Unknown MBC";
-            break;
-
         case NO_MBC:
             mbc_type = "No MBC";
             break;
@@ -513,6 +509,11 @@ void print_mbc_type(gb_cartridge *cart)
 
         case HuC3:
             mbc_type = "HuC3";
+            break;
+
+        case UNKNOWN_MBC:
+        default:
+            mbc_type = "Unknown MBC";
             break;
     }
 
