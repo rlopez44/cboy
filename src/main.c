@@ -4,6 +4,11 @@
 
 int main(int argc, const char *argv[])
 {
+#ifdef DEBUG
+    // make sure our debug logs are printed
+    ENABLE_DEBUG_LOGS();
+#endif
+
     LOG_INFO("CBoy -- A Game Boy Emulator\n"
              "--------------------------\n");
 
