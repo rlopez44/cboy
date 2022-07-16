@@ -1,8 +1,10 @@
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include "cboy/instructions.h"
 #include "cboy/gameboy.h"
 #include "cboy/memory.h"
+#include "cboy/log.h"
 #include "execute.h"
 
 // the CPU's instruction set
@@ -788,12 +790,20 @@ uint8_t execute_instruction(gameboy *gb)
             curr_inst_duration = inst.duration;
             break;
 
-        // invalid opcodes are just ignored
-        // may lead to undefined behavior
-        // TODO: maybe log invalid opcodes
+        /* using UNUSED opcodes isn't necessarily wrong,
+         * but we may want to know this happened when
+         * we're debugging because it seems unlikely
+         * these would be used on purpose
+         */
         case UNUSED:
+            LOG_DEBUG("Opcode UNUSED was encountered. This may be a bug.\n");
+            curr_inst_duration = inst.duration;
+            break;
+
+        // panic if we encounter an illegal opcode
         default:
-            curr_inst_duration = 0;
+            LOG_ERROR("Illegal opcode (0x%02X) was encountered. Exiting...\n", inst_code);
+            exit(1);
     }
     return curr_inst_duration;
 }
