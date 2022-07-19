@@ -2,9 +2,11 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include "cboy/instructions.h"
 #include "cboy/gameboy.h"
 #include "cboy/cpu.h"
+#include "cboy/log.h"
 #include "execute.h"
 
 /* The enable interrupts instruction
@@ -60,7 +62,8 @@ void push(gameboy *gb, gb_instruction *inst)
             break;
 
         default: // shouldn't get here
-            break;
+            LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
+            exit(1);
     }
 
     stack_push(gb, to_push);
@@ -110,7 +113,8 @@ void pop(gameboy *gb, gb_instruction *inst)
         }
 
         default: // shouldn't get here
-            break;
+            LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
+            exit(1);
     }
 }
 

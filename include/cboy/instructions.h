@@ -120,6 +120,9 @@ typedef struct gb_instruction {
     uint8_t length; // in bytes
     // alt duration only used for conditional calls and returns
     uint8_t duration, alt_duration; // in M-cycles (one M-cycle = four clock ticks)
+
+    // string representation of the instruction
+    const char *inst_str;
 } gb_instruction;
 
 // executes the cpu instruction specified by the PC

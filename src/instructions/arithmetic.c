@@ -2,10 +2,12 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include "cboy/instructions.h"
 #include "cboy/gameboy.h"
 #include "cboy/cpu.h"
 #include "cboy/memory.h"
+#include "cboy/log.h"
 #include "execute.h"
 
 // the increment instruction
@@ -118,7 +120,8 @@ void inc(gameboy *gb, gb_instruction *inst)
             break;
 
         default: // shouldn't get here
-            break;
+            LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
+            exit(1);
     }
 }
 
@@ -233,7 +236,8 @@ void dec(gameboy *gb, gb_instruction *inst)
             break;
 
         default: // shouldn't get here
-            break;
+            LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
+            exit(1);
     }
 }
 
@@ -306,7 +310,8 @@ void add(gameboy *gb, gb_instruction *inst)
                     break;
 
                 default: // shouldn't get here
-                    break;
+                    LOG_ERROR("Illegal argument in %s A, r8 encountered. Exiting...\n", inst->inst_str);
+                    exit(1);
             }
             uint8_t old_a = gb->cpu->reg->a;
             gb->cpu->reg->a += to_add;
@@ -339,7 +344,8 @@ void add(gameboy *gb, gb_instruction *inst)
                     to_add = gb->cpu->reg->sp;
 
                 default: // shouldn't get here
-                    break;
+                    LOG_ERROR("Illegal argument in %s HL, r16 encountered. Exiting...\n", inst->inst_str);
+                    exit(1);
             }
             uint16_t old_hl = read_hl(gb->cpu->reg);
             write_hl(gb->cpu->reg, old_hl + to_add);
@@ -368,7 +374,8 @@ void add(gameboy *gb, gb_instruction *inst)
         }
 
         default: // shouldn't get here
-            break;
+            LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
+            exit(1);
     }
 }
 
@@ -425,7 +432,8 @@ void adc(gameboy *gb, gb_instruction *inst)
             break;
 
         default: // shouldn't get here
-            break;
+            LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
+            exit(1);
     }
     uint8_t old_a = gb->cpu->reg->a;
     gb->cpu->reg->a += to_add;
@@ -526,7 +534,8 @@ void sub(gameboy *gb, gb_instruction *inst)
             break;
 
         default: // shouldn't get here
-            break;
+            LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
+            exit(1);
     }
 
     // calculate and store the difference and set flags
@@ -586,7 +595,8 @@ void sbc(gameboy *gb, gb_instruction *inst)
             break;
 
         default: // shouldn't get here
-            break;
+            LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
+            exit(1);
     }
 
     // calculate and store the difference and set flags
@@ -648,7 +658,8 @@ void cp(gameboy *gb, gb_instruction *inst)
             break;
 
         default: // shouldn't get here
-            break;
+            LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
+            exit(1);
     }
 
     // calculate the difference (without storing the result) and set flags
@@ -708,7 +719,8 @@ void and(gameboy *gb, gb_instruction *inst)
             break;
 
         default: // shouldn't get here
-            break;
+            LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
+            exit(1);
     }
     gb->cpu->reg->a &= to_and;
     set_flags(gb->cpu->reg, gb->cpu->reg->a == 0, 0, 1, 0);
@@ -767,7 +779,8 @@ void or(gameboy *gb, gb_instruction *inst)
             break;
 
         default: // shouldn't get here
-            break;
+            LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
+            exit(1);
     }
     gb->cpu->reg->a |= to_or;
     set_flags(gb->cpu->reg, gb->cpu->reg->a == 0, 0, 0, 0);
@@ -827,7 +840,8 @@ void xor(gameboy *gb, gb_instruction *inst)
             break;
 
         default: // shouldn't get here
-            break;
+            LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
+            exit(1);
     }
     gb->cpu->reg->a ^= to_xor;
     set_flags(gb->cpu->reg, gb->cpu->reg->a == 0, 0, 0, 0);

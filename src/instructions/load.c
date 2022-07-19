@@ -2,10 +2,12 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include "cboy/instructions.h"
 #include "cboy/gameboy.h"
 #include "cboy/cpu.h"
 #include "cboy/memory.h"
+#include "cboy/log.h"
 #include "execute.h"
 
 // the load instruction
@@ -93,7 +95,8 @@ void ld(gameboy *gb, gb_instruction *inst)
                 }
 
                 default: // shouldn't get here
-                    break;
+                    LOG_ERROR("Illegal argument in %s A encountered. Exiting...\n", inst->inst_str);
+                    exit(1);
             }
             break;
 
@@ -137,7 +140,8 @@ void ld(gameboy *gb, gb_instruction *inst)
                     break;
 
                 default: // shouldn't get here
-                    break;
+                    LOG_ERROR("Illegal argument in %s B encountered. Exiting...\n", inst->inst_str);
+                    exit(1);
             }
             break;
 
@@ -181,7 +185,8 @@ void ld(gameboy *gb, gb_instruction *inst)
                     break;
 
                 default: // shouldn't get here
-                    break;
+                    LOG_ERROR("Illegal argument in %s C encountered. Exiting...\n", inst->inst_str);
+                    exit(1);
             }
             break;
 
@@ -225,7 +230,8 @@ void ld(gameboy *gb, gb_instruction *inst)
                     break;
 
                 default: // shouldn't get here
-                    break;
+                    LOG_ERROR("Illegal argument in %s D encountered. Exiting...\n", inst->inst_str);
+                    exit(1);
             }
             break;
 
@@ -269,7 +275,8 @@ void ld(gameboy *gb, gb_instruction *inst)
                     break;
 
                 default: // shouldn't get here
-                    break;
+                    LOG_ERROR("Illegal argument in %s E encountered. Exiting...\n", inst->inst_str);
+                    exit(1);
             }
             break;
 
@@ -313,7 +320,8 @@ void ld(gameboy *gb, gb_instruction *inst)
                     break;
 
                 default: // shouldn't get here
-                    break;
+                    LOG_ERROR("Illegal argument in %s H encountered. Exiting...\n", inst->inst_str);
+                    exit(1);
             }
             break;
 
@@ -357,7 +365,8 @@ void ld(gameboy *gb, gb_instruction *inst)
                     break;
 
                 default: // shouldn't get here
-                    break;
+                    LOG_ERROR("Illegal argument in %s L encountered. Exiting...\n", inst->inst_str);
+                    exit(1);
             }
             break;
 
@@ -401,7 +410,8 @@ void ld(gameboy *gb, gb_instruction *inst)
                 }
 
                 default: // shouldn't get here
-                    break;
+                    LOG_ERROR("Illegal argument in %s [HL] encountered. Exiting...\n", inst->inst_str);
+                    exit(1);
             }
             break;
 
@@ -498,7 +508,8 @@ void ld(gameboy *gb, gb_instruction *inst)
                 }
 
                 default: // shouldn't get here
-                    break;
+                    LOG_ERROR("Illegal argument in %s HL encountered. Exiting...\n", inst->inst_str);
+                    exit(1);
             }
             break;
 
@@ -518,7 +529,8 @@ void ld(gameboy *gb, gb_instruction *inst)
                     break;
 
                 default: // shouldn't get here
-                    break;
+                    LOG_ERROR("Illegal argument in %s SP encountered. Exiting...\n", inst->inst_str);
+                    exit(1);
             }
             break;
 
@@ -543,13 +555,15 @@ void ld(gameboy *gb, gb_instruction *inst)
                     break;
 
                 default: // shouldn't get here
-                    break;
+                    LOG_ERROR("Illegal argument in %s [n16] encountered. Exiting...\n", inst->inst_str);
+                    exit(1);
             }
             break;
         }
 
         default: // shouldn't get here
-            break;
+            LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
+            exit(1);
     }
 }
 
@@ -576,7 +590,8 @@ void ldh(gameboy *gb, gb_instruction *inst)
                     break;
 
                 default: // shouldn't get here
-                    break;
+                    LOG_ERROR("Illegal argument in %s A encountered. Exiting...\n", inst->inst_str);
+                    exit(1);
             }
             gb->cpu->reg->a = read_byte(gb, addr);
             break;
@@ -595,6 +610,7 @@ void ldh(gameboy *gb, gb_instruction *inst)
             break;
 
         default: // shouldn't get here
-            break;
+            LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
+            exit(1);
     }
 }

@@ -2,10 +2,12 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include "cboy/instructions.h"
 #include "cboy/gameboy.h"
 #include "cboy/cpu.h"
 #include "cboy/memory.h"
+#include "cboy/log.h"
 #include "execute.h"
 
 /* the jump instruction
@@ -44,7 +46,8 @@ uint8_t jp(gameboy *gb, gb_instruction *inst)
                     break;
 
                 default: // shouldn't get here
-                    break;
+                    LOG_ERROR("Illegal argument in %s arg1 encountered. Exiting...\n", inst->inst_str);
+                    exit(1);
             }
             break;
 
@@ -79,7 +82,8 @@ uint8_t jp(gameboy *gb, gb_instruction *inst)
                     break;
 
                 default: // shouldn't get here
-                    break;
+                    LOG_ERROR("Illegal argument in %s arg1, n16 encountered. Exiting...\n", inst->inst_str);
+                    exit(1);
             }
 
             if (will_jump)
@@ -95,7 +99,8 @@ uint8_t jp(gameboy *gb, gb_instruction *inst)
         }
 
         default: // shouldn't get here
-            break;
+            LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
+            exit(1);
     }
     return duration;
 }
@@ -155,7 +160,8 @@ uint8_t jr(gameboy *gb, gb_instruction *inst)
                     break;
 
                 default: // shouldn't get here
-                    break;
+                    LOG_ERROR("Illegal argument in %s CC, n8 encountered. Exiting...\n", inst->inst_str);
+                    exit(1);
             }
 
             if (will_jump)
@@ -171,7 +177,8 @@ uint8_t jr(gameboy *gb, gb_instruction *inst)
         }
 
         default: // shouldn't get here
-            break;
+            LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
+            exit(1);
     }
     return duration;
 }
@@ -227,7 +234,8 @@ uint8_t call(gameboy *gb, gb_instruction *inst)
                     break;
 
                 default: // shouldn't get here
-                    break;
+                    LOG_ERROR("Illegal argument in %s CC, n16 encountered. Exiting...\n", inst->inst_str);
+                    exit(1);
             }
 
             if (will_jump)
@@ -248,7 +256,8 @@ uint8_t call(gameboy *gb, gb_instruction *inst)
         }
 
         default: // shouldn't get here
-            break;
+            LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
+            exit(1);
     }
     return duration;
 }
@@ -299,7 +308,8 @@ void rst(gameboy *gb, gb_instruction *inst)
             break;
 
         default: // shouldn't get here
-            break;
+            LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
+            exit(1);
     }
 
     // perform the call
@@ -342,7 +352,8 @@ uint8_t ret(gameboy *gb, gb_instruction *inst)
             break;
 
         default: // shouldn't get here
-            break;
+            LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
+            exit(1);
     }
 
     if (will_ret)

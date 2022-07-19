@@ -2,8 +2,10 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdlib.h>
 #include "cboy/instructions.h"
 #include "cboy/gameboy.h"
+#include "cboy/log.h"
 #include "execute.h"
 
 /* the Rotate Left Circular Accumulator instruction
@@ -89,7 +91,7 @@ void rra(gameboy *gb)
  * one of the CPU's 8-bit registers based on the operand
  * passed in.
  */
-static uint8_t *fetch_register(gameboy *gb, enum operands op)
+static uint8_t *fetch_register(gameboy *gb, enum operands op, const char *inst_str)
 {
     uint8_t *reg = NULL;
     switch (op)
@@ -123,7 +125,8 @@ static uint8_t *fetch_register(gameboy *gb, enum operands op)
             break;
 
         default: // shouldn't get here
-            break;
+            LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst_str);
+            exit(1);
     }
     return reg;
 }
@@ -166,7 +169,7 @@ void rlc(gameboy *gb, gb_instruction *inst)
     }
     else
     {
-        uint8_t *reg = fetch_register(gb, inst->op1); // the register to rotate
+        uint8_t *reg = fetch_register(gb, inst->op1, inst->inst_str); // the register to rotate
 
         // perform the rotation and set flags
         bit_seven = (*reg >> 7) & 1;
@@ -213,7 +216,7 @@ void rrc(gameboy *gb, gb_instruction *inst)
     }
     else
     {
-        uint8_t *reg = fetch_register(gb, inst->op1); // the register to rotate
+        uint8_t *reg = fetch_register(gb, inst->op1, inst->inst_str); // the register to rotate
 
         // perform the rotation and set flags
         bit_zero = *reg & 1;
@@ -263,7 +266,7 @@ void rl(gameboy *gb, gb_instruction *inst)
     }
     else
     {
-        uint8_t *reg = fetch_register(gb, inst->op1); // the register to rotate
+        uint8_t *reg = fetch_register(gb, inst->op1, inst->inst_str); // the register to rotate
 
         // perform the rotation and set flags
         bit_seven = (*reg >> 7) & 1;
@@ -313,7 +316,7 @@ void rr(gameboy *gb, gb_instruction *inst)
     }
     else
     {
-        uint8_t *reg = fetch_register(gb, inst->op1); // the register to rotate
+        uint8_t *reg = fetch_register(gb, inst->op1, inst->inst_str); // the register to rotate
 
         // perform the rotation and set flags
         bit_zero = *reg & 1;
@@ -360,7 +363,7 @@ void sla(gameboy *gb, gb_instruction *inst)
     }
     else
     {
-        uint8_t *reg = fetch_register(gb, inst->op1); // the register to shift
+        uint8_t *reg = fetch_register(gb, inst->op1, inst->inst_str); // the register to shift
 
         // Perform the shift and set flags.
         // Note that bit zero is reset by the left shift
@@ -409,7 +412,7 @@ void sra(gameboy *gb, gb_instruction *inst)
     }
     else
     {
-        uint8_t *reg = fetch_register(gb, inst->op1); // the register to shift
+        uint8_t *reg = fetch_register(gb, inst->op1, inst->inst_str); // the register to shift
 
         // Perform the shift and set flags.
         bit_zero = *reg & 1;
@@ -456,7 +459,7 @@ void srl(gameboy *gb, gb_instruction *inst)
     }
     else
     {
-        uint8_t *reg = fetch_register(gb, inst->op1); // the register to shift
+        uint8_t *reg = fetch_register(gb, inst->op1, inst->inst_str); // the register to shift
 
         // Perform the shift and set flags.
         // Bit seven is reset by the shift.
@@ -502,7 +505,7 @@ void swap(gameboy *gb, gb_instruction *inst)
     }
     else
     {
-        uint8_t *reg = fetch_register(gb, inst->op1); // the register to swap
+        uint8_t *reg = fetch_register(gb, inst->op1, inst->inst_str); // the register to swap
 
         // swap nibbles
         *reg = (*reg << 4) | (*reg >> 4);
@@ -576,7 +579,8 @@ void bit(gameboy *gb, gb_instruction *inst)
                 break;
 
             default: // shouldn't get here
-                break;
+                LOG_ERROR("Illegal argument in %s n, r8 encountered. Exiting...\n", inst->inst_str);
+                exit(1);
         }
     }
 
@@ -614,7 +618,7 @@ void res(gameboy *gb, gb_instruction *inst)
     }
     else
     {
-        uint8_t *reg = fetch_register(gb, inst->op2);
+        uint8_t *reg = fetch_register(gb, inst->op2, inst->inst_str);
         *reg &= ~(1 << bit_number);
     }
 
@@ -649,7 +653,7 @@ void set(gameboy *gb, gb_instruction *inst)
     }
     else
     {
-        uint8_t *reg = fetch_register(gb, inst->op2);
+        uint8_t *reg = fetch_register(gb, inst->op2, inst->inst_str);
         *reg |= 1 << bit_number;
     }
 
