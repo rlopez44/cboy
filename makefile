@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -I./include/
+CFLAGS = -Wall -I./include/ -std=c17
 CFLAGS += `sdl2-config --cflags`
 LDLIBS = `sdl2-config --libs`
 OBJ_DIR = obj
