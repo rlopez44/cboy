@@ -342,6 +342,7 @@ void add(gameboy *gb, gb_instruction *inst)
 
                 case REG_SP:
                     to_add = gb->cpu->reg->sp;
+                    break;
 
                 default: // shouldn't get here
                     LOG_ERROR("Illegal argument in %s HL, r16 encountered. Exiting...\n", inst->inst_str);
