@@ -281,7 +281,7 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
         return;
     }
     // attempted write to the ROM area
-    else if (0x0000 <= address && address <= 0x7fff)
+    else if (address <= 0x7fff)
     {
         // TODO: once MBCs are supported, redirect these writes to the MBC
         return;
