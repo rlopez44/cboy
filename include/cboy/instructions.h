@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include "cboy/gameboy.h"
 
+#define NUM_OPERANDS 44
+
 // Game Boy CPU opcodes
 // See: https://gbdev.io/gb-opcodes/optables/
 enum opcodes {
@@ -112,6 +114,9 @@ enum operands {
     BIT_6,
     BIT_7,
 };
+
+// string representations of the CPU opcode operands
+extern const char *operand_strs[NUM_OPERANDS];
 
 
 typedef struct gb_instruction {

@@ -25,6 +25,8 @@ void rlca(gameboy *gb)
     uint8_t bit_seven = (gb->cpu->reg->a >> 7) & 1;
     gb->cpu->reg->a = (gb->cpu->reg->a << 1) | bit_seven;
     set_flags(gb->cpu->reg, 0, 0, 0, bit_seven);
+
+    LOG_DEBUG("RLCA\n");
 }
 
 /* the Rotate Left Accumulator instruction
@@ -45,6 +47,8 @@ void rla(gameboy *gb)
     uint8_t bit_seven = (gb->cpu->reg->a >> 7) & 1;
     gb->cpu->reg->a = (gb->cpu->reg->a << 1) | read_carry_flag(gb->cpu->reg);
     set_flags(gb->cpu->reg, 0, 0, 0, bit_seven);
+
+    LOG_DEBUG("RLA\n");
 }
 
 /* the Rotate Right Circular Accumulator instruction
@@ -64,6 +68,8 @@ void rrca(gameboy *gb)
     uint8_t bit_zero = gb->cpu->reg->a & 1;
     gb->cpu->reg->a = (bit_zero << 7) | (gb->cpu->reg->a >> 1);
     set_flags(gb->cpu->reg, 0, 0, 0, bit_zero);
+
+    LOG_DEBUG("RRCA\n");
 }
 
 /* the Rotate Right Accumulator instruction
@@ -84,6 +90,8 @@ void rra(gameboy *gb)
     uint8_t bit_zero = gb->cpu->reg->a & 1;
     gb->cpu->reg->a = (read_carry_flag(gb->cpu->reg) << 7) | (gb->cpu->reg->a >> 1);
     set_flags(gb->cpu->reg, 0, 0, 0, bit_zero);
+
+    LOG_DEBUG("RRA\n");
 }
 
 /* Helper function for use by the RLC, RRC, RL, RR, SLA, SRA,
@@ -176,6 +184,8 @@ void rlc(gameboy *gb, gb_instruction *inst)
         *reg = (*reg << 1) | bit_seven;
         set_flags(gb->cpu->reg, *reg == 0, 0, 0, bit_seven);
     }
+
+    LOG_DEBUG("%s %s\n", inst->inst_str, operand_strs[inst->op1]);
 }
 
 /* the Rotate Right Circular instruction
@@ -223,6 +233,8 @@ void rrc(gameboy *gb, gb_instruction *inst)
         *reg = (bit_zero << 7) | (*reg >> 1);
         set_flags(gb->cpu->reg, *reg == 0, 0, 0, bit_zero);
     }
+
+    LOG_DEBUG("%s %s\n", inst->inst_str, operand_strs[inst->op1]);
 }
 
 /* the Rotate Left instruction
@@ -273,6 +285,8 @@ void rl(gameboy *gb, gb_instruction *inst)
         *reg = (*reg << 1) | carry;
         set_flags(gb->cpu->reg, *reg == 0, 0, 0, bit_seven);
     }
+
+    LOG_DEBUG("%s %s\n", inst->inst_str, operand_strs[inst->op1]);
 }
 
 /* the Rotate Right instruction
@@ -323,6 +337,8 @@ void rr(gameboy *gb, gb_instruction *inst)
         *reg = (carry << 7) | (*reg >> 1);
         set_flags(gb->cpu->reg, *reg == 0, 0, 0, bit_zero);
     }
+
+    LOG_DEBUG("%s %s\n", inst->inst_str, operand_strs[inst->op1]);
 }
 
 /* the Shift Left Arithmetic instruction
@@ -371,6 +387,8 @@ void sla(gameboy *gb, gb_instruction *inst)
         *reg <<= 1;
         set_flags(gb->cpu->reg, *reg == 0, 0, 0, bit_seven);
     }
+
+    LOG_DEBUG("%s %s\n", inst->inst_str, operand_strs[inst->op1]);
 }
 
 /* the Shift Right Arithmetic instruction
@@ -419,6 +437,8 @@ void sra(gameboy *gb, gb_instruction *inst)
         *reg = (*reg & 0x80) | (*reg >> 1);
         set_flags(gb->cpu->reg, *reg == 0, 0, 0, bit_zero);
     }
+
+    LOG_DEBUG("%s %s\n", inst->inst_str, operand_strs[inst->op1]);
 }
 
 /* the Shift Right Logic instruction
@@ -467,6 +487,8 @@ void srl(gameboy *gb, gb_instruction *inst)
         *reg >>= 1;
         set_flags(gb->cpu->reg, *reg == 0, 0, 0, bit_zero);
     }
+
+    LOG_DEBUG("%s %s\n", inst->inst_str, operand_strs[inst->op1]);
 }
 
 /* The SWAP instruction
@@ -511,6 +533,8 @@ void swap(gameboy *gb, gb_instruction *inst)
         *reg = (*reg << 4) | (*reg >> 4);
         set_flags(gb->cpu->reg, *reg == 0, 0, 0, 0);
     }
+
+    LOG_DEBUG("%s %s\n", inst->inst_str, operand_strs[inst->op1]);
 }
 
 /* The BIT instruction
@@ -587,6 +611,8 @@ void bit(gameboy *gb, gb_instruction *inst)
     set_zero_flag(gb->cpu->reg, (value & (1 << bit_number)) == 0);
     set_subtract_flag(gb->cpu->reg, 0);
     set_half_carry_flag(gb->cpu->reg, 1);
+
+    LOG_DEBUG("%s %s, %s\n", inst->inst_str, operand_strs[inst->op1], operand_strs[inst->op2]);
 }
 
 /* The RESet instruction
@@ -622,6 +648,7 @@ void res(gameboy *gb, gb_instruction *inst)
         *reg &= ~(1 << bit_number);
     }
 
+    LOG_DEBUG("%s %s, %s\n", inst->inst_str, operand_strs[inst->op1], operand_strs[inst->op2]);
 }
 
 /* The SET instruction
@@ -657,4 +684,5 @@ void set(gameboy *gb, gb_instruction *inst)
         *reg |= 1 << bit_number;
     }
 
+    LOG_DEBUG("%s %s, %s\n", inst->inst_str, operand_strs[inst->op1], operand_strs[inst->op2]);
 }

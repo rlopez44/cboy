@@ -565,6 +565,8 @@ void ld(gameboy *gb, gb_instruction *inst)
             LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
             exit(1);
     }
+
+    LOG_DEBUG("%s %s, %s\n", inst->inst_str, operand_strs[inst->op1], operand_strs[inst->op2]);
 }
 
 // the 'load from high page' instruction
@@ -613,4 +615,6 @@ void ldh(gameboy *gb, gb_instruction *inst)
             LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
             exit(1);
     }
+
+    LOG_DEBUG("%s %s, %s\n", inst->inst_str, operand_strs[inst->op1], operand_strs[inst->op2]);
 }

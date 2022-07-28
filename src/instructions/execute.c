@@ -7,6 +7,63 @@
 #include "cboy/log.h"
 #include "execute.h"
 
+// string representations of the CPU opcode operands
+// these representations can be indexed using the operands enum
+const char *operand_strs[NUM_OPERANDS] = {
+    "", // no operand
+    // registers
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "H",
+    "L",
+    "AF",
+    "BC",
+    "DE",
+    "HL",
+    "SP",
+    // 8-bit and 16-bit immediate values
+    "n8",
+    "n16",
+    // 8-bit 'address'
+    "[a8]",
+    // 16-bit address
+    "[a16]",
+    // register values as pointers
+    "[C]",
+    "[BC]",
+    "[DE]",
+    "[HL]",
+    "[HL-]", // decrement value of HL after executing instruction
+    "[HL+]", // increment value of HL after executing instruction
+    // condition codes
+    "Z",
+    "NZ",
+    "C",
+    "NC",
+    // RST vectors
+    "00H",
+    "08H",
+    "10H",
+    "18H",
+    "20H",
+    "28H",
+    "30H",
+    "38H",
+    // bit numbers for bit instructions
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+};
+
 // the CPU's instruction set
 static const gb_instruction instruction_table[512] = {
     /* FORMAT (durations specified in M-cycles)
@@ -576,6 +633,7 @@ uint8_t execute_instruction(gameboy *gb)
     {
         case NOP:
             curr_inst_duration = inst.duration;
+            LOG_DEBUG("NOP\n");
             break;
 
         case LD:

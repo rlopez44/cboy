@@ -123,6 +123,8 @@ void inc(gameboy *gb, gb_instruction *inst)
             LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
             exit(1);
     }
+
+    LOG_DEBUG("%s %s\n", inst->inst_str, operand_strs[inst->op1]);
 }
 
 // the decrement instruction
@@ -239,6 +241,8 @@ void dec(gameboy *gb, gb_instruction *inst)
             LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
             exit(1);
     }
+
+    LOG_DEBUG("%s %s\n", inst->inst_str, operand_strs[inst->op1]);
 }
 
 // the add instruction
@@ -378,6 +382,8 @@ void add(gameboy *gb, gb_instruction *inst)
             LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
             exit(1);
     }
+
+    LOG_DEBUG("%s %s, %s\n", inst->inst_str, operand_strs[inst->op1], operand_strs[inst->op2]);
 }
 
 // the add with carry (ADC) instruction
@@ -443,6 +449,8 @@ void adc(gameboy *gb, gb_instruction *inst)
               0,                                          // subtract
               (old_a & 0xf) + (to_add & 0xf) > 0xf,       // half carry
               (uint16_t)old_a + (uint16_t)to_add > 0xff); // carry
+
+    LOG_DEBUG("%s %s, %s\n", inst->inst_str, operand_strs[inst->op1], operand_strs[inst->op2]);
 }
 
 /* Helper function used by the SUB, SBC, and CP instructions.
@@ -541,6 +549,8 @@ void sub(gameboy *gb, gb_instruction *inst)
 
     // calculate and store the difference and set flags
     sub_from_reg_a(gb->cpu->reg, to_sub, 1);
+
+    LOG_DEBUG("%s %s, %s\n", inst->inst_str, operand_strs[inst->op1], operand_strs[inst->op2]);
 }
 
 // the subtract with carry (SBC) instruction
@@ -602,6 +612,8 @@ void sbc(gameboy *gb, gb_instruction *inst)
 
     // calculate and store the difference and set flags
     sub_from_reg_a(gb->cpu->reg, to_sub, 1);
+
+    LOG_DEBUG("%s %s, %s\n", inst->inst_str, operand_strs[inst->op1], operand_strs[inst->op2]);
 }
 
 // the compare (CP) instruction (same as SUB but without storing the result)
@@ -665,6 +677,8 @@ void cp(gameboy *gb, gb_instruction *inst)
 
     // calculate the difference (without storing the result) and set flags
     sub_from_reg_a(gb->cpu->reg, to_sub, 0);
+
+    LOG_DEBUG("%s %s, %s\n", inst->inst_str, operand_strs[inst->op1], operand_strs[inst->op2]);
 }
 
 // the bitwise and instruction
@@ -725,6 +739,8 @@ void and(gameboy *gb, gb_instruction *inst)
     }
     gb->cpu->reg->a &= to_and;
     set_flags(gb->cpu->reg, gb->cpu->reg->a == 0, 0, 1, 0);
+
+    LOG_DEBUG("%s %s, %s\n", inst->inst_str, operand_strs[inst->op1], operand_strs[inst->op2]);
 }
 
 // the bitwise or instruction
@@ -785,6 +801,8 @@ void or(gameboy *gb, gb_instruction *inst)
     }
     gb->cpu->reg->a |= to_or;
     set_flags(gb->cpu->reg, gb->cpu->reg->a == 0, 0, 0, 0);
+
+    LOG_DEBUG("%s %s, %s\n", inst->inst_str, operand_strs[inst->op1], operand_strs[inst->op2]);
 }
 
 // the bitwise xor instruction
@@ -846,4 +864,6 @@ void xor(gameboy *gb, gb_instruction *inst)
     }
     gb->cpu->reg->a ^= to_xor;
     set_flags(gb->cpu->reg, gb->cpu->reg->a == 0, 0, 0, 0);
+
+    LOG_DEBUG("%s %s, %s\n", inst->inst_str, operand_strs[inst->op1], operand_strs[inst->op2]);
 }

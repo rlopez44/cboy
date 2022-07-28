@@ -102,6 +102,8 @@ uint8_t jp(gameboy *gb, gb_instruction *inst)
             LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
             exit(1);
     }
+
+    LOG_DEBUG("%s %s, %s\n", inst->inst_str, operand_strs[inst->op1], operand_strs[inst->op2]);
     return duration;
 }
 
@@ -180,6 +182,8 @@ uint8_t jr(gameboy *gb, gb_instruction *inst)
             LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
             exit(1);
     }
+
+    LOG_DEBUG("%s %s, %s\n", inst->inst_str, operand_strs[inst->op1], operand_strs[inst->op2]);
     return duration;
 }
 
@@ -259,6 +263,8 @@ uint8_t call(gameboy *gb, gb_instruction *inst)
             LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
             exit(1);
     }
+
+    LOG_DEBUG("%s %s, %s\n", inst->inst_str, operand_strs[inst->op1], operand_strs[inst->op2]);
     return duration;
 }
 
@@ -315,6 +321,8 @@ void rst(gameboy *gb, gb_instruction *inst)
     // perform the call
     stack_push(gb, gb->cpu->reg->pc);
     gb->cpu->reg->pc = addr;
+
+    LOG_DEBUG("%s %s\n", inst->inst_str, operand_strs[inst->op1]);
 }
 
 /* the return from subroutine (RET) instruction
@@ -366,6 +374,7 @@ uint8_t ret(gameboy *gb, gb_instruction *inst)
         duration = inst->alt_duration;
     }
 
+    LOG_DEBUG("%s %s\n", inst->inst_str, operand_strs[inst->op1]);
     return duration;
 }
 
@@ -379,4 +388,6 @@ void reti(gameboy *gb)
 {
     gb->cpu->reg->pc = stack_pop(gb);
     gb->cpu->ime_flag = true;
+
+    LOG_DEBUG("RETI\n");
 }

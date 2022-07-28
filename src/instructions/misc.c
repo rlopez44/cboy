@@ -23,6 +23,8 @@ void ei(gameboy *gb)
     // set the delayed IME set indicator so we know
     // to set the IME after the next instruction
     gb->cpu->ime_delayed_set = true;
+
+    LOG_DEBUG("EI\n");
 }
 
 /* The disable interrupts instruction
@@ -34,6 +36,8 @@ void ei(gameboy *gb)
 void di(gameboy *gb)
 {
     gb->cpu->ime_flag = false;
+
+    LOG_DEBUG("DI\n");
 }
 
 /* The PUSH instruction
@@ -67,6 +71,8 @@ void push(gameboy *gb, gb_instruction *inst)
     }
 
     stack_push(gb, to_push);
+
+    LOG_DEBUG("%s %s\n", inst->inst_str, operand_strs[inst->op1]);
 }
 
 /* The POP instruction
@@ -116,6 +122,8 @@ void pop(gameboy *gb, gb_instruction *inst)
             LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
             exit(1);
     }
+
+    LOG_DEBUG("%s %s\n", inst->inst_str, operand_strs[inst->op1]);
 }
 
 /* The Decimal Adjust Accumulator instruction
@@ -266,6 +274,8 @@ void daa(gameboy *gb)
     // half carry and zero flag are always updated
     set_zero_flag(gb->cpu->reg, gb->cpu->reg->a == 0);
     set_half_carry_flag(gb->cpu->reg, 0);
+
+    LOG_DEBUG("DAA\n");
 }
 
 /* The Set Carry Flag instruction
@@ -285,6 +295,8 @@ void scf(gameboy *gb)
     set_subtract_flag(gb->cpu->reg, 0);
     set_half_carry_flag(gb->cpu->reg, 0);
     set_carry_flag(gb->cpu->reg, 1);
+
+    LOG_DEBUG("SCF\n");
 }
 
 /* The Complement Carry Flag instruction
@@ -306,6 +318,8 @@ void ccf(gameboy *gb)
     // set the remaining flags
     set_subtract_flag(gb->cpu->reg, 0);
     set_half_carry_flag(gb->cpu->reg, 0);
+
+    LOG_DEBUG("CCF\n");
 }
 
 /* The ComPLement accumulator instruction
@@ -329,6 +343,8 @@ void cpl(gameboy *gb)
     // set flags
     set_subtract_flag(gb->cpu->reg, 1);
     set_half_carry_flag(gb->cpu->reg, 1);
+
+    LOG_DEBUG("CPL\n");
 }
 
 /* The STOP instruction
@@ -353,6 +369,8 @@ void stop(gameboy *gb)
 
     // set the Game Boy's stopped flag
     gb->is_stopped = true;
+
+    LOG_DEBUG("STOP\n");
 }
 
 /* The HALT instruction
@@ -368,4 +386,6 @@ void stop(gameboy *gb)
 void halt(gameboy *gb)
 {
     gb->is_halted = true;
+
+    LOG_DEBUG("HALT\n");
 }
