@@ -36,13 +36,16 @@ uint8_t jp(gameboy *gb, gb_instruction *inst)
                     // no need to increment PC here since we're going to jump anyway
                     uint8_t hi = read_byte(gb, gb->cpu->reg->pc);
 
-                    gb->cpu->reg->pc = ((uint16_t)hi << 8) | ((uint16_t)lo);
+                    uint16_t addr = ((uint16_t)hi << 8) | ((uint16_t)lo);
+                    gb->cpu->reg->pc = addr;
+                    LOG_DEBUG("%s 0x%04x\n", inst->inst_str, addr);
                     break;
                 }
 
                 // jump to address in HL register
                 case REG_HL:
                     gb->cpu->reg->pc = read_hl(gb->cpu->reg);
+                    LOG_DEBUG("%s %s\n", inst->inst_str, operand_strs[inst->op1]);
                     break;
 
                 default: // shouldn't get here
@@ -95,6 +98,8 @@ uint8_t jp(gameboy *gb, gb_instruction *inst)
             {
                 duration = inst->alt_duration;
             }
+
+            LOG_DEBUG("%s %s, 0x%04x\n", inst->inst_str, operand_strs[inst->op1], addr);
             break;
         }
 
@@ -102,8 +107,6 @@ uint8_t jp(gameboy *gb, gb_instruction *inst)
             LOG_ERROR("Illegal argument in %s encountered. Exiting...\n", inst->inst_str);
             exit(1);
     }
-
-    LOG_DEBUG("%s %s, %s\n", inst->inst_str, operand_strs[inst->op1], operand_strs[inst->op2]);
     return duration;
 }
 
@@ -136,6 +139,8 @@ uint8_t jr(gameboy *gb, gb_instruction *inst)
              * conversions.
              */
             gb->cpu->reg->pc = (int32_t)gb->cpu->reg->pc + (int32_t)offset;
+
+            LOG_DEBUG("%s 0x%02x\n", inst->inst_str, (uint8_t)offset);
             break;
 
         case IMM_8:
@@ -175,6 +180,8 @@ uint8_t jr(gameboy *gb, gb_instruction *inst)
             {
                 duration = inst->alt_duration;
             }
+
+            LOG_DEBUG("%s %s, 0x%02x\n", inst->inst_str, operand_strs[inst->op1], (uint8_t)offset);
             break;
         }
 
@@ -183,7 +190,6 @@ uint8_t jr(gameboy *gb, gb_instruction *inst)
             exit(1);
     }
 
-    LOG_DEBUG("%s %s, %s\n", inst->inst_str, operand_strs[inst->op1], operand_strs[inst->op2]);
     return duration;
 }
 
@@ -214,6 +220,8 @@ uint8_t call(gameboy *gb, gb_instruction *inst)
 
             // implicit jump instruction to the target address
             gb->cpu->reg->pc = addr;
+
+            LOG_DEBUG("%s 0x%04x\n", inst->inst_str, addr);
             break;
 
         case IMM_16: // first operand is the condition
@@ -256,6 +264,8 @@ uint8_t call(gameboy *gb, gb_instruction *inst)
             {
                 duration = inst->alt_duration;
             }
+
+            LOG_DEBUG("%s %s, 0x%04x\n", inst->inst_str, operand_strs[inst->op1], addr);
             break;
         }
 
@@ -264,7 +274,6 @@ uint8_t call(gameboy *gb, gb_instruction *inst)
             exit(1);
     }
 
-    LOG_DEBUG("%s %s, %s\n", inst->inst_str, operand_strs[inst->op1], operand_strs[inst->op2]);
     return duration;
 }
 
