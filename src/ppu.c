@@ -415,6 +415,12 @@ static uint8_t set_ppu_mode(gameboy *gb)
 // handling all PPU-related logic as needed
 void run_ppu(gameboy *gb, uint8_t num_clocks)
 {
+    // if the PPU isn't on then there's nothing to do
+    uint8_t lcdc = gb->memory->mmap[LCDC_REGISTER];
+    bool ppu_enabled = (lcdc >> 7) & 1;
+    if (!ppu_enabled)
+        return;
+
     gb->ppu->dot_clock += num_clocks;
 
     uint8_t ppu_mode = set_ppu_mode(gb);
