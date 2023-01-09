@@ -346,6 +346,14 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
             gb->dma_requested = true;
         }
     }
+    else if (address == JOYP_REGISTER)
+    {
+        // bits 0-3 are read-only
+        uint8_t old_joyp = gb->memory->mmap[address];
+        uint8_t mask = 0xf0;
+
+        value = (value & mask) | (old_joyp & ~mask);
+    }
 
     gb->memory->mmap[address] = value;
 }
@@ -376,6 +384,12 @@ static void init_io_registers(gb_memory *memory)
     memory->mmap[0xff47] = 0xfc; // BGP
     memory->mmap[0xff48] = 0xff; // OBP0
     memory->mmap[0xff49] = 0xff; // OBP1
+    /* NOTE: because JOYP bits 0-3 are read-only,
+     * they will be hard-coded so that no buttons
+     * are registered as pressed. This will need
+     * to be changed when buttons are implemented.
+     */
+    memory->mmap[0xff00] = 0x1f; // JOYP
 }
 
 /* Allocate memory for the Game Boy's memory map and

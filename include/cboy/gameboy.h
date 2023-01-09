@@ -8,6 +8,8 @@
 #include "cboy/cartridge.h"
 #include "cboy/ppu.h"
 
+#define JOYP_REGISTER 0xff00
+
 #define DIV_REGISTER 0xff04
 #define TIMA_REGISTER 0xff05
 #define TMA_REGISTER 0xff06
