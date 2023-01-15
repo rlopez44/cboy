@@ -1,33 +1,34 @@
 # CBoy
 A Nintendo Game Boy emulator written in C.
-This is the first emulator I've ever tried to build and
-also the first substantial project I've written using C.
 
 # Compiling the Emulator
 In order to compile the emulator, you must have [SDL2](https://www.libsdl.org/)
 installed on your machine (the library and development files).
 For example, to install SDL2 on Debian/Ubuntu, run:
 
-    sudo apt install libsdl2-dev
+    apt install libsdl2-dev
 
-To compile the emulator, run `make` in the project's root directory.
-This will compile the emulator in the `bin/` subdirectory. The
-corresponding object files will be stored in the `obj/` subdirectory.
-To compile with debug symbols, run `make debug` instead. This debug
-emulator will be compiled in the `bin/debug/` subdirectory and the
-corresponding object files will be stored in the `obj/debug/`
-subdirectory.
+or on Arch-based systems:
+
+    pacman -S sdl2
+
+or on MacOS using Homebrew:
+
+    brew install sdl2
+
+To compile the emulator, run `make`. This will compile the emulator in
+the `bin/` subdirectory. To compile a debug build, run `make debug`
+instead. This debug build of the emulator will be compiled in the
+`bin/debug/` subdirectory.
 
 # Running the Emulator
-To run the emulator, simply execute the following: `bin/cboy <rom_file_path>`.
-If you want to run the emulator with debug symbols, then use `bin/debug/cboy`
-instead.
+To start the emulator, run `bin/cboy <rom_file_path>` for the release
+build or `bin/debug/cboy <rom_file_path>` for the debug build .
 
 # Clean Up
 To clean up object files used in prior compilations, run `make clean`.
 To clean up both object files and the emulator from prior compilations,
-run `make full-clean`. These commands are useful if you want to compile
-completely from scratch at any point.
+run `make full-clean`.
 
 # Notes
 Currently, the emulator can't be run on Windows because the debug mode
