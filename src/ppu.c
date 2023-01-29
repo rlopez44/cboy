@@ -344,8 +344,8 @@ static bool ly_compare(gameboy *gb)
     return equal_values;
 }
 
-// handle interrupt requests based on PPU mode
-static void handle_ppu_mode_interrupts(gameboy *gb)
+// handle STAT interrupt requests based on PPU mode
+static void handle_ppu_mode_stat_interrupts(gameboy *gb)
 {
     uint8_t stat                 = gb->memory->mmap[STAT_REGISTER],
             ppu_mode             = stat & 0x03,
@@ -353,29 +353,24 @@ static void handle_ppu_mode_interrupts(gameboy *gb)
             vblank_interrupt_bit = (stat & 0x10) >> 4,
             hblank_interrupt_bit = (stat & 0x08) >> 3;
 
+    bool request_stat_interrupt = false;
     switch (ppu_mode)
     {
         case 0x00:
-            if (hblank_interrupt_bit)
-            {
-                request_interrupt(gb, LCD_STAT);
-            }
+            request_stat_interrupt = hblank_interrupt_bit;
             break;
         case 0x01:
-            if (vblank_interrupt_bit)
-            {
-                request_interrupt(gb, VBLANK);
-            }
+            request_stat_interrupt = vblank_interrupt_bit;
             break;
         case 0x02:
-            if (oam_interrupt_bit)
-            {
-                request_interrupt(gb, LCD_STAT);
-            }
+            request_stat_interrupt = oam_interrupt_bit;
             break;
         case 0x03: // no interrupt for mode 3
             break;
     }
+
+    if (request_stat_interrupt)
+        request_interrupt(gb, LCD_STAT);
 }
 
 // set the appropriate mode in the STAT register
@@ -424,7 +419,7 @@ void run_ppu(gameboy *gb, uint8_t num_clocks)
     gb->ppu->dot_clock += num_clocks;
 
     uint8_t ppu_mode = set_ppu_mode(gb);
-    handle_ppu_mode_interrupts(gb);
+    handle_ppu_mode_stat_interrupts(gb);
     ly_compare(gb);
 
     // we render a scanline once we reach the HBLANK period
@@ -434,10 +429,12 @@ void run_ppu(gameboy *gb, uint8_t num_clocks)
         gb->ppu->curr_scanline_rendered = true;
     }
     // we display the frame once we've reached the VBLANK period
+    // we also need to request a vblank interrupt upon entering
     else if (ppu_mode == 0x01 && !gb->ppu->curr_frame_displayed)
     {
         display_frame(gb);
         gb->ppu->curr_frame_displayed = true;
+        request_interrupt(gb, VBLANK);
     }
 
     // check if we're done with the current scanline
