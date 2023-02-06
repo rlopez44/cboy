@@ -33,7 +33,8 @@ uint16_t read_af(gb_registers *reg)
 void write_af(gb_registers *reg, uint16_t value)
 {
     reg->a = (uint8_t)((value & 0xFF00) >> 8);
-    reg->f = (uint8_t)(value & 0xFF);
+    // the bottom 4 bits of F are unused
+    reg->f = (uint8_t)(value & 0xF0);
 }
 
 uint16_t read_de(gb_registers *reg)
