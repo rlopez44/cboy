@@ -83,6 +83,9 @@ uint8_t read_byte(gameboy *gb, uint16_t address)
     {
         return gb->ppu->wx;
     }
+    // attempted read from cartridge RAM when not enabled
+    else if (0xa000 <= address && address <= 0xbfff && !gb->cart->mbc->ram_enabled)
+        return 0xff;
     /**************** END: Special reads where we return early **************/
 
 
@@ -283,7 +286,17 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
     // attempted write to the ROM area
     else if (address <= 0x7fff)
     {
-        // TODO: once MBCs are supported, redirect these writes to the MBC
+        MBC_REGISTER reg;
+        if (address <= 0x1fff)
+            reg = RAM_ENABLE;
+        else if (address <= 0x3fff)
+            reg = ROM_BANKNO;
+        else if (address <= 0x5fff)
+            reg = RAM_BANKNO;
+        else
+            reg = BANK_MODE;
+
+        handle_mbc_writes(gb, reg, value);
         return;
     }
     // writing to the timing-related registers
@@ -312,6 +325,9 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
     {
         gb->ppu->wx = value;
     }
+    // attempted write to cartridge RAM when not enabled
+    else if (0xa000 <= address && address <= 0xbfff && !gb->cart->mbc->ram_enabled)
+        return;
     /**************** END: Special writes where we return early **************/
 
 

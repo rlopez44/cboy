@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "cboy/cartridge.h"
 #include "cboy/gameboy.h"
 #include "cboy/log.h"
 
@@ -25,9 +26,11 @@ int main(int argc, const char *argv[])
         return 1;
     }
 
-    if (gb->cart->mbc != NO_MBC)
+    print_mbc_type(gb->cart);
+
+    if (gb->cart->mbc_type != NO_MBC && gb->cart->mbc_type != MBC1)
     {
-        LOG_INFO("NOTE: MBCs are not yet supported."
+        LOG_INFO("NOTE: Only MBC1 is supported."
                  " This game will not run correctly\n");
     }
 

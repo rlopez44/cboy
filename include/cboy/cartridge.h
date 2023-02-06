@@ -3,9 +3,13 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 /* 16 KB (2^14 bytes) */
 #define ROM_BANK_SIZE 16384
+
+/* 8 KB (2^13 bytes) */
+#define RAM_BANK_SIZE 8192
 
 #define MAX_ROM_BANKS 512
 
@@ -38,6 +42,21 @@ typedef enum MBC_TYPE {
     HuC3,
 } MBC_TYPE;
 
+/* Memory Bank Controller registers */
+typedef enum MBC_REGISTER {
+    RAM_ENABLE,
+    ROM_BANKNO,
+    RAM_BANKNO,
+    BANK_MODE,
+} MBC_REGISTER;
+
+typedef struct cartridge_mbc {
+    bool ram_enabled;
+    uint8_t rom_bankno;
+    uint8_t ram_bankno;
+    bool bank_mode;
+} cartridge_mbc;
+
 typedef struct gb_cartridge {
     /* The cartridge's ROM banks. There are a
      * minimum of 2 banks and a max of 512 banks.
@@ -52,7 +71,8 @@ typedef struct gb_cartridge {
     uint16_t num_ram_banks, ram_bank_size;
 
     /* the cartridge's MBC */
-    MBC_TYPE mbc;
+    MBC_TYPE mbc_type;
+    cartridge_mbc *mbc;
 } gb_cartridge;
 
 /* free the memory allocated for the cartridge */
@@ -66,5 +86,11 @@ ROM_LOAD_STATUS load_rom(gb_cartridge *cart, FILE *rom_file);
 
 /* utility function for printing out the cartridge MBC type */
 void print_mbc_type(gb_cartridge *cart);
+
+/* forward declaration needed for handle_mbc_writes() */
+typedef struct gameboy gameboy;
+
+/* Handle MBC-related writes to memory */
+void handle_mbc_writes(gameboy *gb, MBC_REGISTER reg, uint8_t val);
 
 #endif
