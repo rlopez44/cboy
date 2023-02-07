@@ -369,21 +369,19 @@ void add(gameboy *gb, gb_instruction *inst)
 
         case REG_SP: // single case, add signed 8-bit offset
         {
-            // cast is safe since we don't change integer width
-            int8_t offset = (int8_t)read_byte(gb, (gb->cpu->reg->pc)++);
-            // explicit casts to avoid bugs due to implicit integer conversions
-            gb->cpu->reg->sp = (int32_t)gb->cpu->reg->sp + (int32_t)offset;
+            uint8_t offset = read_byte(gb, (gb->cpu->reg->pc)++);
+            bool sign_bit = (offset >> 7) & 1;
 
-            bool half_carry = 0, carry = 0;
-            // overflow can occur only if offset > 0
-            if (offset > 0)
-            {
-                half_carry = (gb->cpu->reg->sp & 0xf) + (offset & 0xf) > 0xf;
-                carry = (gb->cpu->reg->sp & 0xff) + offset > 0xff;
-            }
+            // flags are set based on unsigned value of offset
+            bool half_carry = (gb->cpu->reg->sp & 0xf) + (offset & 0xf) > 0xf,
+                 carry      = (gb->cpu->reg->sp & 0xff) + offset > 0xff;
+
+            // SP is 16 bits, so we need to sign extend the offset before adding
+            gb->cpu->reg->sp += sign_bit ? 0xff00 | (uint16_t)offset : offset;
+
             set_flags(gb->cpu->reg, 0, 0, half_carry, carry);
 
-            LOG_DEBUG("%s %s, 0x%02x\n", inst->inst_str, operand_strs[inst->op1], (uint8_t)offset);
+            LOG_DEBUG("%s %s, 0x%02x\n", inst->inst_str, operand_strs[inst->op1], offset);
             break;
         }
 

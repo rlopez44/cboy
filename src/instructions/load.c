@@ -803,17 +803,15 @@ void ld(gameboy *gb, gb_instruction *inst)
                     break;
                 }
 
-                case IMM_8:
+                case IMM_8: // immediate value as signed offset
                 {
-                    /* read byte from memory as a signed value
-                     * NOTE: the cast from unsigned to signed 8-bit integer
-                     * is always safe since the two types are the same length
-                     */
-                    int8_t offset = (int8_t)read_byte(gb, (gb->cpu->reg->pc)++);
+                    uint8_t offset = read_byte(gb, (gb->cpu->reg->pc)++);
+                    bool sign_bit = (offset >> 7) & 1;
 
-                    // NOTE: possible bugs can occur due to implicit integer conversions when
-                    // offset < 0. To avoid this, we perform explicit casts of SP and the offset
-                    write_hl(gb->cpu->reg, (int32_t)gb->cpu->reg->sp + (int32_t)offset);
+                    // HL and SP are 16 bits, so we need to sign extend the offset before adding
+                    uint16_t signed_offset = sign_bit ? 0xff00 | (uint16_t)offset : offset;
+
+                    write_hl(gb->cpu->reg, gb->cpu->reg->sp + signed_offset);
 
                     /* Flags to set:
                      * zero flag: 0
@@ -821,20 +819,17 @@ void ld(gameboy *gb, gb_instruction *inst)
                      * half carry flag: set if overflow from bit 3
                      * carry flag: set if overflow from bit 7
                      *
-                     * NOTE: overflow can only occur if offset > 0
+                     * NOTE: flags are set based on unsigned value of offset
                      */
-                    bool half_carry = 0, carry = 0;
-                    if (offset > 0)
-                    {
-                        // lowest nibbles must add to value bigger than 0xf to overflow
-                        half_carry = (gb->cpu->reg->sp & 0xf) + (offset & 0xf) > 0xf;
+                    // lowest nibbles must add to value bigger than 0xf to overflow
+                    bool half_carry = (gb->cpu->reg->sp & 0xf) + (offset & 0xf) > 0xf;
 
-                        // sum of lowest bytes must be greater than 0xff to overflow
-                        carry = (gb->cpu->reg->sp & 0xff) + offset > 0xff;
-                    }
+                    // sum of lowest bytes must be greater than 0xff to overflow
+                    bool carry = (gb->cpu->reg->sp & 0xff) + offset > 0xff;
+
                     set_flags(gb->cpu->reg, 0, 0, half_carry, carry);
 
-                    LOG_DEBUG("%s %s, 0x%02x\n", inst->inst_str, operand_strs[inst->op1], (uint8_t)offset);
+                    LOG_DEBUG("%s %s, 0x%02x\n", inst->inst_str, operand_strs[inst->op1], offset);
                     break;
                 }
 
