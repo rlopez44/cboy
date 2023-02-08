@@ -20,8 +20,15 @@ typedef struct gb_registers {
 
 // the Game Boy CPU
 typedef struct gb_cpu {
+    // to track if the CPU has been HALTed
+    bool is_halted;
+
     // the Interrupt Master Enable Flag
     bool ime_flag;
+
+    // to keep track of when the HALT bug occurs
+    // See: https://gbdev.io/pandocs/halt.html?highlight=HALT#halt
+    bool halt_bug;
 
     /* flag set when an EI instruction is executed
      * to indicate the IME flag will need to be

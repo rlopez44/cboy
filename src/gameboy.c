@@ -194,7 +194,6 @@ gameboy *init_gameboy(const char *rom_file_path)
         LOG_ERROR("Not enough memory to initialize the emulator\n");
         return NULL;
     }
-    gb->is_halted = false;
     gb->is_stopped = false;
     gb->dma_requested = false;
     gb->clock_counter = 0;
@@ -436,7 +435,23 @@ static void dma_transfer_check(gameboy *gb, uint8_t num_clocks)
 
 }
 
+// check if we can exit the HALT instruction
+static void check_halt_wakeup(gameboy *gb)
+{
+    // we exit if an interrupt is pending
+    uint8_t if_register = gb->memory->mmap[IF_REGISTER],
+            ie_register = gb->memory->mmap[IE_REGISTER];
+
+    bool interrupt_pending = if_register & ie_register;
+    if (interrupt_pending)
+    {
+        LOG_DEBUG("Exiting HALTed state\n");
+        gb->cpu->is_halted = false;
+    }
+}
+
 // run the emulator
+// TODO: Implement halt bug 
 void run_gameboy(gameboy *gb)
 {
     uint8_t num_clocks;
@@ -451,8 +466,23 @@ void run_gameboy(gameboy *gb)
             return;
         }
 
-        // number of clock ticks, given number of m-cycles
-        num_clocks = 4 * execute_instruction(gb);
+        // number of clock ticks this iteration of the event loop
+        num_clocks = 0;
+
+        // if the CPU is HALTed no instructions are executed
+        if (!gb->cpu->is_halted)
+        {
+            // number of clock ticks, given number of m-cycles
+            num_clocks += 4 * execute_instruction(gb);
+        }
+        else
+        {
+            // every iteration that the CPU is halted counts as 4 clock ticks
+            // See: https://gbdev.io/pandocs/CPU_Instruction_Set.html#cpu-control-instructions
+            num_clocks += 4;
+            check_halt_wakeup(gb);
+        }
+
         num_clocks += service_interrupt(gb);
 
         increment_clock_counter(gb, num_clocks);

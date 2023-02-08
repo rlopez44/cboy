@@ -24,7 +24,7 @@ typedef struct gameboy {
     gb_cartridge *cart;
     gb_ppu *ppu;
 
-    bool is_stopped, is_halted, dma_requested;
+    bool is_stopped, dma_requested;
 
     // to maintain the appropriate frame rate
     uint32_t next_frame_time;

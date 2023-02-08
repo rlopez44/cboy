@@ -171,6 +171,9 @@ gb_cpu *init_cpu(void)
         return NULL;
     }
 
+    cpu->is_halted = false;
+    cpu->halt_bug = false;
+
     /* The GiiBiiAdvance emulator (see References section
      * of my README for a link) sets this flag to zero
      * during initialization, so I will too.

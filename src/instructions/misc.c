@@ -7,6 +7,7 @@
 #include "cboy/gameboy.h"
 #include "cboy/cpu.h"
 #include "cboy/log.h"
+#include "cboy/interrupts.h"
 #include "execute.h"
 
 /* The enable interrupts instruction
@@ -375,17 +376,38 @@ void stop(gameboy *gb)
 
 /* The HALT instruction
  * ====================
- * Enter the CPU into a low-power mode.
+ * Enter the CPU into a low-power state.
+ *
+ * IF the IME flag is NOT set but an interrupt is
+ * pending then the HALT immediately exits and
+ * the HALT bug is triggered, where the CPU doesn't
+ * increase the PC when it executes the next instruction.
+ * This results in the byte after the HALT being read
+ * twice.
  *
  * Here we set a flag for the emulator that the
- * GB has been HALTed. Exiting out of this state
+ * CPU has been HALTed (if the HALT doesn't immediately
+ * exit as described above). Exiting out of this state
  * is handled via interrupts.
- *
- * TODO: see about inlining this function
  */
 void halt(gameboy *gb)
 {
-    gb->is_halted = true;
+    uint8_t if_register = gb->memory->mmap[IF_REGISTER],
+            ie_register = gb->memory->mmap[IE_REGISTER];
 
-    LOG_DEBUG("HALT\n");
+    bool interrupt_pending = if_register & ie_register;
+    
+    // IME not set and an interrupt is pending so
+    // we never actually enter the HALTed state
+    // and instead trigger the HALT bug
+    if (!gb->cpu->ime_flag && interrupt_pending)
+    {
+        gb->cpu->halt_bug = true;
+        LOG_DEBUG("HALT bug\n");
+    }
+    else
+    {
+        gb->cpu->is_halted = true;
+        LOG_DEBUG("HALT\n");
+    }
 }

@@ -609,7 +609,17 @@ uint8_t execute_instruction(gameboy *gb)
     // the instruction's duration
     uint8_t curr_inst_duration;
 
-    uint8_t inst_code = read_byte(gb, (gb->cpu->reg->pc)++);
+    uint8_t inst_code;
+    if (!gb->cpu->halt_bug)
+    {
+        inst_code = read_byte(gb, (gb->cpu->reg->pc)++);
+    }
+    else // HALT bug. PC fails to be incremented once
+    {
+        inst_code = read_byte(gb, gb->cpu->reg->pc);
+        gb->cpu->halt_bug = false;
+    }
+
     gb_instruction inst = instruction_table[inst_code];
 
     /* Check if we need to access a prefixed instruction.
