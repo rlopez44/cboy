@@ -451,7 +451,6 @@ static void check_halt_wakeup(gameboy *gb)
 }
 
 // run the emulator
-// TODO: Implement halt bug 
 void run_gameboy(gameboy *gb)
 {
     uint8_t num_clocks;
