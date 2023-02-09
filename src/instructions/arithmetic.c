@@ -396,6 +396,14 @@ void adc(gameboy *gb, gb_instruction *inst)
 {
     /* NOTE: first operand of ADC is always the A register
      *
+     * Since we are adding three values together we need
+     * to be careful to check for carries correctly. For
+     * example, if the register/immediate happens to be 0xff
+     * and the carry flag is set, adding the three values
+     * together would give the same result as adding 0 to A,
+     * with the only difference being the flag register's
+     * state after the instruction executes.
+     *
      * Affected flags
      * --------------
      *  Zero Flag:         set if result is zero
@@ -404,43 +412,44 @@ void adc(gameboy *gb, gb_instruction *inst)
      *  Carry Flag:        set if overflow from bit 7
      */
 
-    uint8_t to_add = read_carry_flag(gb->cpu->reg); // initialize to value of carry flag
+    bool carry = read_carry_flag(gb->cpu->reg);
+    uint8_t to_add;
     switch (inst->op2)
     {
         case REG_A:
-            to_add += gb->cpu->reg->a;
+            to_add = gb->cpu->reg->a;
             break;
 
         case REG_B:
-            to_add += gb->cpu->reg->b;
+            to_add = gb->cpu->reg->b;
             break;
 
         case REG_C:
-            to_add += gb->cpu->reg->c;
+            to_add = gb->cpu->reg->c;
             break;
 
         case REG_D:
-            to_add += gb->cpu->reg->d;
+            to_add = gb->cpu->reg->d;
             break;
 
         case REG_E:
-            to_add += gb->cpu->reg->e;
+            to_add = gb->cpu->reg->e;
             break;
 
         case REG_H:
-            to_add += gb->cpu->reg->h;
+            to_add = gb->cpu->reg->h;
             break;
 
         case REG_L:
-            to_add += gb->cpu->reg->l;
+            to_add = gb->cpu->reg->l;
             break;
 
         case PTR_HL:
-            to_add += read_byte(gb, read_hl(gb->cpu->reg));
+            to_add = read_byte(gb, read_hl(gb->cpu->reg));
             break;
 
         case IMM_8:
-            to_add += read_byte(gb, (gb->cpu->reg->pc)++);
+            to_add = read_byte(gb, (gb->cpu->reg->pc)++);
             break;
 
         default: // shouldn't get here
@@ -448,12 +457,12 @@ void adc(gameboy *gb, gb_instruction *inst)
             exit(1);
     }
     uint8_t old_a = gb->cpu->reg->a;
-    gb->cpu->reg->a += to_add;
+    gb->cpu->reg->a += to_add + carry;
     set_flags(gb->cpu->reg,
-              gb->cpu->reg->a == 0,                       // zero
-              0,                                          // subtract
-              (old_a & 0xf) + (to_add & 0xf) > 0xf,       // half carry
-              (uint16_t)old_a + (uint16_t)to_add > 0xff); // carry
+              gb->cpu->reg->a == 0,                               // zero
+              0,                                                  // subtract
+              (old_a & 0xf) + (to_add & 0xf) + carry > 0xf,       // half carry
+              (uint16_t)old_a + (uint16_t)to_add + carry > 0xff); // carry
 
     if (inst->op2 == IMM_8)
         LOG_DEBUG("%s %s, 0x%02x\n", inst->inst_str, operand_strs[inst->op1], to_add);
@@ -461,14 +470,14 @@ void adc(gameboy *gb, gb_instruction *inst)
         LOG_DEBUG("%s %s, %s\n", inst->inst_str, operand_strs[inst->op1], operand_strs[inst->op2]);
 }
 
-/* Helper function used by the SUB, SBC, and CP instructions.
+/* Helper function used by the SUB and CP instructions.
  * Calculates the difference between register A and to_sub,
- * stores the result in register A if needed (for SUB and SBC),
+ * stores the result in register A if needed (for SUB),
  * and sets flags accordingly.
  */
 static void sub_from_reg_a(gb_registers *reg, uint8_t to_sub, bool store_result)
 {
-    /* NOTE: Regardless of which of the three instructions
+    /* NOTE: Regardless of which of the two instructions
      * calls this function, the four flags are set according
      * to the rules below given a value for to_sub.
      * -----------------------------------------------------
@@ -482,7 +491,7 @@ static void sub_from_reg_a(gb_registers *reg, uint8_t to_sub, bool store_result)
     // save original value of register A
     uint8_t old_a = reg->a;
 
-    // store the result if needed (SUB and SBC only)
+    // store the result if needed (SUB only)
     if (store_result)
     {
         reg->a -= to_sub;
@@ -569,6 +578,10 @@ void sbc(gameboy *gb, gb_instruction *inst)
 {
     /* NOTE: First operand of SBC is always the A register
      *
+     * Since we are adding three values together we need
+     * to be careful to check for borrows correctly (similar
+     * edge case logic as ADC above).
+
      * Affected Flags
      * --------------
      * Zero Flag:         set if result is zero
@@ -577,43 +590,44 @@ void sbc(gameboy *gb, gb_instruction *inst)
      * Carry Flag:        set if borrow (set if op2 + carry > A)
      */
 
-    uint8_t to_sub = read_carry_flag(gb->cpu->reg); // initialize to value of carry flag
+    bool carry = read_carry_flag(gb->cpu->reg);
+    uint8_t to_sub;
     switch (inst->op2)
     {
         case REG_A:
-            to_sub += gb->cpu->reg->a;
+            to_sub = gb->cpu->reg->a;
             break;
 
         case REG_B:
-            to_sub += gb->cpu->reg->b;
+            to_sub = gb->cpu->reg->b;
             break;
 
         case REG_C:
-            to_sub += gb->cpu->reg->c;
+            to_sub = gb->cpu->reg->c;
             break;
 
         case REG_D:
-            to_sub += gb->cpu->reg->d;
+            to_sub = gb->cpu->reg->d;
             break;
 
         case REG_E:
-            to_sub += gb->cpu->reg->e;
+            to_sub = gb->cpu->reg->e;
             break;
 
         case REG_H:
-            to_sub += gb->cpu->reg->h;
+            to_sub = gb->cpu->reg->h;
             break;
 
         case REG_L:
-            to_sub += gb->cpu->reg->l;
+            to_sub = gb->cpu->reg->l;
             break;
 
         case PTR_HL:
-            to_sub += read_byte(gb, read_hl(gb->cpu->reg));
+            to_sub = read_byte(gb, read_hl(gb->cpu->reg));
             break;
 
         case IMM_8:
-            to_sub += read_byte(gb, (gb->cpu->reg->pc)++);
+            to_sub = read_byte(gb, (gb->cpu->reg->pc)++);
             break;
 
         default: // shouldn't get here
@@ -621,8 +635,13 @@ void sbc(gameboy *gb, gb_instruction *inst)
             exit(1);
     }
 
-    // calculate and store the difference and set flags
-    sub_from_reg_a(gb->cpu->reg, to_sub, 1);
+    uint8_t old_a = gb->cpu->reg->a;
+    gb->cpu->reg->a -= to_sub + carry;
+    set_flags(gb->cpu->reg,
+              gb->cpu->reg->a == 0,                   // zero
+              1,                                      // subtract
+              (old_a & 0xf) < (to_sub & 0xf) + carry, // half carry
+              old_a < (uint16_t)to_sub + carry);      // carry
 
     if (inst->op2 == IMM_8)
         LOG_DEBUG("%s %s, 0x%02x\n", inst->inst_str, operand_strs[inst->op1], to_sub);
