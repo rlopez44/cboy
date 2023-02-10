@@ -97,7 +97,8 @@ void inc(gameboy *gb, gb_instruction *inst)
             uint8_t old_val = read_byte(gb, addr);
             write_byte(gb, addr, old_val + 1);
 
-            set_zero_flag(gb->cpu->reg, old_val + 1 == 0);
+            // account for implicit integer promotion
+            set_zero_flag(gb->cpu->reg, ((old_val + 1) & 0xff) == 0);
             set_subtract_flag(gb->cpu->reg, 0);
             set_half_carry_flag(gb->cpu->reg, (old_val & 0xf) + 1 > 0xf);
             break;
