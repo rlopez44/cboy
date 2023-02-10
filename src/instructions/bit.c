@@ -272,9 +272,10 @@ void rl(gameboy *gb, gb_instruction *inst)
         uint8_t val = read_byte(gb, addr);
 
         // rotate and set flags
+        uint8_t new_val = (val << 1) | carry;
         bit_seven = (val >> 7) & 1;
-        write_byte(gb, addr, (val << 1) | carry);
-        set_flags(gb->cpu->reg, ((val << 1) | carry) == 0, 0, 0, bit_seven);
+        write_byte(gb, addr, new_val);
+        set_flags(gb->cpu->reg, new_val == 0, 0, 0, bit_seven);
     }
     else
     {
@@ -373,9 +374,10 @@ void sla(gameboy *gb, gb_instruction *inst)
         uint8_t val = read_byte(gb, addr);
 
         // Shift and set flags. Note that bit zero is reset by the left shift
+        uint8_t new_val = val << 1;
         bit_seven = (val >> 7) & 1;
-        write_byte(gb, addr, val << 1);
-        set_flags(gb->cpu->reg, (val << 1) == 0, 0, 0, bit_seven);
+        write_byte(gb, addr, new_val);
+        set_flags(gb->cpu->reg, new_val == 0, 0, 0, bit_seven);
     }
     else
     {
