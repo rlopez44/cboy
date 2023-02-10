@@ -15,6 +15,9 @@
 // dump the Game Boy's memory contents
 void dump_memory(gameboy *gb);
 
+// print out the current CPU register contents
+void print_registers(gameboy *gb);
+
 #else
 #include <stdio.h>
 #define LOG_DEBUG(...)

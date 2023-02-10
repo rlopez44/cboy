@@ -128,26 +128,6 @@ bool read_carry_flag(gb_registers *reg)
     return (reg->f >> 4) & 1;
 }
 
-// utility function for printing out the CPU register contents
-void print_registers(gb_cpu *cpu)
-{
-    const char *message = "Register Contents:\n"
-                          "------------------\n"
-                          "AF: 0x%04x\n"
-                          "BC: 0x%04x\n"
-                          "DE: 0x%04x\n"
-                          "HL: 0x%04x\n"
-                          "SP: 0x%04x\n"
-                          "PC: 0x%04x\n";
-    LOG_INFO(message,
-             read_af(cpu->reg),
-             read_bc(cpu->reg),
-             read_de(cpu->reg),
-             read_hl(cpu->reg),
-             cpu->reg->sp,
-             cpu->reg->pc);
-}
-
 /* Allocate memory for the CPU struct
  * and initialize its components.
  *

@@ -465,6 +465,11 @@ void run_gameboy(gameboy *gb)
             return;
         }
 
+#ifdef DEBUG
+        // print CPU register contents before each instruction
+        print_registers(gb);
+#endif
+
         // number of clock ticks this iteration of the event loop
         num_clocks = 0;
 

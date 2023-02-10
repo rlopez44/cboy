@@ -40,9 +40,6 @@ typedef struct gb_cpu {
     gb_registers *reg;
 } gb_cpu;
 
-// utility function for printing out register contents
-void print_registers(gb_cpu *cpu);
-
 // initializes the Game Boy's CPU
 gb_cpu *init_cpu(void);
 
