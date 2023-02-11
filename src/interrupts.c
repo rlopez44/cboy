@@ -2,6 +2,7 @@
 #include "cboy/interrupts.h"
 #include "cboy/gameboy.h"
 #include "cboy/memory.h"
+#include "cboy/log.h"
 
 // request an interrupt by setting the appropriate bit in the IF register
 void request_interrupt(gameboy *gb, INTERRUPT_TYPE interrupt)
@@ -80,26 +81,31 @@ uint8_t service_interrupt(gameboy *gb)
         {
             if_register &= ~vblank_mask;
             handler_addr = 0x40;
+            LOG_DEBUG("Servicing VBlank IRQ\n");
         }
         else if (interrupts_to_service & lcd_stat_mask) // LCD_STAT
         {
             if_register &= ~lcd_stat_mask;
             handler_addr = 0x48;
+            LOG_DEBUG("Servicing STAT IRQ\n");
         }
         else if (interrupts_to_service & timer_mask)    // TIMER
         {
             if_register &= ~timer_mask;
             handler_addr = 0x50;
+            LOG_DEBUG("Servicing Timer IRQ\n");
         }
         else if (interrupts_to_service & serial_mask)   // SERIAL
         {
             if_register &= ~serial_mask;
             handler_addr = 0x58;
+            LOG_DEBUG("Servicing Serial IRQ\n");
         }
         else if (interrupts_to_service & joypad_mask)   // JOYPAD
         {
             if_register &= ~joypad_mask;
             handler_addr = 0x60;
+            LOG_DEBUG("Servicing Joypad IRQ\n");
         }
         else {} // shouldn't get here
 

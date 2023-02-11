@@ -427,6 +427,7 @@ static void dma_transfer_check(gameboy *gb, uint8_t num_clocks)
         gb->dma_counter += num_clocks;
         if (gb->dma_counter >= 640)
         {
+            LOG_DEBUG("Performing DMA Transfer\n");
             dma_transfer(gb);
             gb->dma_requested = false;
             gb->dma_counter = 0;

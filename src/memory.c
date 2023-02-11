@@ -6,6 +6,7 @@
 #include "cboy/memory.h"
 #include "cboy/cartridge.h"
 #include "cboy/ppu.h"
+#include "cboy/log.h"
 
 /* Reads a byte from the Game Boy's memory map at the given
  * address. Because a read can be requested from any address,
@@ -359,6 +360,7 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
          */
         if (value <= 0xdf) // valid value
         {
+            LOG_DEBUG("DMA Requested\n");
             gb->dma_requested = true;
         }
     }
