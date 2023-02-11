@@ -1,11 +1,27 @@
+#include <stdint.h>
+#include <string.h>
 #include "cboy/log.h"
+#include "cboy/gameboy.h"
+#include "cboy/ppu.h"
 
 #ifdef DEBUG
-#include "cboy/gameboy.h"
-
 // dump the Game Boy's memory contents
 void dump_memory(gameboy *gb)
 {
+    // update the memory map with I/O registers that don't
+    // live directly in the map before dumping it
+    gb->memory->mmap[DIV_REGISTER] = gb->clock_counter >> 8;
+    gb->memory->mmap[SCY_REGISTER] = gb->ppu->scy;
+    gb->memory->mmap[SCX_REGISTER] = gb->ppu->scx;
+    gb->memory->mmap[LY_REGISTER] = gb->ppu->ly;
+    gb->memory->mmap[WY_REGISTER] = gb->ppu->wy;
+    gb->memory->mmap[WX_REGISTER] = gb->ppu->wx;
+
+    // ECHO RAM is a mirror of 0xC000 - 0xDDFF (in Work RAM)
+    memcpy(gb->memory->mmap + 0xe000,
+           gb->memory->mmap + 0xc000,
+           (0xddff - 0xc000 + 1) * sizeof(uint8_t));
+
     const char *dumpfile_path = "/tmp/gb.dump";
     FILE *dumpfile = fopen(dumpfile_path, "wb");
 
