@@ -406,6 +406,18 @@ static uint8_t set_ppu_mode(gameboy *gb)
     return ppu_mode;
 }
 
+// Pauses the emulator as needed after each frame is displayed
+// to maintain the appropriate Game Boy frame rate.
+static inline void maintain_framerate(gameboy *gb)
+{
+    uint32_t curr_time = SDL_GetTicks();
+    if (!SDL_TICKS_PASSED(curr_time, gb->next_frame_time))
+    {
+        SDL_Delay(gb->next_frame_time - curr_time);
+    }
+    gb->next_frame_time += GB_FRAME_DURATION_MS;
+}
+
 // Run the PPU for the given number of clocks,
 // handling all PPU-related logic as needed
 void run_ppu(gameboy *gb, uint8_t num_clocks)
@@ -435,6 +447,7 @@ void run_ppu(gameboy *gb, uint8_t num_clocks)
         display_frame(gb);
         gb->ppu->curr_frame_displayed = true;
         request_interrupt(gb, VBLANK);
+        maintain_framerate(gb);
     }
 
     // check if we're done with the current scanline

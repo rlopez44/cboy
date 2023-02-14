@@ -201,7 +201,7 @@ gameboy *init_gameboy(const char *rom_file_path)
     gb->window = NULL;
     gb->renderer = NULL;
     gb->screen = NULL;
-    gb->next_frame_time = GB_FRAME_DURATION;
+    gb->next_frame_time = GB_FRAME_DURATION_MS;
 
     // allocate and init the CPU
     gb->cpu = init_cpu();
@@ -455,7 +455,6 @@ static void check_halt_wakeup(gameboy *gb)
 void run_gameboy(gameboy *gb)
 {
     uint8_t num_clocks;
-    uint32_t curr_time;
     SDL_Event event;
 
     while (true)
@@ -495,17 +494,5 @@ void run_gameboy(gameboy *gb)
         dma_transfer_check(gb, num_clocks);
 
         run_ppu(gb, num_clocks);
-
-        // delay as needed after each frame to
-        // maintain the appropriate frame rate
-        if (gb->ppu->ly == 153)
-        {
-            curr_time = SDL_GetTicks();
-            if (!SDL_TICKS_PASSED(curr_time, gb->next_frame_time))
-            {
-                SDL_Delay(gb->next_frame_time - curr_time);
-            }
-            gb->next_frame_time += GB_FRAME_DURATION;
-        }
     }
 }

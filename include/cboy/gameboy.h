@@ -16,7 +16,7 @@
 #define TAC_REGISTER 0xff07
 
 /* frame duration is 16.74 ms */
-#define GB_FRAME_DURATION 17
+#define GB_FRAME_DURATION_MS 17
 
 typedef struct gameboy {
     gb_cpu *cpu;
