@@ -19,6 +19,25 @@
 /* clock duration for a single frame of the Game Boy */
 #define FRAME_CLOCK_DURATION 70224
 
+/* Sprite rendering data */
+typedef struct gb_sprite {
+        uint8_t ypos, // sprite vertical pos + 16
+                xpos, // sprite horizontal pos + 8
+                tile_idx,
+                ysize;
+        
+        // sprite attributes
+        bool bg_over_obj,
+             yflip,
+             xflip,
+             palette_no;
+
+        // The sprite's tile data. Recall that each tile is
+        // 16 bytes in size, so if using 8x8 sprites, the
+        // second half of the array is unused.
+        uint8_t tile_data[32];
+} gb_sprite;
+
 gb_ppu *init_ppu(void)
 {
     gb_ppu *ppu = malloc(sizeof(gb_ppu));
@@ -81,6 +100,30 @@ static uint16_t tile_addr_from_index(bool tile_data_area_bit, uint8_t tile_index
     return base_data_addr + 16 * tile_offset; // each tile is 16 bytes
 }
 
+// Returns a color given a palette register, color index,
+// and whether this color will be for a sprite tile.
+static inline uint32_t color_from_palette(uint8_t palette_reg, bool is_sprite, uint8_t color_idx)
+{
+    uint32_t color;
+    switch((palette_reg >> (2 * color_idx)) & 0x3)
+    {
+        case 0x0:
+            color = is_sprite ? TRANSPARENT : WHITE;
+            break;
+        case 0x1:
+            color = LIGHT_GRAY;
+            break;
+        case 0x2:
+            color = DARK_GRAY;
+            break;
+        case 0x3:
+            color = BLACK;
+            break;
+    }
+
+    return color;
+}
+
 // load pixel color data for one line of the tile (8 pixels) into the given buffer
 static void load_tile_pixels(gameboy *gb, uint16_t tile_addr, uint16_t lineno, uint32_t *buff)
 {
@@ -109,20 +152,66 @@ static void load_tile_pixels(gameboy *gb, uint16_t tile_addr, uint16_t lineno, u
         // the BGP register lets us map color indices to colors
         bgp = read_byte(gb, BGP_REGISTER);
 
-        switch ((bgp >> (2 * color_index)) & 0x3)
+        buff[i] = color_from_palette(bgp, false, color_index);
+    }
+}
+
+// load pixel color data for the sprite line (8 bytes) to be rendered in the given buffer
+// using the occupancy array to handle drawing priority when sprites overlap
+static void render_sprite_pixels(gameboy *gb, gb_sprite *sprite, uint32_t *buff, bool *occupancy)
+{
+    // The current scanline of the PPU's internal frame buffer.
+    // This is needed to handle the "BG over OBJ" flag of each sprite
+    uint32_t *ppu_scanline_buff = gb->ppu->frame_buffer + gb->ppu->ly * FRAME_WIDTH;
+
+    // select which line of the sprite will be rendered
+    uint8_t line_to_render = gb->ppu->ly + 16 - sprite->ypos;
+
+    // each line of the tile is 2 bytes
+    uint8_t lo = sprite->tile_data[2*line_to_render],
+            hi = sprite->tile_data[2*line_to_render + 1];
+
+    /* convert these bytes into the corresponding color
+     * indices and then into actual colors
+     *
+     * See: https://gbdev.io/pandocs/Tile_Data.html
+     */
+    uint8_t color_index, mask, bitno, hi_bit, lo_bit, palette_reg;
+    for (uint8_t i = 0; i < 8; ++i)
+    {
+        // Hi byte has the most significant bits of the color index
+        // for each pixel, and lo byte has the least significant bits.
+        // The leftmost bit represents the leftmost pixel in the line.
+        bitno = 7 - i;
+        mask = 1 << bitno;
+        hi_bit = (hi & mask) >> bitno;
+        lo_bit = (lo & mask) >> bitno;
+        color_index = (hi_bit << 1) | lo_bit;
+
+        // the palette register lets us map color indices to colors
+        palette_reg = read_byte(gb, sprite->palette_no ? OBP1_REGISTER : OBP0_REGISTER);
+
+        uint32_t color = color_from_palette(palette_reg, true, color_index);
+
+        // use the sprite's xpos to determine where each pixel lies on the scanline
+        // Recall: xpos is the sprite's horizontal position + 8
+        uint8_t shifted_buff_idx = sprite->xpos + i;
+        uint8_t buff_idx;
+        if (shifted_buff_idx >= 8 && shifted_buff_idx < FRAME_WIDTH + 8)
         {
-            case 0x0:
-                buff[i] = WHITE;
-                break;
-            case 0x1:
-                buff[i] = LIGHT_GRAY;
-                break;
-            case 0x2:
-                buff[i] = DARK_GRAY;
-                break;
-            case 0x3:
-                buff[i] = BLACK;
-                break;
+            buff_idx = shifted_buff_idx - 8; // no overflow because shifted_buff_idx >= 8
+            // determine if the buffer pixel is already occupied by an opaque sprite pixel
+            if (!occupancy[buff_idx])
+            {
+                // determine if the sprite's pixel is drawn over the BG and window
+                // (bg_over_obj only applies for BG/window colors 1-3)
+                if (!sprite->bg_over_obj || ppu_scanline_buff[buff_idx] == WHITE)
+                {
+                    buff[buff_idx] = color;
+                    // a buffer pixel is occupied only by opaque pixels
+                    occupancy[buff_idx] = color != TRANSPARENT;
+                }
+            }
         }
     }
 }
@@ -248,14 +337,140 @@ static void load_window_tiles(gameboy *gb, bool tile_data_area_bit, bool tile_ma
     }
 }
 
+// reverse the bits of the given byte
+// See https://stackoverflow.com/a/2603254
+static const uint8_t byte_reverse_lookup[16] = {
+    0x0, 0x8, 0x4, 0xc, 0x2, 0xa, 0x6, 0xe,
+    0x1, 0x9, 0x5, 0xd, 0x3, 0xb, 0x7, 0xf,
+};
+static inline uint8_t reverse_byte(uint8_t b)
+{
+    return (byte_reverse_lookup[b & 0xf] << 4) | byte_reverse_lookup[b >> 4];
+}
+
+// Reflect the sprite in the x and y directions if needed
+static void perform_sprite_reflections(gb_sprite *sprite)
+{
+    // Recall: each line of the sprite is two bytes
+    if (sprite->yflip)
+    {
+        // vertical mirror -> reverse bytes of each line's data
+        for (uint8_t lineno = 0; lineno < sprite->ysize; ++lineno)
+        {
+            sprite->tile_data[2*lineno] = reverse_byte(sprite->tile_data[2*lineno]);
+            sprite->tile_data[2*lineno + 1] = reverse_byte(sprite->tile_data[2*lineno + 1]);
+        }
+    }
+
+    if (sprite->xflip)
+    {
+        uint8_t tmp, top_offset, bot_offset;
+        // horizontal mirror -> reverse tile data about the middle of the sprite
+        for (uint8_t lineno = 0; lineno < sprite->ysize / 2; ++lineno)
+        {
+            for (uint8_t line_idx = 0; line_idx <= 1; ++line_idx)
+            {
+                top_offset = 2*lineno + line_idx;
+                bot_offset = 2*(sprite->ysize - lineno - 1) + line_idx;
+
+                tmp = sprite->tile_data[top_offset];
+                sprite->tile_data[top_offset] = sprite->tile_data[bot_offset];
+                sprite->tile_data[bot_offset] = tmp;
+            }
+        }
+    }
+}
+
+// Render the selected sprites from OAM
+static void render_loaded_sprites(gameboy *gb, gb_sprite sprites[], uint8_t n_sprites)
+{
+    uint32_t scanline_buff[FRAME_WIDTH] = {0};
+    // to track if each pixel in the scanline buffer
+    // is already populated by a sprite's opaque pixel
+    bool occupancy[FRAME_WIDTH] = {false};
+
+    for (uint8_t sprite_idx = 0; sprite_idx < n_sprites; ++sprite_idx)
+    {
+        uint16_t base_tile_addr;
+        gb_sprite *curr_sprite = &sprites[sprite_idx];
+
+        // read in the sprite's tile (two tiles if using 8x16 sprites)
+        // Recall: each tile is 16 bytes in size
+        // If using 8x8 sprites, the latter half of the sprite array is unused
+        if (curr_sprite->ysize == 16)
+            curr_sprite->tile_idx &= 0xfe; // hardware-enforced 8x16 indexing
+
+        base_tile_addr = tile_addr_from_index(true, curr_sprite->tile_idx);
+        for (uint16_t offset = 0; offset < curr_sprite->ysize * 2; ++offset)
+            curr_sprite->tile_data[offset] = read_byte(gb, base_tile_addr + offset);
+
+        // perform xflip and yflip before rendering by adjusting xpos and ypos
+        perform_sprite_reflections(curr_sprite);
+
+        render_sprite_pixels(gb, curr_sprite, scanline_buff, occupancy);
+    }
+
+    // once all sprites are in our temp buffer, push into the PPU's frame buffer
+    uint32_t *ppu_scanline_buff = gb->ppu->frame_buffer + gb->ppu->ly * FRAME_WIDTH;
+    for (uint8_t i = 0; i < FRAME_WIDTH; ++i)
+    {
+        // only want to push visible opaque sprite pixels
+        if (occupancy[i])
+            ppu_scanline_buff[i] = scanline_buff[i];
+    }
+}
+
+// Select bytes from OAM to render for the current scanline
+static void load_sprites(gameboy *gb, bool obj_size_bit)
+{
+    uint16_t oam_base_addr = 0xfe00;
+    uint8_t ypos, xpos, tile_idx, flags;
+    uint8_t sprite_ysize = obj_size_bit ? 16 : 8;
+
+    // select the ten sprites to render for the current scan line from OAM
+    gb_sprite sprites_to_render[10] = {0};
+    uint8_t sprite_count = 0;
+    uint8_t shifted_ly = gb->ppu->ly + 16; // to match the +16 offset inside ypos
+
+    // NOTE: each sprite's attribute data is 4 bytes
+    for (uint8_t oam_offset = 0x00; oam_offset < 0x9f; oam_offset += 4)
+    {
+        if (sprite_count >= 10)
+            break;
+
+        ypos = read_byte(gb, oam_base_addr + oam_offset); // sprite vertical pos + 16
+
+        // current scanline is interior to the sprite
+        if (shifted_ly >= ypos && shifted_ly < ypos + sprite_ysize)
+        {
+            xpos = read_byte(gb, oam_base_addr + oam_offset + 1);
+            tile_idx = read_byte(gb, oam_base_addr + oam_offset + 2);
+            flags = read_byte(gb, oam_base_addr + oam_offset + 3);
+
+            sprites_to_render[sprite_count].ypos     = ypos; // sprite vertical pos + 16
+            sprites_to_render[sprite_count].xpos     = xpos;
+            sprites_to_render[sprite_count].tile_idx = tile_idx;
+            sprites_to_render[sprite_count].ysize    = sprite_ysize;
+
+            // unpack sprite attributes (bits 0-3 are for CGB only)
+            sprites_to_render[sprite_count].bg_over_obj = (flags >> 7) & 1;
+            sprites_to_render[sprite_count].yflip       = (flags >> 6) & 1;
+            sprites_to_render[sprite_count].xflip       = (flags >> 5) & 1;
+            sprites_to_render[sprite_count].palette_no  = (flags >> 4) & 1;
+
+            ++sprite_count;
+        }
+    }
+
+    render_loaded_sprites(gb, sprites_to_render, sprite_count);
+}
+
 // Render a single scanline into the frame buffer
 void render_scanline(gameboy *gb)
 {
     // get the bit info out of the LCDC register
     uint8_t lcdc = gb->memory->mmap[LCDC_REGISTER];
-    // TODO: handle LCD disabling
-    bool lcd_enable_bit            = lcdc & 0x80,
-         window_tile_map_area_bit  = lcdc & 0x40,
+    bool window_tile_map_area_bit  = lcdc & 0x40,
          window_enable_bit         = lcdc & 0x20,
          bg_win_tile_data_area_bit = lcdc & 0x10,
          bg_tile_map_area_bit      = lcdc & 0x08,
@@ -286,7 +501,9 @@ void render_scanline(gameboy *gb)
         load_window_tiles(gb, bg_win_tile_data_area_bit, window_tile_map_area_bit);
     }
 
-    // TODO: render the sprites, if enabled
+    // render the sprites, if enabled
+    if (obj_enable_bit)
+        load_sprites(gb, obj_size_bit);
 }
 
 // Display the current frame buffer to the screen
