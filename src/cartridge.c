@@ -645,3 +645,13 @@ void print_mbc_type(gb_cartridge *cart)
 
     LOG_INFO("MBC Type: %s\n", mbc_type);
 }
+
+/* print the ROM's title */
+void print_rom_title(gb_cartridge *cart)
+{
+    // the title is max 16 characters (17 w/null terminator)
+    // and is located at address 0x0134 in the first ROM bank
+    char title[17] = {0};
+    memcpy(title, cart->rom_banks[0] + 0x0134, 16);
+    LOG_INFO("Title: %s\n", title);
+}

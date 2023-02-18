@@ -93,4 +93,7 @@ typedef struct gameboy gameboy;
 /* Handle MBC-related writes to memory */
 void handle_mbc_writes(gameboy *gb, MBC_REGISTER reg, uint8_t val);
 
+/* print the ROM's title */
+void print_rom_title(gb_cartridge *cart);
+
 #endif

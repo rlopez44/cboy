@@ -65,6 +65,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    print_rom_title(gb->cart);
     print_mbc_type(gb->cart);
 
     if (gb->cart->mbc_type != NO_MBC && gb->cart->mbc_type != MBC1)
