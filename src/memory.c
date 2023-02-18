@@ -33,9 +33,16 @@ uint8_t read_byte(gameboy *gb, uint16_t address)
     uint8_t ppu_status   = gb->memory->mmap[STAT_REGISTER] & 0x3,
             oam_blocked  = (ppu_status == 3) || (ppu_status == 2);
 
+    bool boot_rom_enabled = !gb->memory->mmap[0xff50];
+
     /**************** BEGIN: Special reads where we return early **************/
+    // a boot ROM was successfully loaded
+    if (gb->run_boot_rom && address < 0x100 && boot_rom_enabled)
+    {
+        return gb->boot_rom[address];
+    }
     // during a DMA transfer we can only access HRAM
-    if (gb->dma_requested && (address < 0xff80 || address > 0xfffe))
+    else if (gb->dma_requested && (address < 0xff80 || address > 0xfffe))
     {
         return 0xff;
     }
@@ -244,14 +251,22 @@ static void timing_related_write(gameboy *gb, uint16_t address, uint8_t value)
  */
 void write_byte(gameboy *gb, uint16_t address, uint8_t value)
 {
+    bool boot_rom_enabled = !gb->memory->mmap[0xff50];
+
     /**************** BEGIN: Special writes where we return early **************/
     // during a DMA transfer we can only access HRAM
     if (gb->dma_requested && (address < 0xff80 || address > 0xfffe))
     {
         return;
     }
-    // attempted writes to the boot ROM disabled bit or the prohibited memory range are ignored
-    else if (address == 0xff50 || (0xfea0 <= address && address <= 0xfeff))
+    // attempted write to the boot ROM disabled bit
+    // after the boot ROM has finished running
+    else if (!boot_rom_enabled && address == 0xff50)
+    {
+        return;
+    }
+    // attempted writes to the prohibited memory range are ignored
+    else if (0xfea0 <= address && address <= 0xfeff)
     {
         return;
     }
@@ -424,9 +439,6 @@ gb_memory *init_memory_map(gb_cartridge *cart)
     {
         memory->mmap[i] = 0;
     }
-
-    // disable the boot ROM
-    memory->mmap[0xff50] = 1;
 
     // mount the zeroth and first ROM banks
     memcpy(memory->mmap, cart->rom_banks[0], ROM_BANK_SIZE * sizeof(uint8_t));

@@ -19,6 +19,9 @@
 /* frame duration is 16.74 ms */
 #define GB_FRAME_DURATION_MS 17
 
+/* boot ROM size in bytes */
+#define BOOT_ROM_SIZE 256
+
 typedef struct gameboy {
     gb_cpu *cpu;
     gb_memory *memory;
@@ -28,6 +31,10 @@ typedef struct gameboy {
 
     // if the Game Boy is still on
     bool is_on;
+
+    // Game Boy boot ROM, if passed into the emulator
+    uint8_t boot_rom[BOOT_ROM_SIZE];
+    bool run_boot_rom;
 
     bool is_stopped, dma_requested;
 
@@ -59,7 +66,7 @@ void stack_push(gameboy *gb, uint16_t value);
 uint16_t stack_pop(gameboy *gb);
 
 // initialize the Game Boy
-gameboy *init_gameboy(const char *rom_file_path);
+gameboy *init_gameboy(const char *rom_file_path, const char *bootrom);
 
 // free the Game Boy
 void free_gameboy(gameboy *gb);

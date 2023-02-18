@@ -179,6 +179,63 @@ static bool init_screen(gameboy *gb)
     return true;
 }
 
+/* Attempts to load the given boot ROM into the emulator
+ * so that it can be played before starting the game.
+ *
+ * If The boot ROM can't be read (missing file etc.)
+ * or it is smaller than 256 bytes in size a warning message
+ * is printed out, but the emulator will continue
+ * to run without using the boot ROM.
+ *
+ * On successful boot ROM load, the boot ROM enable register
+ * is reset and the CPU's program counter is set to 0x00
+ * (the boot ROM is mapped to the first 256 bytes of ROM bank 0).
+ */
+ static void maybe_load_bootrom(gameboy *gb, const char *bootrom)
+ {
+    FILE *bootrom_file = fopen(bootrom, "rb");
+    if (bootrom_file == NULL)
+    {
+        LOG_ERROR("Unable to load the boot ROM (incorrect path?).\n");
+    }
+    else
+    {
+        size_t nbytes_read = fread(gb->boot_rom, sizeof(uint8_t), BOOT_ROM_SIZE, bootrom_file);
+        if (BOOT_ROM_SIZE != nbytes_read)
+        {
+            // either an I/O error occurred, or there weren't enough bytes in the file
+            if (ferror(bootrom_file))
+                LOG_ERROR("Unable to read from the boot ROM (I/O error).\n");
+
+            // the ROM was too small
+            LOG_ERROR("The specified boot ROM is only %zu "
+                    "bytes large (expected %d bytes).\n",
+                    nbytes_read,
+                    BOOT_ROM_SIZE);
+        }
+        else
+        {
+            // succeeded in reading in the boot ROM
+            gb->run_boot_rom = true;
+        }
+
+        fclose(bootrom_file);
+    }
+
+    if (gb->run_boot_rom)
+    {
+        LOG_INFO("Boot ROM loaded successfully.\n\n");
+        // set the program counter to the beginning of the boot ROM
+        gb->cpu->reg->pc = 0x0000;
+    }
+    else
+    {
+        LOG_INFO("The emulator will continue without using a boot ROM.\n\n");
+        // disable the boot ROM
+        gb->memory->mmap[0xff50] = 1;
+    }
+ }
+
 /* Allocates memory for the Game Boy struct
  * and initializes the Game Boy and its components.
  * Loads the ROM file into the emulator.
@@ -186,7 +243,7 @@ static bool init_screen(gameboy *gb)
  * If initialization fails then NULL is returned
  * and an error message is printed out.
  */
-gameboy *init_gameboy(const char *rom_file_path)
+gameboy *init_gameboy(const char *rom_file_path, const char *bootrom)
 {
     // allocate the Game Boy struct
     gameboy *gb = malloc(sizeof(gameboy));
@@ -204,6 +261,7 @@ gameboy *init_gameboy(const char *rom_file_path)
     gb->renderer = NULL;
     gb->screen = NULL;
     gb->next_frame_time = GB_FRAME_DURATION_MS;
+    gb->run_boot_rom = false;
     gb->is_on = true; // the Game Boy is running
 
     // allocate and init the joypad
@@ -296,6 +354,16 @@ gameboy *init_gameboy(const char *rom_file_path)
         free(gb);
         return NULL;
     }
+
+    /* Load the boot ROM into the emulator if it was passed in.
+     * We need to do this after the memory map is initialized
+     * because, if no suitable boot ROM is given, we need to
+     * write 1 to memory adress 0xff50 to "disable" the boot
+     * ROM (to be faithful to the hardware's behavior).
+     */
+    if (bootrom != NULL)
+        maybe_load_bootrom(gb, bootrom);
+
 
     // initialize the screen after all other components
     if (!init_screen(gb))

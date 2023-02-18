@@ -22,8 +22,11 @@ instead. This debug build of the emulator will be compiled in the
 `bin/debug/` subdirectory.
 
 # Running the Emulator
-To start the emulator, run `bin/cboy <rom_file_path>` for the release
-build or `bin/debug/cboy <rom_file_path>` for the debug build .
+The release mode of the emulator is `bin/cboy` and the debug mode is
+`bin/debug/cboy`. The emulator accepts a game ROM file and, optionally,
+a DMG boot ROM file to play before starting the game ROM. For example,
+the release mode of the emulator is invoked as follows:
+`bin/cboy [-b bootrom] <romfile>`.
 
 # Clean Up
 To clean up object files used in prior compilations, run `make clean`.
@@ -32,7 +35,8 @@ run `make full-clean`.
 
 # Notes
 Currently, the emulator can't be run on Windows because the debug mode
-memory dumping functionality writes to the `/tmp/` directory.
+memory dumping functionality writes to the `/tmp/` directory and because
+the POSIX `getopt` function is used for command line options processing.
 
 # References
 * [*DMG-01: How to Emulate a Game Boy*](https://rylev.github.io/DMG-01/public/book/)
