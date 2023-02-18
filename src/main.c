@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "cboy/cartridge.h"
 #include "cboy/gameboy.h"
+#include "cboy/joypad.h"
 #include "cboy/log.h"
 
 int main(int argc, const char *argv[])
@@ -11,7 +12,7 @@ int main(int argc, const char *argv[])
 #endif
 
     LOG_INFO("CBoy -- A Game Boy Emulator\n"
-             "--------------------------\n");
+             "---------------------------\n");
 
     if (argc != 2)
     {
@@ -33,6 +34,8 @@ int main(int argc, const char *argv[])
         LOG_INFO("NOTE: Only MBC1 is supported."
                  " This game will not run correctly\n");
     }
+
+    print_button_mappings();
 
     run_gameboy(gb);
 

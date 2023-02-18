@@ -3,12 +3,14 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <SDL_events.h>
 #include "cboy/gameboy.h"
 #include "cboy/memory.h"
 #include "cboy/cartridge.h"
 #include "cboy/ppu.h"
 #include "cboy/interrupts.h"
 #include "cboy/instructions.h"
+#include "cboy/joypad.h"
 #include "cboy/log.h"
 
 /* 3 seems like a good scale factor */
@@ -202,12 +204,22 @@ gameboy *init_gameboy(const char *rom_file_path)
     gb->renderer = NULL;
     gb->screen = NULL;
     gb->next_frame_time = GB_FRAME_DURATION_MS;
+    gb->is_on = true; // the Game Boy is running
+
+    // allocate and init the joypad
+    gb->joypad = init_joypad();
+    if (gb->joypad == NULL)
+    {
+        free(gb);
+        return NULL;
+    }
 
     // allocate and init the CPU
     gb->cpu = init_cpu();
 
     if (gb->cpu == NULL)
     {
+        free_joypad(gb->joypad);
         free(gb);
         return NULL;
     }
@@ -217,6 +229,7 @@ gameboy *init_gameboy(const char *rom_file_path)
 
     if (gb->cart == NULL)
     {
+        free_joypad(gb->joypad);
         free_cpu(gb->cpu);
         free(gb);
         return NULL;
@@ -227,6 +240,7 @@ gameboy *init_gameboy(const char *rom_file_path)
 
     if (gb->ppu == NULL)
     {
+        free_joypad(gb->joypad);
         free_cpu(gb->cpu);
         unload_cartridge(gb->cart);
         free(gb);
@@ -239,6 +253,7 @@ gameboy *init_gameboy(const char *rom_file_path)
     if (rom_file == NULL)
     {
         LOG_ERROR("Failed to open the ROM file (incorrect path?)\n");
+        free_joypad(gb->joypad);
         unload_cartridge(gb->cart);
         free_cpu(gb->cpu);
         free_ppu(gb->ppu);
@@ -261,6 +276,7 @@ gameboy *init_gameboy(const char *rom_file_path)
             LOG_ERROR("Failed to load the ROM into the emulator (I/O or memory error)\n");
         }
 
+        free_joypad(gb->joypad);
         unload_cartridge(gb->cart);
         free_cpu(gb->cpu);
         free_ppu(gb->ppu);
@@ -273,6 +289,7 @@ gameboy *init_gameboy(const char *rom_file_path)
 
     if (gb->memory == NULL)
     {
+        free_joypad(gb->joypad);
         unload_cartridge(gb->cart);
         free_cpu(gb->cpu);
         free_ppu(gb->ppu);
@@ -304,6 +321,7 @@ void free_gameboy(gameboy *gb)
     free_cpu(gb->cpu);
     unload_cartridge(gb->cart);
     free_ppu(gb->ppu);
+    free_joypad(gb->joypad);
     SDL_DestroyTexture(gb->screen);
     SDL_DestroyRenderer(gb->renderer);
     SDL_DestroyWindow(gb->window);
@@ -457,12 +475,22 @@ void run_gameboy(gameboy *gb)
     uint8_t num_clocks;
     SDL_Event event;
 
-    while (true)
+    while (gb->is_on)
     {
         SDL_PollEvent(&event);
-        if (event.type == SDL_QUIT)
+        switch (event.type)
         {
-            return;
+            case SDL_QUIT:
+                gb->is_on = false;
+                break;
+
+            case SDL_KEYDOWN:
+            case SDL_KEYUP:
+                handle_keypress(gb->joypad, &event.key);
+                break;
+
+            default:
+                break;
         }
 
 #ifdef DEBUG

@@ -7,6 +7,7 @@
 #include "cboy/memory.h"
 #include "cboy/cartridge.h"
 #include "cboy/ppu.h"
+#include "cboy/joypad.h"
 
 #define JOYP_REGISTER 0xff00
 
@@ -23,6 +24,10 @@ typedef struct gameboy {
     gb_memory *memory;
     gb_cartridge *cart;
     gb_ppu *ppu;
+    gb_joypad *joypad;
+
+    // if the Game Boy is still on
+    bool is_on;
 
     bool is_stopped, dma_requested;
 

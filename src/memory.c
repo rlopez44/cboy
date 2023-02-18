@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include "cboy/gameboy.h"
+#include "cboy/joypad.h"
 #include "cboy/memory.h"
 #include "cboy/cartridge.h"
 #include "cboy/ppu.h"
@@ -326,6 +327,16 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
     {
         gb->ppu->wx = value;
     }
+    else if (address == JOYP_REGISTER)
+    {
+        // writes to JOYP determine which set of buttons
+        // are reported with 0 = selected
+        value = (value >> 4) & 0x03; // bits 4 and 5
+        BUTTON_REPORTING_MODE mode = value == 0x01 ? ACTION : DIRECTION;
+
+        report_button_states(gb, mode);
+        return;
+    }
     // attempted write to cartridge RAM when not enabled
     else if (0xa000 <= address && address <= 0xbfff && !gb->cart->mbc->ram_enabled)
         return;
@@ -364,14 +375,6 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
             gb->dma_requested = true;
         }
     }
-    else if (address == JOYP_REGISTER)
-    {
-        // bits 0-3 are read-only
-        uint8_t old_joyp = gb->memory->mmap[address];
-        uint8_t mask = 0xf0;
-
-        value = (value & mask) | (old_joyp & ~mask);
-    }
 
     gb->memory->mmap[address] = value;
 }
@@ -402,11 +405,6 @@ static void init_io_registers(gb_memory *memory)
     memory->mmap[0xff47] = 0xfc; // BGP
     memory->mmap[0xff48] = 0xff; // OBP0
     memory->mmap[0xff49] = 0xff; // OBP1
-    /* NOTE: because JOYP bits 0-3 are read-only,
-     * they will be hard-coded so that no buttons
-     * are registered as pressed. This will need
-     * to be changed when buttons are implemented.
-     */
     memory->mmap[0xff00] = 0x1f; // JOYP
 }
 
