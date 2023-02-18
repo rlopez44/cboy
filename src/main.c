@@ -82,6 +82,9 @@ int main(int argc, char *argv[])
     dump_memory(gb);
 #endif
 
+    // display the total number of frames rendered
+    LOG_INFO("\nFrames rendered: %lu\n", gb->ppu->frames_rendered);
+
     free_gameboy(gb);
     return 0;
 }

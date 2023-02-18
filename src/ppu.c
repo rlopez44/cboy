@@ -47,6 +47,7 @@ gb_ppu *init_ppu(void)
         return NULL;
     }
 
+    ppu->frames_rendered = 0;
     ppu->dot_clock = 0;
     ppu->scx = 0;
     ppu->scy = 0;
@@ -525,6 +526,8 @@ void display_frame(gameboy *gb)
     SDL_RenderClear(gb->renderer);
     SDL_RenderCopy(gb->renderer, gb->screen, NULL, NULL);
     SDL_RenderPresent(gb->renderer);
+
+    ++gb->ppu->frames_rendered;
 }
 
 /* Compare the LY and LYC registers. If the two values

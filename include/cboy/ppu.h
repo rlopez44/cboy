@@ -27,6 +27,7 @@ typedef struct gameboy gameboy;
 typedef struct gb_ppu {
     uint32_t frame_buffer[FRAME_WIDTH * FRAME_HEIGHT];
     uint32_t dot_clock;
+    uint64_t frames_rendered;
     uint8_t scx, scy, ly, wx, wy;
     bool curr_scanline_rendered, curr_frame_displayed;
 } gb_ppu;
