@@ -9,6 +9,8 @@
 #include "cboy/ppu.h"
 #include "cboy/log.h"
 
+ /********** TODO: When PPU timing emulation improves, add back OAM and VRAM blocking **********/
+
 /* Reads a byte from the Game Boy's memory map at the given
  * address. Because a read can be requested from any address,
  * we have to implement certain checks on the address so that
@@ -29,8 +31,7 @@
 uint8_t read_byte(gameboy *gb, uint16_t address)
 {
     uint8_t ppu_status   = gb->memory->mmap[STAT_REGISTER] & 0x3,
-            oam_blocked  = (ppu_status == 3) || (ppu_status == 2),
-            vram_blocked = ppu_status == 3;
+            oam_blocked  = (ppu_status == 3) || (ppu_status == 2);
 
     /**************** BEGIN: Special reads where we return early **************/
     // during a DMA transfer we can only access HRAM
@@ -41,24 +42,7 @@ uint8_t read_byte(gameboy *gb, uint16_t address)
     // attempted read from the prohibited memory range
     else if (0xfea0 <= address && address <= 0xfeff)
     {
-        if (oam_blocked)
-        {
-            return 0xff;
-        }
-        else // OAM not blocked
-        {
-            return 0x00;
-        }
-    }
-    // attempted read from OAM when it's blocked by the PPU
-    else if (oam_blocked && 0xfe00 <= address && address <= 0xfe9f)
-    {
-        return 0xff;
-    }
-    // attempted read from VRAM when it's blocked by the PPU
-    else if (vram_blocked && 0x8000 <= address && address <= 0x9fff)
-    {
-        return 0xff;
+        return oam_blocked ? 0xff : 0x00;
     }
     else if (address == DIV_REGISTER)
     {
@@ -260,10 +244,6 @@ static void timing_related_write(gameboy *gb, uint16_t address, uint8_t value)
  */
 void write_byte(gameboy *gb, uint16_t address, uint8_t value)
 {
-    uint8_t ppu_status   = gb->memory->mmap[STAT_REGISTER] & 0x3,
-            oam_blocked  = (ppu_status == 3) || (ppu_status == 2),
-            vram_blocked = ppu_status == 3;
-
     /**************** BEGIN: Special writes where we return early **************/
     // during a DMA transfer we can only access HRAM
     if (gb->dma_requested && (address < 0xff80 || address > 0xfffe))
@@ -272,16 +252,6 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
     }
     // attempted writes to the boot ROM disabled bit or the prohibited memory range are ignored
     else if (address == 0xff50 || (0xfea0 <= address && address <= 0xfeff))
-    {
-        return;
-    }
-    // attempted write to OAM when it's blocked by the PPU
-    else if (oam_blocked && 0xfe00 <= address && address <= 0xfe9f)
-    {
-        return;
-    }
-    // attempted write to VRAM when it's blocked by the PPU
-    else if (vram_blocked && 0x8000 <= address && address <= 0x9fff)
     {
         return;
     }
