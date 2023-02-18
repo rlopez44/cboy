@@ -352,21 +352,10 @@ static inline uint8_t reverse_byte(uint8_t b)
 // Reflect the sprite in the x and y directions if needed
 static void perform_sprite_reflections(gb_sprite *sprite)
 {
-    // Recall: each line of the sprite is two bytes
-    if (sprite->yflip)
-    {
-        // vertical mirror -> reverse bytes of each line's data
-        for (uint8_t lineno = 0; lineno < sprite->ysize; ++lineno)
-        {
-            sprite->tile_data[2*lineno] = reverse_byte(sprite->tile_data[2*lineno]);
-            sprite->tile_data[2*lineno + 1] = reverse_byte(sprite->tile_data[2*lineno + 1]);
-        }
-    }
-
-    if (sprite->xflip)
+    if (sprite->yflip) 
     {
         uint8_t tmp, top_offset, bot_offset;
-        // horizontal mirror -> reverse tile data about the middle of the sprite
+        // vertical mirror = reflect about x-axis -> reverse tile data about the middle of the sprite
         for (uint8_t lineno = 0; lineno < sprite->ysize / 2; ++lineno)
         {
             for (uint8_t line_idx = 0; line_idx <= 1; ++line_idx)
@@ -378,6 +367,17 @@ static void perform_sprite_reflections(gb_sprite *sprite)
                 sprite->tile_data[top_offset] = sprite->tile_data[bot_offset];
                 sprite->tile_data[bot_offset] = tmp;
             }
+        }
+    }
+
+    if (sprite->xflip)
+    {
+        // horizontal mirror = reflect about y-axis -> reverse bytes of each line's data
+        // Recall: each line of the sprite is two bytes
+        for (uint8_t lineno = 0; lineno < sprite->ysize; ++lineno)
+        {
+            sprite->tile_data[2*lineno] = reverse_byte(sprite->tile_data[2*lineno]);
+            sprite->tile_data[2*lineno + 1] = reverse_byte(sprite->tile_data[2*lineno + 1]);
         }
     }
 }
