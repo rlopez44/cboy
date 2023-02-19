@@ -1,3 +1,4 @@
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -83,7 +84,7 @@ int main(int argc, char *argv[])
 #endif
 
     // display the total number of frames rendered
-    LOG_INFO("\nFrames rendered: %lu\n", gb->ppu->frames_rendered);
+    LOG_INFO("\nFrames rendered: %" PRIu64 "\n", gb->ppu->frames_rendered);
 
     free_gameboy(gb);
     return 0;
