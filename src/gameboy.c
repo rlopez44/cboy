@@ -554,7 +554,7 @@ void run_gameboy(gameboy *gb)
 
             case SDL_KEYDOWN:
             case SDL_KEYUP:
-                handle_keypress(gb->joypad, &event.key);
+                handle_keypress(gb, &event.key);
                 break;
 
             default:

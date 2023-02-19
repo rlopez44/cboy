@@ -24,10 +24,10 @@ typedef struct gb_joypad {
     bool a, b, select, start;
 } gb_joypad;
 
-// handle Game Boy key presses
-void handle_keypress(gb_joypad *joypad, SDL_KeyboardEvent *key);
-
 typedef struct gameboy gameboy;
+
+// handle Game Boy key presses
+void handle_keypress(gameboy *gb, SDL_KeyboardEvent *key);
 
 // report key states via JOYP register
 void report_button_states(gameboy *gb, BUTTON_REPORTING_MODE mode);

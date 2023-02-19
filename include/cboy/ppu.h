@@ -24,8 +24,21 @@
 
 typedef struct gameboy gameboy;
 
+/* colors for use by the display */
+typedef struct display_colors {
+    uint32_t white,
+             light_gray,
+             dark_gray,
+             black,
+             transparent;
+
+    // whether we're in grayscale or "greenscale" mode
+    bool grayscale_mode;
+} display_colors;
+
 typedef struct gb_ppu {
     uint32_t frame_buffer[FRAME_WIDTH * FRAME_HEIGHT];
+    display_colors colors;
     uint32_t dot_clock;
     uint64_t frames_rendered;
     uint8_t scx, scy, ly, wx, wy;
@@ -37,6 +50,8 @@ void render_scanline(gameboy *gb);
 void display_frame(gameboy *gb);
 
 void run_ppu(gameboy *gb, uint8_t num_clocks);
+
+void toggle_display_colors(gb_ppu *ppu);
 
 gb_ppu *init_ppu(void);
 

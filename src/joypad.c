@@ -61,35 +61,40 @@ void report_button_states(gameboy *gb, BUTTON_REPORTING_MODE mode)
 }
 
 // handle Game Boy key presses
-void handle_keypress(gb_joypad *joypad, SDL_KeyboardEvent *key)
+void handle_keypress(gameboy *gb, SDL_KeyboardEvent *key)
 {
     bool button_pressed = key->type == SDL_KEYDOWN;
 
     switch(key->keysym.sym)
     {
+        // switch between grayscale and "greenscale"
+        case SDLK_c:
+            if (button_pressed)
+                toggle_display_colors(gb->ppu);
+            break;
         case SDLK_w:
-            joypad->up = button_pressed;
+            gb->joypad->up = button_pressed;
             break;
         case SDLK_a:
-            joypad->left = button_pressed;
+            gb->joypad->left = button_pressed;
             break;
         case SDLK_s:
-            joypad->down = button_pressed;
+            gb->joypad->down = button_pressed;
             break;
         case SDLK_d:
-            joypad->right = button_pressed;
+            gb->joypad->right = button_pressed;
             break;
         case SDLK_j:
-            joypad->b = button_pressed;
+            gb->joypad->b = button_pressed;
             break;
         case SDLK_k:
-            joypad->a = button_pressed;
+            gb->joypad->a = button_pressed;
             break;
         case SDLK_SPACE:
-            joypad->select = button_pressed;
+            gb->joypad->select = button_pressed;
             break;
         case SDLK_RETURN:
-            joypad->start = button_pressed;
+            gb->joypad->start = button_pressed;
             break;
 
         default:
@@ -102,6 +107,7 @@ void print_button_mappings(void)
     LOG_INFO("\n"
              "Button Mappings\n"
              "---------------\n"
+             "Toggle grayscale/shades-of-green: <c>\n"
              "B:      <j>\n"
              "A:      <k>\n"
              "Up:     <w>\n"
