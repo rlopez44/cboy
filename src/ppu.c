@@ -84,6 +84,23 @@ void free_ppu(gb_ppu *ppu)
     free(ppu);
 }
 
+/* Reset the PPU.
+ *
+ * Should be called when the LCD/PPU
+ * enable bit in LCDC is reset.
+ *
+ * Resetting the PPU immediately resets LY
+ * (with no LY=LYC check) and resets the PPU
+ * clock, as well as reset to LCD mode 0.
+ */
+void reset_ppu(gameboy *gb)
+{
+    gb->ppu->ly = 0;
+    gb->ppu->dot_clock = 0;
+    gb->memory->mmap[STAT_REGISTER] &= 0xf8;
+    LOG_DEBUG("PPU reset\n");
+}
+
 // switch between grayscale and shades-of-green
 // colors for a more authentic Game Boy feel
 void toggle_display_colors(gb_ppu *ppu)

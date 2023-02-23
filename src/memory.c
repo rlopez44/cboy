@@ -298,22 +298,6 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
     {
         return;
     }
-    else if (address == SCY_REGISTER)
-    {
-        gb->ppu->scy = value;
-    }
-    else if (address == SCX_REGISTER)
-    {
-        gb->ppu->scx = value;
-    }
-    else if (address == WY_REGISTER)
-    {
-        gb->ppu->wy = value;
-    }
-    else if (address == WX_REGISTER)
-    {
-        gb->ppu->wx = value;
-    }
     // attempted write to cartridge RAM when not enabled
     else if (0xa000 <= address && address <= 0xbfff && !gb->cart->mbc->ram_enabled)
         return;
@@ -339,6 +323,28 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
                 mask     = 0x78; // mask for bits 3-6
 
         value = (value & mask) | (old_stat & ~mask);
+    }
+    else if (address == LCDC_REGISTER)
+    {
+        // reset the PPU when it's turned off (bit 7 of LCDC)
+        if (!(value & 0x80))
+            reset_ppu(gb);
+    }
+    else if (address == SCY_REGISTER)
+    {
+        gb->ppu->scy = value;
+    }
+    else if (address == SCX_REGISTER)
+    {
+        gb->ppu->scx = value;
+    }
+    else if (address == WY_REGISTER)
+    {
+        gb->ppu->wy = value;
+    }
+    else if (address == WX_REGISTER)
+    {
+        gb->ppu->wx = value;
     }
     else if (address == DMA_REGISTER)
     {

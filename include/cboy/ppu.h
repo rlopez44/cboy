@@ -57,4 +57,6 @@ gb_ppu *init_ppu(void);
 
 void free_ppu(gb_ppu *ppu);
 
+void reset_ppu(gameboy *gb);
+
 #endif
