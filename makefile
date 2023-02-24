@@ -17,7 +17,7 @@ SRC = $(notdir $(wildcard src/*.c) $(wildcard src/instructions/*.c))
 OBJS = $(patsubst %.c, $(OBJ_DIR)/%.o, $(SRC))
 DEBUG_OBJS = $(patsubst %.c, $(OBJ_DIR)/$(DEBUG_DIR)/%.o, $(SRC))
 
-all: CFLAGS += -O3
+all: CFLAGS += -O3 -flto
 all: $(BIN_DIR)/$(BIN)
 
 debug: CFLAGS += -g -DDEBUG
