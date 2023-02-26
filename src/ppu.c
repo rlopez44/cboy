@@ -9,6 +9,11 @@
 #include "cboy/interrupts.h"
 #include "cboy/log.h"
 
+/* tile map dimensions (32 tiles = 256 pixels) */
+#define TILE_WIDTH 8
+#define TILE_MAP_TILE_WIDTH 32
+#define TILE_MAP_WIDTH 256
+
 /* gray shade color codes in ARGB8888 format */
 #define WHITE       0xffffffff
 #define LIGHT_GRAY  0xffaaaaaa
@@ -311,52 +316,30 @@ static void load_bg_tiles(gameboy *gb, bool tile_data_area_bit, bool tile_map_ar
     // get the appropriate 32x32 tile map's address in VRAM
     uint16_t base_map_addr = tile_map_area_bit ? 0x9c00 : 0x9800;
 
-    /* Determine the offset from this base address using the SCX, SCY, and LY registers.
-     * We need two offsets: the offset to the first tile that will be loaded, and
-     * the pixel offset within that tile to give the first pixel that will be loaded.
-     */
-    uint16_t tile_addr,
-             pixel_xoffset      = gb->ppu->scx % 256,                 // modulo to wrap around the map
-             pixel_yoffset      = (gb->ppu->scy + gb->ppu->ly) % 256,
-             tile_xoffset       = pixel_xoffset / 8,                  // tile is 8 pixels wide
-             tile_yoffset       = pixel_yoffset / 8,
-             tile_pixel_xoffset = pixel_xoffset % 8,                  // pixel xoffset within the tile
-             tile_pixel_yoffset = pixel_yoffset % 8;
+    // determine Y offset inside tile map based on current LY and SCY
+    uint16_t pixel_yoffset      = (gb->ppu->scy + gb->ppu->ly) % TILE_MAP_WIDTH,
+             tile_yoffset       = pixel_yoffset / TILE_WIDTH,
+             tile_pixel_yoffset = pixel_yoffset % TILE_WIDTH; // offset within the tile
 
-
-    // now that we have our offsets, we can start loading tiles and rendering pixels
-    uint8_t tile_index, curr_pixels_to_load = 0, pixels_left_to_load = FRAME_WIDTH;
-    uint32_t tile_pixel_buff[8] = {0}; // to hold pixel color data for one line of a tile
-    uint16_t frame_buffer_offset;
-
-    while (pixels_left_to_load > 0)
+    // read in the full scanline of the 32x32 tile map
+    uint8_t tile_index;
+    uint16_t tile_addr;
+    uint32_t full_scanline_pixels[TILE_MAP_WIDTH] = {0};
+    for (uint16_t tileno = 0; tileno < TILE_MAP_TILE_WIDTH; ++tileno)
     {
-        tile_index = read_byte(gb, base_map_addr + tile_yoffset * 32 + tile_xoffset);
+        tile_index = read_byte(gb, base_map_addr + TILE_MAP_TILE_WIDTH * tile_yoffset + tileno);
         tile_addr = tile_addr_from_index(tile_data_area_bit, tile_index);
+        load_tile_pixels(gb, tile_addr,
+                         tile_pixel_yoffset,
+                         full_scanline_pixels + TILE_WIDTH*tileno);
+    }
 
-        // because we're rendering pixels for one scanline,
-        // we only need to load one line of the 8x8 tile
-        load_tile_pixels(gb, tile_addr, tile_pixel_yoffset, tile_pixel_buff);
-
-        curr_pixels_to_load = 8 - tile_pixel_xoffset; // from offset to end of tile line
-
-        // make sure we don't overflow the scanline
-        // when we're near the end of it
-        if (pixels_left_to_load < curr_pixels_to_load)
+    // use SCX to select the scanline's visible area
+    uint16_t frame_buffer_offset = FRAME_WIDTH * gb->ppu->ly;
+    for (uint16_t pixelno = 0; pixelno < FRAME_WIDTH; ++pixelno)
         {
-            curr_pixels_to_load = pixels_left_to_load;
-        }
-
-        // load the appropriate pixels
-        frame_buffer_offset = FRAME_WIDTH * (gb->ppu->ly + 1) - pixels_left_to_load;
-        memcpy(gb->ppu->frame_buffer + frame_buffer_offset,
-               tile_pixel_buff + tile_pixel_xoffset,
-               curr_pixels_to_load * sizeof(uint32_t));
-
-        // prepare to load values from the next tile
-        pixels_left_to_load -= curr_pixels_to_load;
-        tile_pixel_xoffset = (tile_pixel_xoffset + curr_pixels_to_load) % 8;
-        tile_xoffset = (tile_xoffset + 1) % 32; // wrap arround the tile map
+        uint16_t tile_pixelno = (pixelno + gb->ppu->scx) % TILE_MAP_WIDTH;
+        gb->ppu->frame_buffer[frame_buffer_offset + pixelno] = full_scanline_pixels[tile_pixelno];
     }
 }
 
