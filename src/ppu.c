@@ -66,6 +66,10 @@ gb_ppu *init_ppu(void)
     ppu->wy = 0;
     ppu->curr_scanline_rendered = false;
     ppu->curr_frame_displayed = false;
+    ppu->lyc_stat_line = false;
+    ppu->hblank_stat_line = false;
+    ppu->vblank_stat_line = false;
+    ppu->oam_stat_line = false;
 
     ppu->colors.white = WHITE;
     ppu->colors.light_gray = LIGHT_GRAY;
@@ -100,12 +104,28 @@ void reset_ppu(gameboy *gb)
     gb->memory->mmap[STAT_REGISTER] &= 0xf8;
     gb->ppu->curr_scanline_rendered = false;
     gb->ppu->curr_frame_displayed = false;
+    gb->ppu->lyc_stat_line = false;
+    gb->ppu->hblank_stat_line = false;
+    gb->ppu->vblank_stat_line = false;
+    gb->ppu->oam_stat_line = false;
     
     // resetting the PPU makes the screen go blank (white)
     for (uint16_t i = 0; i < FRAME_WIDTH*FRAME_HEIGHT; ++i)
         gb->ppu->frame_buffer[i] = gb->ppu->colors.white;
     display_frame(gb);
     LOG_DEBUG("PPU reset\n");
+}
+
+/* Returns the state of the PPU's "STAT interrupt line"
+ *
+ * See: https://gbdev.io/pandocs/Interrupt_Sources.html#int-48--stat-interrupt
+ */
+static inline bool stat_interrupt_line(gb_ppu *ppu)
+{
+    return ppu->lyc_stat_line
+           | ppu->hblank_stat_line
+           | ppu->vblank_stat_line
+           | ppu->oam_stat_line;
 }
 
 // switch between grayscale and shades-of-green
@@ -604,6 +624,9 @@ void display_frame(gameboy *gb)
  *
  * If the LYC=LY interrupt enable bit in the STAT
  * register is set then a STAT interrupt is requested.
+ *
+ * This interrupt request occurs once every low-to-high
+ * transition of the LY=LYC flag.
  */
 static bool ly_compare(gameboy *gb)
 {
@@ -618,15 +641,21 @@ static bool ly_compare(gameboy *gb)
         // set the LYC=LY flag
         gb->memory->mmap[STAT_REGISTER] = stat | cmp_flag;
 
-        if (stat & cmp_interrupt)
+        if (stat & cmp_interrupt && !stat_interrupt_line(gb->ppu))
         {
             request_interrupt(gb, LCD_STAT);
         }
+
+        // we set this after requesting an interrupt, otherwise
+        // the STAT interrupt line will always be high even
+        // if modes 0-2 haven't requested an interrupt.
+        gb->ppu->lyc_stat_line = true;
     }
     else
     {
         // reset the LYC=LY flag
         gb->memory->mmap[STAT_REGISTER] = stat & ~cmp_flag;
+        gb->ppu->lyc_stat_line = false;
     }
 
     return equal_values;
@@ -642,22 +671,43 @@ static void handle_ppu_mode_stat_interrupts(gameboy *gb)
             hblank_interrupt_bit = (stat & 0x08) >> 3;
 
     bool request_stat_interrupt = false;
+
+    // snapshot this so we can update individual source lines
+    // below without affecting our STAT interrupt request logic
+    bool stat_interrupt_line_state = stat_interrupt_line(gb->ppu);
+
     switch (ppu_mode)
     {
         case 0x00:
             request_stat_interrupt = hblank_interrupt_bit;
+            // mode 0 always follows mode 3 which
+            // doesn't request STAT interrupts
+            if (hblank_interrupt_bit)
+                gb->ppu->hblank_stat_line = true;
             break;
         case 0x01:
             request_stat_interrupt = vblank_interrupt_bit;
+            // mode 1 always follows mode 0
+            gb->ppu->hblank_stat_line = false;
+            if (vblank_interrupt_bit)
+                gb->ppu->vblank_stat_line = true;
             break;
         case 0x02:
             request_stat_interrupt = oam_interrupt_bit;
+            // mode 2 follows either mode 1 or mode 0
+            gb->ppu->hblank_stat_line = false;
+            gb->ppu->vblank_stat_line = false;
+            if (oam_interrupt_bit)
+                gb->ppu->oam_stat_line = true;
             break;
         case 0x03: // no interrupt for mode 3
+            gb->ppu->hblank_stat_line = false;
+            gb->ppu->vblank_stat_line = false;
+            gb->ppu->oam_stat_line = false;
             break;
     }
 
-    if (request_stat_interrupt)
+    if (request_stat_interrupt && !stat_interrupt_line_state)
         request_interrupt(gb, LCD_STAT);
 }
 

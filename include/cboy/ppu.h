@@ -43,6 +43,17 @@ typedef struct gb_ppu {
     uint64_t frames_rendered;
     uint8_t scx, scy, ly, wx, wy;
     bool curr_scanline_rendered, curr_frame_displayed;
+
+    /* The mode 0-2 and LY=LYC STAT mode interrupt
+     * sources are ORed together for purposes
+     * of requesting STAT interrupts. This
+     * prevents multiple consecutive STAT
+     * interrupt requests from these sources.
+     */
+    bool lyc_stat_line,
+         hblank_stat_line,
+         vblank_stat_line,
+         oam_stat_line;
 } gb_ppu;
 
 void render_scanline(gameboy *gb);
