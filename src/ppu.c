@@ -98,6 +98,13 @@ void reset_ppu(gameboy *gb)
     gb->ppu->ly = 0;
     gb->ppu->dot_clock = 0;
     gb->memory->mmap[STAT_REGISTER] &= 0xf8;
+    gb->ppu->curr_scanline_rendered = false;
+    gb->ppu->curr_frame_displayed = false;
+    
+    // resetting the PPU makes the screen go blank (white)
+    for (uint16_t i = 0; i < FRAME_WIDTH*FRAME_HEIGHT; ++i)
+        gb->ppu->frame_buffer[i] = gb->ppu->colors.white;
+    display_frame(gb);
     LOG_DEBUG("PPU reset\n");
 }
 
