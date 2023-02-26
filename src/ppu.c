@@ -337,7 +337,7 @@ static void load_bg_tiles(gameboy *gb, bool tile_data_area_bit, bool tile_map_ar
     // use SCX to select the scanline's visible area
     uint16_t frame_buffer_offset = FRAME_WIDTH * gb->ppu->ly;
     for (uint16_t pixelno = 0; pixelno < FRAME_WIDTH; ++pixelno)
-        {
+    {
         uint16_t tile_pixelno = (pixelno + gb->ppu->scx) % TILE_MAP_WIDTH;
         gb->ppu->frame_buffer[frame_buffer_offset + pixelno] = full_scanline_pixels[tile_pixelno];
     }
@@ -627,12 +627,12 @@ static bool ly_compare(gameboy *gb)
         if (stat & cmp_interrupt && !stat_interrupt_line(gb->ppu))
         {
             request_interrupt(gb, LCD_STAT);
-        }
 
-        // we set this after requesting an interrupt, otherwise
-        // the STAT interrupt line will always be high even
-        // if modes 0-2 haven't requested an interrupt.
-        gb->ppu->lyc_stat_line = true;
+            // we set this after requesting an interrupt, otherwise
+            // the STAT interrupt line will always be high even
+            // if modes 0-2 haven't requested an interrupt.
+            gb->ppu->lyc_stat_line = true;
+        }
     }
     else
     {
