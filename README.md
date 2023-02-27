@@ -38,6 +38,16 @@ Currently, the emulator can't be run on Windows because the debug mode
 memory dumping functionality writes to the `/tmp/` directory and because
 the POSIX `getopt` function is used for command line options processing.
 
+# Test ROM Coverage
+The emulator currently passes the following test ROMS.
+* Blargg
+    * cpu_instrs
+* [Scribbltests](https://github.com/Hacktix/scribbltests)
+    * LYCSCX
+    * LYCSCY
+    * PaletteLY
+    * SCXLY
+
 # References
 * [*DMG-01: How to Emulate a Game Boy*](https://rylev.github.io/DMG-01/public/book/)
 * [*Emulation of Nintendo Game Boy (DMG-01)*](https://raw.githubusercontent.com/Baekalfen/PyBoy/master/PyBoy.pdf)
