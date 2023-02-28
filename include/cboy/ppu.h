@@ -42,6 +42,11 @@ typedef struct gb_ppu {
     uint32_t dot_clock;
     uint64_t frames_rendered;
     uint8_t scx, scy, ly, wx, wy;
+
+    // an internal counter that tracks how many lines of
+    // the window have been rendered for the current frame
+    uint8_t window_line_counter;
+
     bool curr_scanline_rendered, curr_frame_displayed;
 
     /* The mode 0-2 and LY=LYC STAT mode interrupt
