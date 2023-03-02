@@ -198,11 +198,15 @@ static uint16_t tile_addr_from_index(bool tile_data_area_bit, uint8_t tile_index
 static inline uint32_t color_from_palette(display_colors *colors, uint8_t palette_reg,
                                           bool is_sprite, uint8_t color_idx)
 {
+    // color index 0 is ignored for sprites
+    if (!color_idx && is_sprite)
+        return colors->transparent;
+
     uint32_t color;
     switch((palette_reg >> (2 * color_idx)) & 0x3)
     {
         case 0x0:
-            color = is_sprite ? colors->transparent : colors->white;
+            color = colors->white;
             break;
         case 0x1:
             color = colors->light_gray;

@@ -47,6 +47,7 @@ The emulator currently passes the following test ROMS.
     * LYCSCY
     * PaletteLY
     * SCXLY
+    * WinPos
 
 # References
 * [*DMG-01: How to Emulate a Game Boy*](https://rylev.github.io/DMG-01/public/book/)
