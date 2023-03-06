@@ -769,7 +769,7 @@ static inline void maintain_framerate(gameboy *gb)
     if (curr_time < gb->next_frame_time)
         SDL_Delay(gb->next_frame_time - curr_time);
 
-    gb->next_frame_time += GB_FRAME_DURATION_MS;
+    gb->next_frame_time = SDL_GetTicks64() + GB_FRAME_DURATION_MS;
 }
 
 // Run the PPU for the given number of clocks,
