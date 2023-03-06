@@ -43,6 +43,7 @@ The emulator currently passes the following test ROMS.
 * Blargg
     * cpu_instrs
 * [Scribbltests](https://github.com/Hacktix/scribbltests)
+    * Fairylake
     * LYCSCX
     * LYCSCY
     * PaletteLY

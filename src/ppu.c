@@ -14,12 +14,16 @@
 #define TILE_MAP_TILE_WIDTH 32
 #define TILE_MAP_WIDTH 256
 
+/* sentinel value to indicate the background and
+ * window are disabled when rendering scanlines
+ */
+#define NO_PALETTE 0x0000
+
 /* gray shade color codes in ARGB8888 format */
 #define WHITE       0xffffffff
 #define LIGHT_GRAY  0xffaaaaaa
 #define DARK_GRAY   0xff555555
 #define BLACK       0xff000000
-#define TRANSPARENT 0x00000000
 
 /* gray shade color codes in ARGB8888 format,
  * but all tinted green to resemble physical
@@ -81,10 +85,14 @@ gb_ppu *init_ppu(void)
     ppu->colors.light_gray = LIGHT_GRAY;
     ppu->colors.dark_gray = DARK_GRAY;
     ppu->colors.black = BLACK;
-    ppu->colors.transparent = TRANSPARENT;
     ppu->colors.grayscale_mode = true;
 
-    memset(ppu->frame_buffer, 0, FRAME_WIDTH * FRAME_HEIGHT * sizeof(uint32_t));
+    memset(ppu->frame_buffer, 0,
+           FRAME_WIDTH * FRAME_HEIGHT * sizeof(uint32_t));
+    memset(ppu->scanline_palette_buff,
+           NO_PALETTE, FRAME_WIDTH * sizeof(uint16_t));
+    memset(ppu->scanline_coloridx_buff,
+           0, FRAME_WIDTH * sizeof(uint8_t));
 
     return ppu;
 }
@@ -195,27 +203,40 @@ static uint16_t tile_addr_from_index(bool tile_data_area_bit, uint8_t tile_index
 
 // Returns a color given a palette register, color index,
 // and whether this color will be for a sprite tile.
-static inline uint32_t color_from_palette(display_colors *colors, uint8_t palette_reg,
+// Should be used on the completed scanline data as the final
+// step before outputting pixels.
+static inline uint32_t color_from_palette(gameboy *gb, uint16_t palette_reg,
                                           bool is_sprite, uint8_t color_idx)
 {
-    // color index 0 is ignored for sprites
+    // transparent pixels should not be present
+    // in the completed scanline data
     if (!color_idx && is_sprite)
-        return colors->transparent;
+    {
+        LOG_ERROR("Inconsistent PPU state encountered:\n"
+                  "Transparent pixel was found during"
+                  " final scanline rendering.\n"
+                  "This is a bug.\n");
+        exit(1);
+    }
+
+    // account for the bg/window disabled sentinel value
+    // to ensure all non-sprite pixels are set to white
+    uint8_t palette = palette_reg == NO_PALETTE ? 0 : read_byte(gb, palette_reg);
 
     uint32_t color;
-    switch((palette_reg >> (2 * color_idx)) & 0x3)
+    switch((palette >> (2 * color_idx)) & 0x3)
     {
         case 0x0:
-            color = colors->white;
+            color = gb->ppu->colors.white;
             break;
         case 0x1:
-            color = colors->light_gray;
+            color = gb->ppu->colors.light_gray;
             break;
         case 0x2:
-            color = colors->dark_gray;
+            color = gb->ppu->colors.dark_gray;
             break;
         case 0x3:
-            color = colors->black;
+            color = gb->ppu->colors.black;
             break;
     }
 
@@ -223,19 +244,15 @@ static inline uint32_t color_from_palette(display_colors *colors, uint8_t palett
 }
 
 // load pixel color data for one line of the tile (8 pixels) into the given buffer
-static void load_tile_pixels(gameboy *gb, uint16_t tile_addr, uint16_t lineno, uint32_t *buff)
+static void load_tile_color_data(gameboy *gb, uint16_t load_addr, uint8_t *buff)
 {
     // each line of the tile is 2 bytes
-    uint8_t lo = read_byte(gb, tile_addr + 2 * lineno),
-            hi = read_byte(gb, tile_addr + 2 * lineno + 1);
+    uint8_t lo = read_byte(gb, load_addr),
+            hi = read_byte(gb, load_addr + 1);
 
-    /* convert these bytes into the corresponding color
-     * indices and then into actual colors
-     *
-     * See: https://gbdev.io/pandocs/#vram-tile-data
-     * and https://gbdev.io/pandocs/#lcd-monochrome-palettes
-     */
-    uint8_t color_index, mask, bitno, hi_bit, lo_bit, bgp;
+    // convert these bytes into the corresponding color indices
+    // See: https://gbdev.io/pandocs/Tile_Data.html
+    uint8_t color_index, mask, bitno, hi_bit, lo_bit;
     for (uint8_t i = 0; i < 8; ++i)
     {
         // Hi byte has the most significant bits of the color index
@@ -246,23 +263,16 @@ static void load_tile_pixels(gameboy *gb, uint16_t tile_addr, uint16_t lineno, u
         hi_bit = (hi & mask) >> bitno;
         lo_bit = (lo & mask) >> bitno;
         color_index = (hi_bit << 1) | lo_bit;
-
-        // the BGP register lets us map color indices to colors
-        bgp = read_byte(gb, BGP_REGISTER);
-
-        buff[i] = color_from_palette(&gb->ppu->colors, bgp, false, color_index);
+        buff[i] = color_index;
     }
 }
 
-// load pixel color data for the sprite line (8 bytes) to be rendered in the given buffer
-// using the occupancy array to handle drawing priority when sprites overlap
-static void render_sprite_pixels(gameboy *gb, gb_sprite *sprite, uint32_t *buff, bool *occupancy)
+// load pixel color data for the sprite line (8 bytes) to be rendered,
+// mixing the sprite's pixels with the background and window
+static void render_sprite_pixels(gameboy *gb, gb_sprite *sprite)
 {
-    display_colors *colors = &gb->ppu->colors;
-
-    // The current scanline of the PPU's internal frame buffer.
-    // This is needed to handle the "BG over OBJ" flag of each sprite
-    uint32_t *ppu_scanline_buff = gb->ppu->frame_buffer + gb->ppu->ly * FRAME_WIDTH;
+    uint16_t *palette_buff = gb->ppu->scanline_palette_buff;
+    uint8_t *coloridx_buff = gb->ppu->scanline_coloridx_buff;
 
     // select which line of the sprite will be rendered
     uint8_t line_to_render = gb->ppu->ly + 16 - sprite->ypos;
@@ -271,52 +281,44 @@ static void render_sprite_pixels(gameboy *gb, gb_sprite *sprite, uint32_t *buff,
     uint8_t lo = sprite->tile_data[2*line_to_render],
             hi = sprite->tile_data[2*line_to_render + 1];
 
-    /* convert these bytes into the corresponding color
-     * indices and then into actual colors
-     *
-     * See: https://gbdev.io/pandocs/Tile_Data.html
-     */
-    uint8_t color_index, mask, bitno, hi_bit, lo_bit, palette_reg;
+    uint8_t color_index, mask, bitno, hi_bit, lo_bit;
     for (uint8_t i = 0; i < 8; ++i)
     {
-        // Hi byte has the most significant bits of the color index
-        // for each pixel, and lo byte has the least significant bits.
-        // The leftmost bit represents the leftmost pixel in the line.
         bitno = 7 - i;
         mask = 1 << bitno;
         hi_bit = (hi & mask) >> bitno;
         lo_bit = (lo & mask) >> bitno;
         color_index = (hi_bit << 1) | lo_bit;
 
-        // the palette register lets us map color indices to colors
-        palette_reg = read_byte(gb, sprite->palette_no ? OBP1_REGISTER : OBP0_REGISTER);
-
-        uint32_t color = color_from_palette(colors, palette_reg, true, color_index);
-
-        // use the sprite's xpos to determine where each pixel lies on the scanline
         // Recall: xpos is the sprite's horizontal position + 8
-        uint8_t shifted_buff_idx = sprite->xpos + i;
-        uint8_t buff_idx;
-        if (shifted_buff_idx >= 8 && shifted_buff_idx < FRAME_WIDTH + 8)
+        uint8_t shifted_pixel_loc = sprite->xpos + i;
+        // pixel is offscreen
+        if (shifted_pixel_loc < 8 || shifted_pixel_loc >= FRAME_WIDTH + 8)
+            continue;
+
+        // no overflow because shifted_pixel_loc >= 8
+        uint8_t pixel_loc = shifted_pixel_loc - 8;
+
+        // if the pixel is already occupied by a sprite, it will not be overwritten
+        if (palette_buff[pixel_loc] == OBP0_REGISTER
+            || palette_buff[pixel_loc] == OBP1_REGISTER)
+            continue;
+
+        // bg_over_obj only applies for BG/window colors 1-3
+        bool sprite_is_drawn = !sprite->bg_over_obj || !coloridx_buff[pixel_loc];
+        sprite_is_drawn = sprite_is_drawn && color_index; // color index 0 is transparent
+
+        if (sprite_is_drawn)
         {
-            buff_idx = shifted_buff_idx - 8; // no overflow because shifted_buff_idx >= 8
-            // determine if the buffer pixel is already occupied by an opaque sprite pixel
-            if (!occupancy[buff_idx])
-            {
-                // determine if the sprite's pixel is drawn over the BG and window
-                // (bg_over_obj only applies for BG/window colors 1-3)
-                if (!sprite->bg_over_obj || ppu_scanline_buff[buff_idx] == colors->white)
-                {
-                    buff[buff_idx] = color;
-                    // a buffer pixel is occupied only by opaque pixels
-                    occupancy[buff_idx] = color != colors->transparent;
-                }
-            }
+            coloridx_buff[pixel_loc] = color_index;
+            palette_buff[pixel_loc] = sprite->palette_no
+                                      ? OBP1_REGISTER
+                                      : OBP0_REGISTER;
         }
     }
 }
 
-// load appropriate background tiles into the frame buffer for a single scanline
+// load appropriate background tiles into the pixel data buffers for a single scanline
 static void load_bg_tiles(gameboy *gb, bool tile_data_area_bit, bool tile_map_area_bit)
 {
     // get the appropriate 32x32 tile map's address in VRAM
@@ -324,32 +326,51 @@ static void load_bg_tiles(gameboy *gb, bool tile_data_area_bit, bool tile_map_ar
 
     // determine Y offset inside tile map based on current LY and SCY
     uint16_t pixel_yoffset      = (gb->ppu->scy + gb->ppu->ly) % TILE_MAP_WIDTH,
+             tile_xoffset       = gb->ppu->scx / TILE_WIDTH,
+             tile_pixel_xoffset = gb->ppu->scx % TILE_WIDTH, // offset within the tile
              tile_yoffset       = pixel_yoffset / TILE_WIDTH,
-             tile_pixel_yoffset = pixel_yoffset % TILE_WIDTH; // offset within the tile
+             tile_pixel_yoffset = pixel_yoffset % TILE_WIDTH;
 
-    // read in the full scanline of the 32x32 tile map
-    uint8_t tile_index;
+    // traverse tile map until we've loaded a full frame width of pixels
+    uint8_t tile_index, pixels_to_load, pixels_remaining = FRAME_WIDTH;
     uint16_t tile_addr;
-    uint32_t full_scanline_pixels[TILE_MAP_WIDTH] = {0};
-    for (uint16_t tileno = 0; tileno < TILE_MAP_TILE_WIDTH; ++tileno)
+    uint8_t tile_color_data[TILE_WIDTH] = {0};
+    uint8_t *tile_color_data_load_start;
+    for (uint16_t tileno = tile_xoffset;
+         pixels_remaining > 0;
+         tileno = (tileno + 1) % TILE_MAP_TILE_WIDTH)
     {
         tile_index = read_byte(gb, base_map_addr + TILE_MAP_TILE_WIDTH * tile_yoffset + tileno);
         tile_addr = tile_addr_from_index(tile_data_area_bit, tile_index);
-        load_tile_pixels(gb, tile_addr,
-                         tile_pixel_yoffset,
-                         full_scanline_pixels + TILE_WIDTH*tileno);
+        load_tile_color_data(gb,
+                             tile_addr + 2 * tile_pixel_yoffset, // two bytes per line
+                             tile_color_data);
+
+        // for the first tile loaded, throw away
+        // enough leading pixels to account for SCX
+        tile_color_data_load_start = tile_color_data;
+        if (pixels_remaining == FRAME_WIDTH)
+        {
+            pixels_to_load = TILE_WIDTH - tile_pixel_xoffset;
+            tile_color_data_load_start += tile_pixel_xoffset;
+        }
+        else if (pixels_remaining > TILE_WIDTH)
+            pixels_to_load = TILE_WIDTH;
+        else
+            pixels_to_load = pixels_remaining;
+        
+        memcpy(gb->ppu->scanline_coloridx_buff + FRAME_WIDTH - pixels_remaining,
+               tile_color_data_load_start,
+               pixels_to_load * sizeof(uint8_t));
+
+        pixels_remaining -= pixels_to_load;
     }
 
-    // use SCX to select the scanline's visible area
-    uint16_t frame_buffer_offset = FRAME_WIDTH * gb->ppu->ly;
-    for (uint16_t pixelno = 0; pixelno < FRAME_WIDTH; ++pixelno)
-    {
-        uint16_t tile_pixelno = (pixelno + gb->ppu->scx) % TILE_MAP_WIDTH;
-        gb->ppu->frame_buffer[frame_buffer_offset + pixelno] = full_scanline_pixels[tile_pixelno];
-    }
+    for (uint8_t i = 0; i < FRAME_WIDTH; ++i)
+        gb->ppu->scanline_palette_buff[i] = BGP_REGISTER;
 }
 
-// load appropriate window tiles into the frame buffer for a single scanline
+// load appropriate window tiles into the pixel data buffers for a single scanline
 static void load_window_tiles(gameboy *gb, bool tile_data_area_bit, bool tile_map_area_bit)
 {
     // the window is only visible if WX is in 0..166 and WY is in 0..143
@@ -373,40 +394,39 @@ static void load_window_tiles(gameboy *gb, bool tile_data_area_bit, bool tile_ma
                 tile_pixel_yoffset = pixel_yoffset % TILE_WIDTH;
 
     // we need one extra tile for when the window is shifted left
-    uint32_t scanline_buff[FRAME_WIDTH + TILE_WIDTH] = {0};
+    uint8_t scanline_buff[FRAME_WIDTH + TILE_WIDTH] = {0};
     uint8_t tile_index;
 
     for (uint8_t tile_xoffset = 0;
-            tile_xoffset < 1 + (FRAME_WIDTH / TILE_WIDTH);
-            ++tile_xoffset)
+         tile_xoffset < 1 + (FRAME_WIDTH / TILE_WIDTH);
+         ++tile_xoffset)
     {
         tile_index = read_byte(gb,
-                                base_map_addr
-                                + tile_yoffset * TILE_MAP_TILE_WIDTH
-                                + tile_xoffset);
+                               base_map_addr
+                               + tile_yoffset * TILE_MAP_TILE_WIDTH
+                               + tile_xoffset);
         tile_addr = tile_addr_from_index(tile_data_area_bit, tile_index);
 
-        // load one line (8 pixels) from the tile into the scanline buffer
-        load_tile_pixels(gb, tile_addr,
-                            tile_pixel_yoffset,
-                            scanline_buff + TILE_WIDTH * tile_xoffset);
+        load_tile_color_data(gb,
+                             tile_addr + 2 * tile_pixel_yoffset, // two bytes per line
+                             scanline_buff + TILE_WIDTH * tile_xoffset);
     }
 
     // Copy the visible portion of the window scanline to the frame buffer.
     // Shifts left cover the entire visible scanline (WX < 7) and shifts
     // right offset by that many pixels.
-    uint16_t frame_buffer_offset = gb->ppu->ly * FRAME_WIDTH;
+    uint16_t color_data_buffer_offset = 0;
     uint8_t visible_pixel_count = FRAME_WIDTH;
     uint8_t scanline_buffer_offset = gb->ppu->wx >= 7 ? 0 : 7 - gb->ppu->wx;
     if (gb->ppu->wx > 7)
     {
-        frame_buffer_offset += gb->ppu->wx - 7;
+        color_data_buffer_offset += gb->ppu->wx - 7;
         visible_pixel_count -= gb->ppu->wx - 7;
     }
 
-    memcpy(gb->ppu->frame_buffer + frame_buffer_offset,
-            scanline_buff + scanline_buffer_offset,
-            visible_pixel_count * sizeof(uint32_t));
+    memcpy(gb->ppu->scanline_coloridx_buff + color_data_buffer_offset,
+           scanline_buff + scanline_buffer_offset,
+           visible_pixel_count * sizeof(uint8_t));
 
     ++gb->ppu->window_line_counter;
 }
@@ -456,13 +476,8 @@ static void perform_sprite_reflections(gb_sprite *sprite)
 }
 
 // Render the selected sprites from OAM
-static void render_loaded_sprites(gameboy *gb, gb_sprite sprites[], uint8_t n_sprites)
+static void render_loaded_sprites(gameboy *gb, gb_sprite *sprites, uint8_t n_sprites)
 {
-    uint32_t scanline_buff[FRAME_WIDTH] = {0};
-    // to track if each pixel in the scanline buffer
-    // is already populated by a sprite's opaque pixel
-    bool occupancy[FRAME_WIDTH] = {false};
-
     for (uint8_t sprite_idx = 0; sprite_idx < n_sprites; ++sprite_idx)
     {
         uint16_t base_tile_addr;
@@ -481,16 +496,7 @@ static void render_loaded_sprites(gameboy *gb, gb_sprite sprites[], uint8_t n_sp
         // perform xflip and yflip before rendering by adjusting xpos and ypos
         perform_sprite_reflections(curr_sprite);
 
-        render_sprite_pixels(gb, curr_sprite, scanline_buff, occupancy);
-    }
-
-    // once all sprites are in our temp buffer, push into the PPU's frame buffer
-    uint32_t *ppu_scanline_buff = gb->ppu->frame_buffer + gb->ppu->ly * FRAME_WIDTH;
-    for (uint8_t i = 0; i < FRAME_WIDTH; ++i)
-    {
-        // only want to push visible opaque sprite pixels
-        if (occupancy[i])
-            ppu_scanline_buff[i] = scanline_buff[i];
+        render_sprite_pixels(gb, curr_sprite);
     }
 }
 
@@ -539,6 +545,33 @@ static void load_sprites(gameboy *gb, bool obj_size_bit)
     render_loaded_sprites(gb, sprites_to_render, sprite_count);
 }
 
+// translate the completed scanline data into
+// colors and push into the PPU's frame buffer
+static void push_scanline_data(gameboy *gb)
+{
+    uint16_t *scanline_palette_buff = gb->ppu->scanline_palette_buff;
+    uint8_t *scanline_coloridx_buff = gb->ppu->scanline_coloridx_buff;
+
+    // the starting index of the current scanline in the frame buffer
+    uint16_t scanline_start = gb->ppu->ly * FRAME_WIDTH;
+
+    bool is_sprite;
+    uint8_t color_idx;
+    uint16_t palette_reg;
+    uint32_t color;
+    for (uint16_t i = 0; i < FRAME_WIDTH; ++i)
+    {
+        palette_reg = scanline_palette_buff[i];
+        color_idx = scanline_coloridx_buff[i];
+        is_sprite = palette_reg == OBP0_REGISTER
+                    || palette_reg == OBP1_REGISTER;
+        color = color_from_palette(gb, palette_reg, is_sprite, color_idx);
+
+        gb->ppu->frame_buffer[scanline_start + i] = color;
+    }
+
+}
+
 // Render a single scanline into the frame buffer
 void render_scanline(gameboy *gb)
 {
@@ -552,32 +585,31 @@ void render_scanline(gameboy *gb)
          obj_enable_bit            = lcdc & 0x02,
          bg_and_window_enable_bit  = lcdc & 0x01;
 
-    // the starting index of the current scanline in the frame buffer
-    uint16_t scanline_start = gb->ppu->ly * FRAME_WIDTH;
-
-    // render the background, if enabled
+    // render the background and window, if enabled
     if (bg_and_window_enable_bit)
     {
-        load_bg_tiles(gb, bg_win_tile_data_area_bit, bg_tile_map_area_bit);
+        load_bg_tiles(gb, bg_win_tile_data_area_bit,
+                      bg_tile_map_area_bit);
+
+        if (window_enable_bit)
+            load_window_tiles(gb, bg_win_tile_data_area_bit,
+                              window_tile_map_area_bit);
     }
     else // background becomes blank (white)
     {
-        for (int i = 0; i < FRAME_WIDTH; ++i)
-        {
-            gb->ppu->frame_buffer[scanline_start + i] = gb->ppu->colors.white;
-        }
-    }
-
-    // Render the window, if enabled. The background and
-    // window enable bit overrides the window enable bit
-    if (bg_and_window_enable_bit && window_enable_bit)
-    {
-        load_window_tiles(gb, bg_win_tile_data_area_bit, window_tile_map_area_bit);
+        // all palettes and color indices set to 0 -> all white pixels
+        memset(gb->ppu->scanline_palette_buff,
+               NO_PALETTE, FRAME_WIDTH * sizeof(uint16_t));
+        memset(gb->ppu->scanline_coloridx_buff,
+               0, FRAME_WIDTH * sizeof(uint8_t));
     }
 
     // render the sprites, if enabled
     if (obj_enable_bit)
         load_sprites(gb, obj_size_bit);
+
+    // Push the completed scanline into the frame buffer
+    push_scanline_data(gb);
 }
 
 // Display the current frame buffer to the screen

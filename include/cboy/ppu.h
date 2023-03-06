@@ -29,8 +29,7 @@ typedef struct display_colors {
     uint32_t white,
              light_gray,
              dark_gray,
-             black,
-             transparent;
+             black;
 
     // whether we're in grayscale or "greenscale" mode
     bool grayscale_mode;
@@ -42,6 +41,12 @@ typedef struct gb_ppu {
     uint32_t dot_clock;
     uint64_t frames_rendered;
     uint8_t scx, scy, ly, wx, wy;
+
+    // track palette and color index data for the scanline
+    // being rendered so we can mix the background, window,
+    // and sprites into a final image
+    uint16_t scanline_palette_buff[FRAME_WIDTH];
+    uint8_t scanline_coloridx_buff[FRAME_WIDTH];
 
     // an internal counter that tracks how many lines of
     // the window have been rendered for the current frame
