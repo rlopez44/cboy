@@ -27,7 +27,7 @@ void unload_cartridge(gb_cartridge *cart)
 
     // free the RAM banks array, if any
     free(cart->ram_banks);
-    
+
     // free the MBC, if any
     free(cart->mbc);
 
@@ -239,7 +239,7 @@ static void perform_bank_swaps(gameboy *gb)
                    RAM_BANK_SIZE * sizeof(uint8_t));
         }
     }
-    
+
 }
 
 /* Handle MBC-related writes to memory */

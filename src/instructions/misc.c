@@ -396,7 +396,7 @@ void halt(gameboy *gb)
             ie_register = gb->memory->mmap[IE_REGISTER];
 
     bool interrupt_pending = if_register & ie_register;
-    
+
     // IME not set and an interrupt is pending so
     // we never actually enter the HALTed state
     // and instead trigger the HALT bug

@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
                 return 1;
         }
     }
-    
+
     // we don't allow extraneous non-option arguments
     if (optind != argc - 1)
     {

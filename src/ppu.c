@@ -147,7 +147,7 @@ void reset_ppu(gameboy *gb)
     gb->ppu->vblank_stat_line = false;
     gb->ppu->oam_stat_line = false;
     gb->ppu->window_line_counter = 0;
-    
+
     // resetting the PPU makes the screen go blank (white)
     for (uint16_t i = 0; i < FRAME_WIDTH*FRAME_HEIGHT; ++i)
         gb->ppu->frame_buffer[i] = gb->ppu->colors.white;
@@ -469,7 +469,7 @@ static inline uint8_t reverse_byte(uint8_t b)
 // Reflect the sprite in the x and y directions if needed
 static void perform_sprite_reflections(gb_sprite *sprite)
 {
-    if (sprite->yflip) 
+    if (sprite->yflip)
     {
         uint8_t tmp, top_offset, bot_offset;
         // vertical mirror = reflect about x-axis -> reverse tile data about the middle of the sprite
