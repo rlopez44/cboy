@@ -44,7 +44,10 @@ typedef struct gb_sprite {
                 xpos, // sprite horizontal pos + 8
                 tile_idx,
                 ysize;
-        
+
+        // needed for drawing priority
+        uint8_t oam_offset;
+
         // sprite attributes
         bool bg_over_obj,
              yflip,
@@ -56,6 +59,27 @@ typedef struct gb_sprite {
         // second half of the array is unused.
         uint8_t tile_data[32];
 } gb_sprite;
+
+/* Use to sort sprites according to their drawing priority.
+ *
+ * Smaller X coordinate -> higher priority
+ * Same X coordinate -> located first in OAM -> higher priority
+ */
+static int sprite_comp(const void *a, const void *b)
+{
+    const gb_sprite *sprite1 = a, *sprite2 = b;
+    uint8_t xpos1 = sprite1->xpos,
+            xpos2 = sprite2->xpos;
+    uint8_t offset1 = sprite1->oam_offset,
+            offset2 = sprite2->oam_offset;
+
+    if (xpos1 != xpos2)
+        return xpos1 < xpos2 ? -1 : 1;
+    else if (offset1 != offset2)
+        return offset1 < offset2 ? -1 : 1;
+
+    return 0;
+}
 
 gb_ppu *init_ppu(void)
 {
@@ -358,7 +382,7 @@ static void load_bg_tiles(gameboy *gb, bool tile_data_area_bit, bool tile_map_ar
             pixels_to_load = TILE_WIDTH;
         else
             pixels_to_load = pixels_remaining;
-        
+
         memcpy(gb->ppu->scanline_coloridx_buff + FRAME_WIDTH - pixels_remaining,
                tile_color_data_load_start,
                pixels_to_load * sizeof(uint8_t));
@@ -478,6 +502,9 @@ static void perform_sprite_reflections(gb_sprite *sprite)
 // Render the selected sprites from OAM
 static void render_loaded_sprites(gameboy *gb, gb_sprite *sprites, uint8_t n_sprites)
 {
+    // apply drawing priority then draw
+    qsort(sprites, n_sprites, sizeof(gb_sprite), &sprite_comp);
+
     for (uint8_t sprite_idx = 0; sprite_idx < n_sprites; ++sprite_idx)
     {
         uint16_t base_tile_addr;
@@ -531,6 +558,8 @@ static void load_sprites(gameboy *gb, bool obj_size_bit)
             sprites_to_render[sprite_count].xpos     = xpos;
             sprites_to_render[sprite_count].tile_idx = tile_idx;
             sprites_to_render[sprite_count].ysize    = sprite_ysize;
+
+            sprites_to_render[sprite_count].oam_offset = oam_offset;
 
             // unpack sprite attributes (bits 0-3 are for CGB only)
             sprites_to_render[sprite_count].bg_over_obj = (flags >> 7) & 1;
