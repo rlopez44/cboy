@@ -8,10 +8,10 @@ DEBUG_DIR = debug
 BIN = cboy
 
 # so we can reference all our source files without directories
-vpath %.c src/ src/instructions/
+vpath %.c src/ src/instructions/ src/mbcs/
 
 # list of all our source files without directories
-SRC = $(notdir $(wildcard src/*.c) $(wildcard src/instructions/*.c))
+SRC = $(notdir $(wildcard src/*.c) $(wildcard src/instructions/*.c) $(wildcard src/mbcs/*.c))
 
 # list of object file names for debug and regular builds
 OBJS = $(patsubst %.c, $(OBJ_DIR)/%.o, $(SRC))

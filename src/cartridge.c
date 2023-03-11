@@ -5,7 +5,21 @@
 
 #include "cboy/gameboy.h"
 #include "cboy/cartridge.h"
+#include "cboy/mbc.h"
 #include "cboy/log.h"
+
+// minimum number of bits needed to store the given value
+static uint16_t count_bits(uint16_t n)
+{
+    uint8_t bit_count = 0;
+    while (n)
+    {
+        ++bit_count;
+        n >>= 1;
+    }
+
+    return bit_count;
+}
 
 /* free the allocated memory for the cartridge struct */
 void unload_cartridge(gb_cartridge *cart)
@@ -87,10 +101,6 @@ gb_cartridge *init_cartridge(void)
         free(cart);
         return NULL;
     }
-    cart->mbc->ram_enabled = false;
-    cart->mbc->rom_bankno = 0;
-    cart->mbc->ram_bankno = 0;
-    cart->mbc->bank_mode = false;
 
     // allocate the ROM and RAM banks array
     cart->rom_banks = malloc(MAX_ROM_BANKS * sizeof(uint8_t *));
@@ -173,113 +183,6 @@ gb_cartridge *init_cartridge(void)
     cart->num_ram_banks = MAX_RAM_BANKS;
     cart->ram_bank_size = 8 * KB;
     return cart;
-}
-
-/* Helper function for counting bits in a number.
- * For use by perform_bank_swaps() to determine
- * how many bits are needed to address the cartridge
- * ROM banks.
- */
-static uint16_t count_bits(uint16_t n)
-{
-    uint16_t bit_count = 0;
-    while (n)
-    {
-        ++bit_count;
-        n >>= 1;
-    }
-
-    return bit_count;
-}
-
-static void perform_bank_swaps(gameboy *gb)
-{
-    cartridge_mbc *mbc = gb->cart->mbc;
-
-    // calculate number of bits needed to address all of the ROM's banks.
-    uint16_t num_rom_banks_bitsize = count_bits(gb->cart->num_rom_banks - 1),
-             bit_mask = (1 << num_rom_banks_bitsize) - 1;
-
-    // a value of 0x00 for ROM_BANKNO behaves as if it were 0x01
-    uint8_t adjusted_rom_bankno = mbc->rom_bankno ? mbc->rom_bankno : 0x01;
-
-    // only bits needed to fully address the ROM banks are kept (max 128 banks for MBC1)
-    uint8_t effective_rom_bankno = ((mbc->ram_bankno << 5) | adjusted_rom_bankno) & bit_mask;
-
-    // swap addresses $4000-$7FFF of the memory map
-    memcpy(gb->memory->mmap + 0x4000,
-           gb->cart->rom_banks[effective_rom_bankno],
-           ROM_BANK_SIZE * sizeof(uint8_t));
-
-    if (!mbc->bank_mode) // mode 0 (default)
-    {
-        // the zeroth ROM bank is always mapped to $0000-$3FFF
-        memcpy(gb->memory->mmap, gb->cart->rom_banks[0], ROM_BANK_SIZE * sizeof(uint8_t));
-
-        // the zeroth RAM bank (if any) is always mapped to $A000-$BFFF
-        if (gb->cart->num_ram_banks)
-        {
-            memcpy(gb->memory->mmap + 0xa000,
-                   gb->cart->ram_banks[0],
-                   RAM_BANK_SIZE * sizeof(uint8_t));
-        }
-    }
-    else // mode 1
-    {
-        // RAM_BANKNO is used for extended ROM bank switching of the first memory-mapped bank
-        memcpy(gb->memory->mmap,
-               gb->cart->rom_banks[mbc->ram_bankno << 5],
-               ROM_BANK_SIZE * sizeof(uint8_t));
-
-        // RAM bank switching is enabled
-        if (mbc->ram_bankno < gb->cart->num_ram_banks)
-        {
-            memcpy(gb->memory->mmap + 0xa000,
-                   gb->cart->ram_banks[mbc->ram_bankno],
-                   RAM_BANK_SIZE * sizeof(uint8_t));
-        }
-    }
-
-}
-
-/* Handle MBC-related writes to memory */
-void handle_mbc_writes(gameboy *gb, MBC_REGISTER reg, uint8_t val)
-{
-    if (gb->cart->mbc_type == NO_MBC)
-        return;
-
-    // TODO add support for other MBC types
-    if (gb->cart->mbc_type != MBC1)
-        return;
-
-    cartridge_mbc *mbc = gb->cart->mbc;
-    switch (reg)
-    {
-        case RAM_ENABLE:
-            // any value with $A in the lower 4 bits enables RAM
-            mbc->ram_enabled = (val & 0x0f) == 0x0a;
-            break;
-
-        case ROM_BANKNO:
-            // this register is 5 bits wide
-            mbc->rom_bankno = val & 0x1f;
-            break;
-
-        case RAM_BANKNO:
-            // this register is 2 bits wide
-            mbc->ram_bankno = val & 0x03;
-            break;
-
-        case BANK_MODE:
-            mbc->bank_mode = val;
-            break;
-    }
-
-    // enabling/disabling RAM doesn't require us to switch ROM/RAM banks
-    if (reg == RAM_ENABLE)
-        return;
-
-    perform_bank_swaps(gb);
 }
 
 /* determine the number of banks in the ROM given the zeroth ROM bank */
@@ -473,6 +376,9 @@ ROM_LOAD_STATUS load_rom(gb_cartridge *cart, FILE *rom_file)
     // get the MBC type from the ROM header
     cart->mbc_type = get_mbc_type(rom_bank_buffer);
 
+    // we now know which MBC type to initialize
+    init_mbc(cart->mbc_type, cart->mbc);
+
     if (cart->mbc_type == UNKNOWN_MBC)
     {
         return MALFORMED_ROM;
@@ -587,63 +493,10 @@ ROM_LOAD_STATUS load_rom(gb_cartridge *cart, FILE *rom_file)
         cart->ram_bank_size = ram_bank_size;
     }
 
+    // used by the MBC for ROM addressing (0..num_rom_banks - 1)
+    cart->rom_banks_bitsize = count_bits(cart->num_rom_banks - 1);
+
     return ROM_LOAD_SUCCESS;
-}
-
-/* print out the cartridge MBC type */
-void print_mbc_type(gb_cartridge *cart)
-{
-    const char *mbc_type;
-
-    switch (cart->mbc_type)
-    {
-        case NO_MBC:
-            mbc_type = "No MBC";
-            break;
-
-        case MBC1:
-            mbc_type = "MBC1";
-            break;
-
-        case MBC2:
-            mbc_type = "MBC2";
-            break;
-
-        case MBC3:
-            mbc_type = "MBC3";
-            break;
-
-        case MBC5:
-            mbc_type = "MBC5";
-            break;
-
-        case MBC6:
-            mbc_type = "MBC6";
-            break;
-
-        case MBC7:
-            mbc_type = "MBC7";
-            break;
-
-        case MMM01:
-            mbc_type = "MMM01";
-            break;
-
-        case HuC1:
-            mbc_type = "HuC1";
-            break;
-
-        case HuC3:
-            mbc_type = "HuC3";
-            break;
-
-        case UNKNOWN_MBC:
-        default:
-            mbc_type = "Unknown MBC";
-            break;
-    }
-
-    LOG_INFO("MBC Type: %s\n", mbc_type);
 }
 
 /* print the ROM's title */
