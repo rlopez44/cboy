@@ -36,11 +36,19 @@ typedef struct cartridge_mbc1 {
     bool bank_mode;
 } cartridge_mbc1;
 
+typedef struct cartridge_mbc3 {
+    bool ram_and_timer_enabled;
+    uint8_t rom_bankno;
+    uint8_t ram_or_rtc_select;
+    uint8_t rtc_latch;
+} cartridge_mbc3;
+
 typedef struct cartridge_mbc {
     MBC_TYPE mbc_type;
     union
     {
         cartridge_mbc1 mbc1;
+        cartridge_mbc3 mbc3;
     };
 } cartridge_mbc;
 
