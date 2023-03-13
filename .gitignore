@@ -1,3 +1,6 @@
+# gprof profiling
+gmon.*
+
 # clangd indexing and tooling
 .cache/
 compile_commands.json

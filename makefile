@@ -4,6 +4,7 @@ CFLAGS += `sdl2-config --cflags`
 LDLIBS = `sdl2-config --libs`
 OBJ_DIR = obj
 BIN_DIR = bin
+PROFILE_DIR = profile
 DEBUG_DIR = debug
 BIN = cboy
 
@@ -15,20 +16,30 @@ SRC = $(notdir $(wildcard src/*.c) $(wildcard src/instructions/*.c) $(wildcard s
 
 # list of object file names for debug and regular builds
 OBJS = $(patsubst %.c, $(OBJ_DIR)/%.o, $(SRC))
+PROFILE_OBJS = $(patsubst %.c, $(OBJ_DIR)/$(PROFILE_DIR)/%.o, $(SRC))
 DEBUG_OBJS = $(patsubst %.c, $(OBJ_DIR)/$(DEBUG_DIR)/%.o, $(SRC))
 
 all: CFLAGS += -O3 -flto
 all: $(BIN_DIR)/$(BIN)
 
+profile: CFLAGS += -O3 -flto -pg
+profile: $(BIN_DIR)/$(PROFILE_DIR)/$(BIN)
+
 debug: CFLAGS += -g -DDEBUG
 debug: $(BIN_DIR)/$(DEBUG_DIR)/$(BIN)
 
 # rules for making required directories
-$(BIN_DIR) $(OBJ_DIR) $(BIN_DIR)/$(DEBUG_DIR) $(OBJ_DIR)/$(DEBUG_DIR):
+$(BIN_DIR) $(OBJ_DIR)\
+$(BIN_DIR)/$(PROFILE_DIR) $(OBJ_DIR)/$(PROFILE_DIR)\
+$(BIN_DIR)/$(DEBUG_DIR) $(OBJ_DIR)/$(DEBUG_DIR):
 	mkdir -p $@/
 
 # regular build
 $(BIN_DIR)/$(BIN): $(OBJS) | $(BIN_DIR)
+	$(CC) $(CFLAGS) $^ $(LDLIBS) -o $@
+
+# profiling build
+$(BIN_DIR)/$(PROFILE_DIR)/$(BIN): $(PROFILE_OBJS) | $(BIN_DIR)/$(PROFILE_DIR)
 	$(CC) $(CFLAGS) $^ $(LDLIBS) -o $@
 
 # debug build
