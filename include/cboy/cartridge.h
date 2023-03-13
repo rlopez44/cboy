@@ -57,4 +57,10 @@ ROM_LOAD_STATUS load_rom(gb_cartridge *cart, FILE *rom_file);
 /* print the ROM's title */
 void print_rom_title(gb_cartridge *cart);
 
+/* Write cartridge RAM to a file */
+void save_cartridge_ram(gb_cartridge *cart, const char *romfile);
+
+/* Import cartridge RAM from a file */
+void maybe_import_cartridge_ram(gb_cartridge *cart, const char *romfile);
+
 #endif

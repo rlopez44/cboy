@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
                 if (optopt == 'b')
                     LOG_ERROR("Option '%c' specified but no boot ROM was given\n", optopt);
                 else
-                    LOG_INFO("Unrecognized option: '%c'\n", optopt);
+                    LOG_ERROR("Unrecognized option: '%c'\n", optopt);
                 // fallthrough
 
             default:
@@ -83,6 +83,8 @@ int main(int argc, char *argv[])
 #ifdef DEBUG
     dump_memory(gb);
 #endif
+
+    save_cartridge_ram(gb->cart, romfile);
 
     // display the total number of frames rendered
     LOG_INFO("\nFrames rendered: %" PRIu64 "\n", gb->ppu->frames_rendered);

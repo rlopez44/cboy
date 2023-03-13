@@ -508,3 +508,94 @@ void print_rom_title(gb_cartridge *cart)
     memcpy(title, cart->rom_banks[0] + 0x0134, 16);
     LOG_INFO("Title: %s\n", title);
 }
+
+static char *get_ramsav_filename(const char *romfile)
+{
+    const char *ext = "cboysav";
+    const size_t extlen = strlen(ext);
+    const size_t rom_pathlen = strlen(romfile);
+    char *savepath = calloc(rom_pathlen + extlen + 1, 1);
+
+    if (savepath == NULL)
+        return NULL;
+
+    strcpy(savepath, romfile);
+    strcpy(savepath + rom_pathlen, ext);
+
+    return savepath;
+}
+
+void maybe_import_cartridge_ram(gb_cartridge *cart, const char *romfile)
+{
+    if (!cart->num_ram_banks)
+        return;
+
+    char *filepath = get_ramsav_filename(romfile);
+    if (filepath == NULL)
+        goto mem_error;
+
+    FILE *ramfile = fopen(filepath, "rb");
+    if (ramfile == NULL)
+        goto fopen_error;
+
+    size_t bytes_read;
+    for (int i = 0; i < cart->num_ram_banks; ++i)
+    {
+        bytes_read = fread(cart->ram_banks[i],
+                           1,
+                           cart->ram_bank_size,
+                           ramfile);
+
+        if (bytes_read != cart->ram_bank_size)
+            goto write_error;
+    }
+
+    fclose(ramfile);
+    free(filepath);
+    return;
+
+write_error:
+    fclose(ramfile);
+fopen_error:
+    free(filepath);
+mem_error:
+    for (int i = 0; i < cart->num_ram_banks; ++i)
+        memset(cart->ram_banks[i], 0, cart->ram_bank_size);
+}
+
+void save_cartridge_ram(gb_cartridge *cart, const char *romfile)
+{
+    if (!cart->num_ram_banks)
+        return;
+
+    char *savepath = get_ramsav_filename(romfile);
+    if (savepath == NULL)
+        goto mem_error;
+
+    FILE *savefile = fopen(savepath, "wb");
+    if (savefile == NULL)
+        goto fopen_error;
+
+    size_t bytes_written;
+    for (int i = 0; i < cart->num_ram_banks; ++i)
+    {
+        bytes_written = fwrite(cart->ram_banks[i],
+                               1,
+                               cart->ram_bank_size,
+                               savefile);
+
+        if (bytes_written != cart->ram_bank_size)
+            goto write_error;
+    }
+
+    free(savepath);
+    fclose(savefile);
+    return;
+
+write_error:
+    fclose(savefile);
+fopen_error:
+    free(savepath);
+mem_error:
+    LOG_ERROR("\nCould not save cartridge RAM (memory or I/O error).\n");
+}

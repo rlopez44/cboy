@@ -342,6 +342,8 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom)
         return NULL;
     }
 
+    maybe_import_cartridge_ram(gb->cart, rom_file_path);
+
     // allocate and init the memory map
     gb->memory = init_memory_map(gb->cart);
 
