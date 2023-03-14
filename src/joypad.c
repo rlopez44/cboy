@@ -55,8 +55,8 @@ uint8_t report_button_states(gameboy *gb, uint8_t joyp)
             break;
     }
 
-    // bits 6 and 7 are unused
-    return (joyp & 0x30) | (button_state & 0x0f);
+    // bits 6 and 7 are unused and always report set
+    return 0xc0 | (joyp & 0x30) | (button_state & 0x0f);
 }
 
 // handle Game Boy key presses

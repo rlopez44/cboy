@@ -381,7 +381,7 @@ static void init_io_registers(gb_memory *memory)
     memory->mmap[0xff47] = 0xfc; // BGP
     memory->mmap[0xff48] = 0xff; // OBP0
     memory->mmap[0xff49] = 0xff; // OBP1
-    memory->mmap[0xff00] = 0x1f; // JOYP
+    memory->mmap[0xff00] = 0xcf; // JOYP
 }
 
 /* Allocate memory for the Game Boy's memory map and
