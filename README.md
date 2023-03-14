@@ -16,14 +16,14 @@ or on MacOS using Homebrew:
 
     brew install sdl2
 
-To compile the emulator, run `make`. This will compile the emulator in
-the `bin/` subdirectory. To compile a debug build, run `make debug`
-instead. This debug build of the emulator will be compiled in the
-`bin/debug/` subdirectory.
+There are three builds of the emulator available: a release build,
+a profiling build (for use with `gprof`), and a debug build; these
+are created with `make`, `make profile`, and `make debug`,
+respectively. The corresponding executables are located at `bin/cboy`,
+`bin/profile/cboy`, and `bin/debug/cboy`.
 
 # Running the Emulator
-The release mode of the emulator is `bin/cboy` and the debug mode is
-`bin/debug/cboy`. The emulator accepts a game ROM file and, optionally,
+The emulator accepts a game ROM file and, optionally,
 a DMG boot ROM file to play before starting the game ROM. For example,
 the release mode of the emulator is invoked as follows:
 `bin/cboy [-b bootrom] <romfile>`.
@@ -38,6 +38,12 @@ Currently, the emulator can't be run on Windows because the debug mode
 memory dumping functionality writes to the `/tmp/` directory and because
 the POSIX `getopt` function is used for command line options processing.
 
+# Supported MBCs
+CBoy currently supports the following Memory Bank Controllers:
+* No MBC
+* MBC1 (except for MBC1M)
+* MBC3 (no RTC)
+
 # Test ROM Coverage
 The emulator currently passes the following test ROMS.
 * Blargg
@@ -50,6 +56,11 @@ The emulator currently passes the following test ROMS.
     * PaletteLY
     * SCXLY
     * WinPos
+* [Mooneye Test Suite](https://github.com/Gekkio/mooneye-test-suite)
+    * `emulator-only/mbc1/*` except for `multicart_rom_8Mb.s`
+    * `acceptance/bits/{mem_oam,reg_f}.s`
+    * `acceptance/instr/*`
+    * `acceptance/oam_dma/basic.s`
 * [dmg-acid2](https://github.com/mattcurrie/dmg-acid2)
 
 # References
