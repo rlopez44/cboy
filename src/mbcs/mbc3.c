@@ -18,7 +18,7 @@ uint8_t mbc3_read(gameboy *gb, uint16_t address)
         bankno = mbc->rom_bankno & rom_bitmask;
         value = gb->cart->rom_banks[bankno][address - 0x4000];
     }
-    else if (0xa000 <= address && address <= 0xbfff) // RAM or RTC
+    else if (0xa000 <= address && address <= 0xbfff && mbc->ram_and_rtc_enabled) // RAM or RTC
     {
         if (mbc->ram_or_rtc_select <= 0x03) // RAM
         {
@@ -43,9 +43,9 @@ void mbc3_write(gameboy *gb, uint16_t address, uint8_t value)
     if (address <= 0x1fff) // RAM and Timer enable
     {
         if ((value & 0x0f) == 0x0a)
-            mbc->ram_and_timer_enabled = true;
+            mbc->ram_and_rtc_enabled = true;
         else if (!value)
-            mbc->ram_and_timer_enabled = false;
+            mbc->ram_and_rtc_enabled = false;
     }
     else if (address <= 0x3fff) // ROM bank number
     {
@@ -63,7 +63,7 @@ void mbc3_write(gameboy *gb, uint16_t address, uint8_t value)
     else if (address <= 0x7fff) // RTC latch
         // TODO: actually implement latching
         mbc->rtc_latch = value;
-    else if (0xa000 <= address && address <= 0xbfff) // RAM or RTC
+    else if (0xa000 <= address && address <= 0xbfff && mbc->ram_and_rtc_enabled) // RAM or RTC
     {
         if (mbc->ram_or_rtc_select <= 0x03) // RAM
         {

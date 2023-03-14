@@ -101,7 +101,7 @@ void init_mbc(MBC_TYPE mbc_type, cartridge_mbc *mbc)
             break;
 
         case MBC3:
-            mbc->mbc3.ram_and_timer_enabled = false;
+            mbc->mbc3.ram_and_rtc_enabled = false;
             mbc->mbc3.rom_bankno = 0;
             mbc->mbc3.ram_or_rtc_select = 0;
             mbc->mbc3.rtc_latch = 0;

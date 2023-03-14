@@ -24,7 +24,7 @@ uint8_t mbc1_read(gameboy *gb, uint16_t address)
 
         value = gb->cart->rom_banks[bankno][address - 0x4000];
     }
-    else if (0xa000 <= address && address <= 0xbfff)// GB RAM bank
+    else if (0xa000 <= address && address <= 0xbfff && mbc->ram_enabled)// GB RAM bank
     {
         bankno = mbc->bank_mode ? mbc->ram_bankno : 0;
         if (bankno < gb->cart->num_ram_banks)
@@ -51,7 +51,7 @@ void mbc1_write(gameboy *gb, uint16_t address, uint8_t value)
     }
     else if (address <= 0x7fff) // bank mode
         mbc->bank_mode = value;
-    else if (0xa000 <= address && address <= 0xbfff) // RAM
+    else if (0xa000 <= address && address <= 0xbfff && mbc->ram_enabled) // RAM
     {
         uint8_t bankno = mbc->bank_mode ? mbc->ram_bankno : 0;
         if (bankno < gb->cart->num_ram_banks)

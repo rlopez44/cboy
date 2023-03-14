@@ -37,7 +37,7 @@ typedef struct cartridge_mbc1 {
 } cartridge_mbc1;
 
 typedef struct cartridge_mbc3 {
-    bool ram_and_timer_enabled;
+    bool ram_and_rtc_enabled;
     uint8_t rom_bankno;
     uint8_t ram_or_rtc_select;
     uint8_t rtc_latch;
