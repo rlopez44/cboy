@@ -60,7 +60,7 @@ The emulator currently passes the following test ROMS.
     * `emulator-only/mbc1/*` except for `multicart_rom_8Mb.s`
     * `acceptance/bits/{mem_oam,reg_f}.s`
     * `acceptance/instr/*`
-    * `acceptance/oam_dma/basic.s`
+    * `acceptance/oam_dma/{basic,reg_read}.s`
 * [dmg-acid2](https://github.com/mattcurrie/dmg-acid2)
 
 # References
