@@ -42,6 +42,7 @@ the POSIX `getopt` function is used for command line options processing.
 The emulator currently passes the following test ROMS.
 * Blargg
     * cpu_instrs
+    * instr_timing
 * [Scribbltests](https://github.com/Hacktix/scribbltests)
     * Fairylake
     * LYCSCX
