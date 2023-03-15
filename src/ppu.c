@@ -19,46 +19,22 @@
  */
 #define NO_PALETTE 0x0000
 
-/* gray shade color codes in ARGB8888 format */
-#define WHITE       0xffffffff
-#define LIGHT_GRAY  0xffaaaaaa
-#define DARK_GRAY   0xff555555
-#define BLACK       0xff000000
-
-/* gray shade color codes in ARGB8888 format,
- * but all tinted green to resemble physical
- * Game Boy colors
- */
- #define WHITE_G      0xff9bbc0f
- #define LIGHT_GRAY_G 0xff8bac0f
- #define DARK_GRAY_G  0xff306230
- #define BLACK_G      0xff0f380f
-
-
 /* clock duration for a single frame of the Game Boy */
 #define FRAME_CLOCK_DURATION 70224
 
-/* Sprite rendering data */
-typedef struct gb_sprite {
-        uint8_t ypos, // sprite vertical pos + 16
-                xpos, // sprite horizontal pos + 8
-                tile_idx,
-                ysize;
+#define NUM_DISPLAY_PALETTES 4
 
-        // needed for drawing priority
-        uint8_t oam_offset;
-
-        // sprite attributes
-        bool bg_over_obj,
-             yflip,
-             xflip,
-             palette_no;
-
-        // The sprite's tile data. Recall that each tile is
-        // 16 bytes in size, so if using 8x8 sprites, the
-        // second half of the array is unused.
-        uint8_t tile_data[32];
-} gb_sprite;
+/* color codes are in ARGB8888 format */
+static const uint32_t display_color_palettes[4*NUM_DISPLAY_PALETTES] = {
+    // grayscale
+    0xff000000, 0xff555555, 0xffaaaaaa, 0xffffffff,
+    // green-tinted grayscale
+    0xff001000, 0xff80a080, 0xffc0d0c0, 0xfff4fff4,
+    // pastel green shades
+    0xff081810, 0xff396139, 0xff84a563, 0xffc9de8c,
+    // acid green shades
+    0xff0f380f, 0xff306230, 0xff8bac0f, 0xff9bbc0f,
+};
 
 /* Use to sort sprites according to their drawing priority.
  *
@@ -79,6 +55,15 @@ static int sprite_comp(const void *a, const void *b)
         return offset1 < offset2 ? -1 : 1;
 
     return 0;
+}
+
+static void init_display_colors(display_colors *colors)
+{
+    colors->black = display_color_palettes[0];
+    colors->dark_gray = display_color_palettes[1];
+    colors->light_gray = display_color_palettes[2];
+    colors->white = display_color_palettes[3];
+    colors->palette_index = 0;
 }
 
 gb_ppu *init_ppu(void)
@@ -105,11 +90,7 @@ gb_ppu *init_ppu(void)
     ppu->vblank_stat_line = false;
     ppu->oam_stat_line = false;
 
-    ppu->colors.white = WHITE;
-    ppu->colors.light_gray = LIGHT_GRAY;
-    ppu->colors.dark_gray = DARK_GRAY;
-    ppu->colors.black = BLACK;
-    ppu->colors.grayscale_mode = true;
+    init_display_colors(&ppu->colors);
 
     memset(ppu->frame_buffer, 0,
            FRAME_WIDTH * FRAME_HEIGHT * sizeof(uint32_t));
@@ -167,28 +148,20 @@ static inline bool stat_interrupt_line(gb_ppu *ppu)
            | ppu->oam_stat_line;
 }
 
-// switch between grayscale and shades-of-green
-// colors for a more authentic Game Boy feel
-void toggle_display_colors(gb_ppu *ppu)
+void cycle_display_colors(display_colors *colors, bool cycle_forward)
 {
-    // swapping from grayscale to "greenscale"
-    if (ppu->colors.grayscale_mode)
-    {
-        ppu->colors.white = WHITE_G;
-        ppu->colors.light_gray = LIGHT_GRAY_G;
-        ppu->colors.dark_gray = DARK_GRAY_G;
-        ppu->colors.black = BLACK_G;
-    }
-    else
-    {
-        ppu->colors.white = WHITE;
-        ppu->colors.light_gray = LIGHT_GRAY;
-        ppu->colors.dark_gray = DARK_GRAY;
-        ppu->colors.black = BLACK;
-    }
+    uint8_t step = cycle_forward ? 1 : -1;
+    uint8_t index = colors->palette_index;
 
-    // we toggled colors
-    ppu->colors.grayscale_mode = !ppu->colors.grayscale_mode;
+    if (!index && !cycle_forward)
+        index = NUM_DISPLAY_PALETTES;
+
+    colors->palette_index = (index + step) % NUM_DISPLAY_PALETTES;
+
+    colors->black = display_color_palettes[4*colors->palette_index];
+    colors->dark_gray = display_color_palettes[4*colors->palette_index + 1];
+    colors->light_gray = display_color_palettes[4*colors->palette_index + 2];
+    colors->white = display_color_palettes[4*colors->palette_index + 3];
 }
 
 /* Get the memory address of a tile given its index
@@ -229,20 +202,8 @@ static uint16_t tile_addr_from_index(bool tile_data_area_bit, uint8_t tile_index
 // and whether this color will be for a sprite tile.
 // Should be used on the completed scanline data as the final
 // step before outputting pixels.
-static inline uint32_t color_from_palette(gameboy *gb, uint16_t palette_reg,
-                                          bool is_sprite, uint8_t color_idx)
+static inline uint32_t color_from_palette(gameboy *gb, uint16_t palette_reg, uint8_t color_idx)
 {
-    // transparent pixels should not be present
-    // in the completed scanline data
-    if (!color_idx && is_sprite)
-    {
-        LOG_ERROR("Inconsistent PPU state encountered:\n"
-                  "Transparent pixel was found during"
-                  " final scanline rendering.\n"
-                  "This is a bug.\n");
-        exit(1);
-    }
-
     // account for the bg/window disabled sentinel value
     // to ensure all non-sprite pixels are set to white
     uint8_t palette = palette_reg == NO_PALETTE ? 0 : read_byte(gb, palette_reg);
@@ -584,7 +545,6 @@ static void push_scanline_data(gameboy *gb)
     // the starting index of the current scanline in the frame buffer
     uint16_t scanline_start = gb->ppu->ly * FRAME_WIDTH;
 
-    bool is_sprite;
     uint8_t color_idx;
     uint16_t palette_reg;
     uint32_t color;
@@ -592,9 +552,7 @@ static void push_scanline_data(gameboy *gb)
     {
         palette_reg = scanline_palette_buff[i];
         color_idx = scanline_coloridx_buff[i];
-        is_sprite = palette_reg == OBP0_REGISTER
-                    || palette_reg == OBP1_REGISTER;
-        color = color_from_palette(gb, palette_reg, is_sprite, color_idx);
+        color = color_from_palette(gb, palette_reg, color_idx);
 
         gb->ppu->frame_buffer[scanline_start + i] = color;
     }

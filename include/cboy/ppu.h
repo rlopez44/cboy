@@ -24,6 +24,28 @@
 
 typedef struct gameboy gameboy;
 
+/* Sprite rendering data */
+typedef struct gb_sprite {
+        uint8_t ypos, // sprite vertical pos + 16
+                xpos, // sprite horizontal pos + 8
+                tile_idx,
+                ysize;
+
+        // needed for drawing priority
+        uint8_t oam_offset;
+
+        // sprite attributes
+        bool bg_over_obj,
+             yflip,
+             xflip,
+             palette_no;
+
+        // The sprite's tile data. Recall that each tile is
+        // 16 bytes in size, so if using 8x8 sprites, the
+        // second half of the array is unused.
+        uint8_t tile_data[32];
+} gb_sprite;
+
 /* colors for use by the display */
 typedef struct display_colors {
     uint32_t white,
@@ -31,8 +53,7 @@ typedef struct display_colors {
              dark_gray,
              black;
 
-    // whether we're in grayscale or "greenscale" mode
-    bool grayscale_mode;
+    uint8_t palette_index;
 } display_colors;
 
 typedef struct gb_ppu {
@@ -72,7 +93,7 @@ void display_frame(gameboy *gb);
 
 void run_ppu(gameboy *gb, uint8_t num_clocks);
 
-void toggle_display_colors(gb_ppu *ppu);
+void cycle_display_colors(display_colors *colors, bool cycle_forward);
 
 gb_ppu *init_ppu(void);
 

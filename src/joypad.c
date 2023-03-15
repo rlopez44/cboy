@@ -70,8 +70,8 @@ void handle_keypress(gameboy *gb, SDL_KeyboardEvent *key)
     // special key, not actually GB button
     if (key->keysym.sym == SDLK_c && key_pressed)
     {
-        // switch between grayscale and "greenscale"
-        toggle_display_colors(gb->ppu);
+        bool cycle_forward = !(key->keysym.mod & KMOD_SHIFT);
+        cycle_display_colors(&gb->ppu->colors, cycle_forward);
         return;
     }
 
@@ -133,7 +133,7 @@ void print_button_mappings(void)
     LOG_INFO("\n"
              "Button Mappings\n"
              "---------------\n"
-             "Toggle grayscale/shades-of-green: <c>\n"
+             "Cycle display palettes: <c>/<Shift-c>\n"
              "B:      <j>\n"
              "A:      <k>\n"
              "Up:     <w>\n"
