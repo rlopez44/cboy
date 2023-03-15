@@ -122,13 +122,19 @@ void dma_transfer(gameboy *gb)
 {
     uint8_t source_hi = gb->memory->mmap[DMA_REGISTER];
     uint16_t source, dest;
+    bool mbc_read;
 
     for (uint16_t lo = 0x0000; lo <= 0x009f; ++lo)
     {
         source = ((uint16_t)source_hi << 8) | lo;
         dest = 0xfe00 | lo;
+        mbc_read = source <= 0x7fff || (0xa000 <= source && source <= 0xbfff);
 
-        gb->memory->mmap[dest] = gb->memory->mmap[source];
+        // source may be in cartridge RAM/ROM
+        if (mbc_read)
+            gb->memory->mmap[dest] = cartridge_read(gb, source);
+        else
+            gb->memory->mmap[dest] = gb->memory->mmap[source];
     }
 }
 
