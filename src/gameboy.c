@@ -497,6 +497,28 @@ void increment_clock_counter(gameboy *gb, uint16_t num_clocks)
     }
 }
 
+void poll_input(gameboy *gb)
+{
+    SDL_Event event;
+    while(SDL_PollEvent(&event))
+    {
+        switch (event.type)
+        {
+            case SDL_QUIT:
+                gb->is_on = false;
+                break;
+
+            case SDL_KEYDOWN:
+            case SDL_KEYUP:
+                handle_keypress(gb, &event.key);
+                break;
+
+            default:
+                break;
+        }
+    }
+}
+
 /* Check if a DMA transfer needs to be performed
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  * To emulate the DMA transfer timing, we wait until the
@@ -543,26 +565,9 @@ static void check_halt_wakeup(gameboy *gb)
 void run_gameboy(gameboy *gb)
 {
     uint8_t num_clocks;
-    SDL_Event event;
 
     while (gb->is_on)
     {
-        SDL_PollEvent(&event);
-        switch (event.type)
-        {
-            case SDL_QUIT:
-                gb->is_on = false;
-                break;
-
-            case SDL_KEYDOWN:
-            case SDL_KEYUP:
-                handle_keypress(gb, &event.key);
-                break;
-
-            default:
-                break;
-        }
-
 #ifdef DEBUG
         // print CPU register contents before each instruction
         if (!gb->cpu->is_halted)

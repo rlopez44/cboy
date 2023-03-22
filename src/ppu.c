@@ -789,6 +789,7 @@ void run_ppu(gameboy *gb, uint8_t num_clocks)
         gb->ppu->curr_frame_displayed = true;
         gb->ppu->window_line_counter = 0;
         request_interrupt(gb, VBLANK);
+        poll_input(gb);
         maintain_framerate(gb);
     }
 

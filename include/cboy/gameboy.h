@@ -80,6 +80,11 @@ void increment_tima(gameboy *gb);
  */
 void increment_clock_counter(gameboy *gb, uint16_t num_clocks);
 
+/* Poll emulator input.
+ * Should be called once per frame.
+ */
+void poll_input(gameboy *gb);
+
 // the emulator's game loop
 void run_gameboy(gameboy *gb);
 #endif /* GAME_BOY_H */
