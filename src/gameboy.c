@@ -565,7 +565,8 @@ void run_gameboy(gameboy *gb)
 
 #ifdef DEBUG
         // print CPU register contents before each instruction
-        print_registers(gb);
+        if (!gb->cpu->is_halted)
+            print_registers(gb);
 #endif
 
         // number of clock ticks this iteration of the event loop
