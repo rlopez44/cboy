@@ -591,8 +591,6 @@ void run_gameboy(gameboy *gb)
             check_halt_wakeup(gb);
         }
 
-        num_clocks += service_interrupt(gb);
-
         increment_clock_counter(gb, num_clocks);
 
         dma_transfer_check(gb, num_clocks);

@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "cboy/instructions.h"
 #include "cboy/gameboy.h"
+#include "cboy/interrupts.h"
 #include "cboy/memory.h"
 #include "cboy/log.h"
 #include "execute.h"
@@ -591,23 +592,14 @@ static const gb_instruction instruction_table[512] = {
 // returns the number of m-cycles elapsed during instruction execution
 uint8_t execute_instruction(gameboy *gb)
 {
-    /* Check if the IME flag needs to be set after
-     * an EI instruction. Technically, we should be
-     * checking for this *after* the instruction has
-     * executed below, since the IME is set after the
-     * instruction following the EI. However, for our
-     * purposes it is enough to check at the beginning
-     * of this function since the instruction will
-     * execute anyway before this function returns.
-     */
-    if (gb->cpu->ime_delayed_set)
-    {
-        gb->cpu->ime_flag = true;
-        gb->cpu->ime_delayed_set = false;
-    }
-
     // the instruction's duration
     uint8_t curr_inst_duration;
+
+    // if an interrupt is pending, service it
+    // instead of executing the next instruction
+    curr_inst_duration = service_interrupt(gb);
+    if (curr_inst_duration)
+        goto interrupt_serviced;
 
     uint8_t inst_code;
     if (!gb->cpu->halt_bug)
@@ -873,5 +865,17 @@ uint8_t execute_instruction(gameboy *gb)
             LOG_ERROR("Illegal opcode (0x%02X) was encountered. Exiting...\n", inst_code);
             exit(1);
     }
+
+interrupt_serviced:
+    /* Check if the IME flag needs to be set after
+     * an EI instruction. The IME is set after the
+     * instruction following the EI.
+     */
+    if (gb->cpu->ime_delayed_set)
+    {
+        gb->cpu->ime_flag = true;
+        gb->cpu->ime_delayed_set = false;
+    }
+
     return curr_inst_duration;
 }
