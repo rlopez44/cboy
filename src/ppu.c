@@ -769,43 +769,46 @@ void run_ppu(gameboy *gb, uint8_t num_clocks)
     if (!ppu_enabled)
         return;
 
-    gb->ppu->dot_clock += num_clocks;
-
-    uint8_t ppu_mode = set_ppu_mode(gb);
-    handle_ppu_mode_stat_interrupts(gb);
-    ly_compare(gb);
-
-    // we render a scanline once we reach the HBLANK period
-    if (ppu_mode == 0x00 && !gb->ppu->curr_scanline_rendered)
+    for(; num_clocks; --num_clocks)
     {
-        render_scanline(gb);
-        gb->ppu->curr_scanline_rendered = true;
-    }
-    // we display the frame once we've reached the VBLANK period
-    // we also need to request a vblank interrupt upon entering
-    else if (ppu_mode == 0x01 && !gb->ppu->curr_frame_displayed)
-    {
-        display_frame(gb);
-        gb->ppu->curr_frame_displayed = true;
-        gb->ppu->window_line_counter = 0;
-        request_interrupt(gb, VBLANK);
-        poll_input(gb);
-        maintain_framerate(gb);
-    }
+        ++gb->ppu->dot_clock;
 
-    // check if we're done with the current scanline
-    if (gb->ppu->dot_clock - 456 * gb->ppu->ly > 456)
-    {
-        // make sure we wrap around from scanline 153 to scanline 0
-        gb->ppu->ly = (gb->ppu->ly + 1) % 154;
-        gb->ppu->curr_scanline_rendered = false;
-    }
+        uint8_t ppu_mode = set_ppu_mode(gb);
+        handle_ppu_mode_stat_interrupts(gb);
+        ly_compare(gb);
 
-    // reset the dot clock after cycling through all 154
-    // scanlines so we can track timings for the next frame
-    if (gb->ppu->dot_clock > FRAME_CLOCK_DURATION)
-    {
-        gb->ppu->dot_clock %= FRAME_CLOCK_DURATION;
-        gb->ppu->curr_frame_displayed = false;
+        // we render a scanline once we reach the HBLANK period
+        if (ppu_mode == 0x00 && !gb->ppu->curr_scanline_rendered)
+        {
+            render_scanline(gb);
+            gb->ppu->curr_scanline_rendered = true;
+        }
+        // we display the frame once we've reached the VBLANK period
+        // we also need to request a vblank interrupt upon entering
+        else if (ppu_mode == 0x01 && !gb->ppu->curr_frame_displayed)
+        {
+            display_frame(gb);
+            gb->ppu->curr_frame_displayed = true;
+            gb->ppu->window_line_counter = 0;
+            request_interrupt(gb, VBLANK);
+            poll_input(gb);
+            maintain_framerate(gb);
+        }
+
+        // check if we're done with the current scanline
+        if (gb->ppu->dot_clock - 456 * gb->ppu->ly == 456)
+        {
+            // make sure we wrap around from scanline 153 to scanline 0
+            gb->ppu->ly = (gb->ppu->ly + 1) % 154;
+            gb->ppu->curr_scanline_rendered = false;
+        }
+
+        // reset the dot clock after cycling through all 154
+        // scanlines so we can track timings for the next frame
+        if (gb->ppu->dot_clock == FRAME_CLOCK_DURATION)
+        {
+            gb->ppu->dot_clock = 0;
+            gb->ppu->curr_frame_displayed = false;
+        }
     }
 }
