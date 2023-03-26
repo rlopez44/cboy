@@ -76,6 +76,7 @@ bool mbc_supported(MBC_TYPE mbc_type)
         case NO_MBC:
         case MBC1:
         case MBC3:
+        case MBC5:
             supported = true;
             break;
 
@@ -107,6 +108,13 @@ void init_mbc(MBC_TYPE mbc_type, cartridge_mbc *mbc)
             mbc->mbc3.rtc_latch = 0;
             break;
 
+        case MBC5:
+            mbc->mbc5.ram_enabled = false;
+            mbc->mbc5.lsb_rom_bankno = 1;
+            mbc->mbc5.bit9_rom_bankno = false;
+            mbc->mbc5.ram_bankno = 0;
+            break;
+
         // NO_MBC or unsupported MBC, will not
         // be used, no need to initialize
         default:
@@ -129,6 +137,10 @@ uint8_t cartridge_read(gameboy *gb, uint16_t address)
 
         case MBC3:
             value = mbc3_read(gb, address);
+            break;
+
+        case MBC5:
+            value = mbc5_read(gb, address);
             break;
 
         // unsupported MBCs - should not get here
@@ -154,6 +166,10 @@ void cartridge_write(gameboy *gb, uint16_t address, uint8_t value)
 
         case MBC3:
             mbc3_write(gb, address, value);
+            break;
+
+        case MBC5:
+            mbc5_write(gb, address, value);
             break;
 
         // unsupported MBCs - should not get here

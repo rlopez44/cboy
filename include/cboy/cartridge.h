@@ -39,6 +39,7 @@ typedef struct gb_cartridge {
 
     /* the number of RAM banks and their size in bytes */
     uint16_t num_ram_banks, ram_bank_size;
+    uint16_t ram_banks_bitsize;
 
     /* the cartridge's MBC */
     MBC_TYPE mbc_type;

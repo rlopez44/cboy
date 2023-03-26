@@ -493,8 +493,13 @@ ROM_LOAD_STATUS load_rom(gb_cartridge *cart, FILE *rom_file)
         cart->ram_bank_size = ram_bank_size;
     }
 
-    // used by the MBC for ROM addressing (0..num_rom_banks - 1)
-    cart->rom_banks_bitsize = count_bits(cart->num_rom_banks - 1);
+    // used by the MBC for ROM/RAM addressing (0..num_banks - 1)
+    cart->rom_banks_bitsize = cart->num_rom_banks
+                              ? count_bits(cart->num_rom_banks - 1)
+                              : 0;
+    cart->ram_banks_bitsize = cart->num_ram_banks
+                              ? count_bits(cart->num_ram_banks - 1)
+                              : 0;
 
     return ROM_LOAD_SUCCESS;
 }

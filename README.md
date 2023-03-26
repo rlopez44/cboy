@@ -43,6 +43,7 @@ CBoy currently supports the following Memory Bank Controllers:
 * No MBC
 * MBC1 (except for MBC1M)
 * MBC3 (no RTC)
+* MBC5 (no rumble)
 
 # Test ROM Coverage
 The emulator currently passes the following test ROMS.
@@ -58,6 +59,7 @@ The emulator currently passes the following test ROMS.
     * WinPos
 * [Mooneye Test Suite](https://github.com/Gekkio/mooneye-test-suite)
     * `emulator-only/mbc1/*` except for `multicart_rom_8Mb.s`
+    * `emulator-only/mbc5/*`
     * `acceptance/bits/{mem_oam,reg_f}.s`
     * `acceptance/instr/*`
     * `acceptance/oam_dma/{basic,reg_read}.s`
