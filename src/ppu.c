@@ -5,7 +5,6 @@
 #include <SDL.h>
 #include "cboy/gameboy.h"
 #include "cboy/ppu.h"
-#include "cboy/memory.h"
 #include "cboy/interrupts.h"
 #include "cboy/log.h"
 
@@ -206,7 +205,7 @@ static inline uint32_t color_from_palette(gameboy *gb, uint16_t palette_reg, uin
 {
     // account for the bg/window disabled sentinel value
     // to ensure all non-sprite pixels are set to white
-    uint8_t palette = palette_reg == NO_PALETTE ? 0 : read_byte(gb, palette_reg);
+    uint8_t palette = palette_reg == NO_PALETTE ? 0 : gb->memory->mmap[palette_reg];
 
     uint32_t color;
     switch((palette >> (2 * color_idx)) & 0x3)
@@ -232,8 +231,8 @@ static inline uint32_t color_from_palette(gameboy *gb, uint16_t palette_reg, uin
 static void load_tile_color_data(gameboy *gb, uint16_t load_addr, uint8_t *buff)
 {
     // each line of the tile is 2 bytes
-    uint8_t lo = read_byte(gb, load_addr),
-            hi = read_byte(gb, load_addr + 1);
+    uint8_t lo = gb->memory->mmap[load_addr],
+            hi = gb->memory->mmap[load_addr + 1];
 
     // convert these bytes into the corresponding color indices
     // See: https://gbdev.io/pandocs/Tile_Data.html
@@ -325,7 +324,7 @@ static void load_bg_tiles(gameboy *gb, bool tile_data_area_bit, bool tile_map_ar
          pixels_remaining > 0;
          tileno = (tileno + 1) % TILE_MAP_TILE_WIDTH)
     {
-        tile_index = read_byte(gb, base_map_addr + TILE_MAP_TILE_WIDTH * tile_yoffset + tileno);
+        tile_index = gb->memory->mmap[base_map_addr + TILE_MAP_TILE_WIDTH * tile_yoffset + tileno];
         tile_addr = tile_addr_from_index(tile_data_area_bit, tile_index);
         load_tile_color_data(gb,
                              tile_addr + 2 * tile_pixel_yoffset, // two bytes per line
@@ -386,10 +385,9 @@ static void load_window_tiles(gameboy *gb, bool tile_data_area_bit, bool tile_ma
          tile_xoffset < 1 + (FRAME_WIDTH / TILE_WIDTH);
          ++tile_xoffset)
     {
-        tile_index = read_byte(gb,
-                               base_map_addr
-                               + tile_yoffset * TILE_MAP_TILE_WIDTH
-                               + tile_xoffset);
+        tile_index = gb->memory->mmap[base_map_addr
+                                      + tile_yoffset * TILE_MAP_TILE_WIDTH
+                                      + tile_xoffset];
         tile_addr = tile_addr_from_index(tile_data_area_bit, tile_index);
 
         load_tile_color_data(gb,
@@ -479,7 +477,7 @@ static void render_loaded_sprites(gameboy *gb, gb_sprite *sprites, uint8_t n_spr
 
         base_tile_addr = tile_addr_from_index(true, curr_sprite->tile_idx);
         for (uint16_t offset = 0; offset < curr_sprite->ysize * 2; ++offset)
-            curr_sprite->tile_data[offset] = read_byte(gb, base_tile_addr + offset);
+            curr_sprite->tile_data[offset] = gb->memory->mmap[base_tile_addr + offset];
 
         // perform xflip and yflip before rendering by adjusting xpos and ypos
         perform_sprite_reflections(curr_sprite);
@@ -506,14 +504,14 @@ static void load_sprites(gameboy *gb, bool obj_size_bit)
         if (sprite_count >= 10)
             break;
 
-        ypos = read_byte(gb, oam_base_addr + oam_offset); // sprite vertical pos + 16
+        ypos = gb->memory->mmap[oam_base_addr + oam_offset]; // sprite vertical pos + 16
 
         // current scanline is interior to the sprite
         if (shifted_ly >= ypos && shifted_ly < ypos + sprite_ysize)
         {
-            xpos = read_byte(gb, oam_base_addr + oam_offset + 1);
-            tile_idx = read_byte(gb, oam_base_addr + oam_offset + 2);
-            flags = read_byte(gb, oam_base_addr + oam_offset + 3);
+            xpos = gb->memory->mmap[oam_base_addr + oam_offset + 1];
+            tile_idx = gb->memory->mmap[oam_base_addr + oam_offset + 2];
+            flags = gb->memory->mmap[oam_base_addr + oam_offset + 3];
 
             sprites_to_render[sprite_count].ypos     = ypos; // sprite vertical pos + 16
             sprites_to_render[sprite_count].xpos     = xpos;
