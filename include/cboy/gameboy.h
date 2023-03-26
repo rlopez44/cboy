@@ -9,8 +9,6 @@
 #include "cboy/ppu.h"
 #include "cboy/joypad.h"
 
-#define JOYP_REGISTER 0xff00
-
 #define DIV_REGISTER 0xff04
 #define TIMA_REGISTER 0xff05
 #define TMA_REGISTER 0xff06
