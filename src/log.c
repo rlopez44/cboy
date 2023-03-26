@@ -68,9 +68,9 @@ void print_registers(gameboy *gb)
              gb->cpu->reg->l,
              gb->cpu->reg->sp,
              gb->cpu->reg->pc,
-             gb->memory->mmap[gb->cpu->reg->pc],
-             gb->memory->mmap[gb->cpu->reg->pc + 1],
-             gb->memory->mmap[gb->cpu->reg->pc + 2],
-             gb->memory->mmap[gb->cpu->reg->pc + 3]);
+             read_byte(gb, gb->cpu->reg->pc),
+             read_byte(gb, gb->cpu->reg->pc + 1),
+             read_byte(gb, gb->cpu->reg->pc + 2),
+             read_byte(gb, gb->cpu->reg->pc + 3));
 }
 #endif /* DEBUG */
