@@ -8,6 +8,7 @@
 #include "cboy/cartridge.h"
 #include "cboy/ppu.h"
 #include "cboy/joypad.h"
+#include "cboy/apu.h"
 
 #define DIV_REGISTER 0xff04
 #define TIMA_REGISTER 0xff05
@@ -26,6 +27,7 @@ typedef struct gameboy {
     gb_cartridge *cart;
     gb_ppu *ppu;
     gb_joypad *joypad;
+    gb_apu *apu;
 
     // if the Game Boy is still on
     bool is_on;

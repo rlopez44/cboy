@@ -76,3 +76,4 @@ The emulator currently passes the following test ROMS.
 * [The `jitboy` Game Boy emulator](https://github.com/sysprog21/jitboy)
 * [The `GiiBiiAdvance` GB, GBC, and GBA emulator](https://github.com/AntonioND/giibiiadvance)
 * [Game Boy: Complete Technical Reference](https://gekkio.fi/files/gb-docs/gbctr.pdf)
+* [*Game Boy Sound Emulation*](https://nightshade256.github.io/2021/03/27/gb-sound-emulation.html)

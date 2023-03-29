@@ -3,6 +3,7 @@
 #include "cboy/log.h"
 #include "cboy/gameboy.h"
 #include "cboy/ppu.h"
+#include "cboy/apu.h"
 
 #ifdef DEBUG
 // dump the Game Boy's memory contents
@@ -21,6 +22,10 @@ void dump_memory(gameboy *gb)
     memcpy(gb->memory->mmap + 0xe000,
            gb->memory->mmap + 0xc000,
            (0xddff - 0xc000 + 1) * sizeof(uint8_t));
+
+    // APU registers
+    for (uint16_t address = 0xff10; address <= 0xff26; ++address)
+        gb->memory->mmap[address] = apu_read(gb, address);
 
     const char *dumpfile_path = "/tmp/gb.dump";
     FILE *dumpfile = fopen(dumpfile_path, "wb");

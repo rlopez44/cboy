@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include "cboy/gameboy.h"
+#include "cboy/apu.h"
 #include "cboy/joypad.h"
 #include "cboy/memory.h"
 #include "cboy/cartridge.h"
@@ -86,6 +87,10 @@ uint8_t read_byte(gameboy *gb, uint16_t address)
              || (0xa000 <= address && address <= 0xbfff)) // cartridge RAM
     {
         return cartridge_read(gb, address);
+    }
+    else if (address >= 0xff10 && address <= 0xff26)
+    {
+        return apu_read(gb, address);
     }
     /**************** END: Special reads where we return early **************/
 
@@ -295,6 +300,11 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
              || (0xa000 <= address && address <= 0xbfff)) // cartridge RAM
     {
         cartridge_write(gb, address, value);
+        return;
+    }
+    else if (address >= 0xff10 && address <= 0xff26)
+    {
+        apu_write(gb, address, value);
         return;
     }
     /**************** END: Special writes where we return early **************/

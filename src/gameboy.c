@@ -11,6 +11,7 @@
 #include "cboy/interrupts.h"
 #include "cboy/instructions.h"
 #include "cboy/joypad.h"
+#include "cboy/apu.h"
 #include "cboy/log.h"
 
 /* 3 seems like a good scale factor */
@@ -366,6 +367,12 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom)
     if (bootrom != NULL)
         maybe_load_bootrom(gb, bootrom);
 
+    gb->apu = init_apu();
+    if (gb->apu == NULL)
+    {
+        free_gameboy(gb);
+        return NULL;
+    }
 
     // initialize the screen after all other components
     if (!init_screen(gb))
@@ -392,6 +399,7 @@ void free_gameboy(gameboy *gb)
     unload_cartridge(gb->cart);
     free_ppu(gb->ppu);
     free_joypad(gb->joypad);
+    deinit_apu(gb->apu);
     SDL_DestroyTexture(gb->screen);
     SDL_DestroyRenderer(gb->renderer);
     SDL_DestroyWindow(gb->window);
@@ -594,6 +602,8 @@ void run_gameboy(gameboy *gb)
         increment_clock_counter(gb, num_clocks);
 
         dma_transfer_check(gb, num_clocks);
+
+        run_apu(gb, num_clocks);
 
         run_ppu(gb, num_clocks);
     }
