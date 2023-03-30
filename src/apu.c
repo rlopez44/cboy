@@ -92,7 +92,7 @@ void apu_write(gameboy *gb, uint16_t address, uint8_t value)
         case NR22_REGISTER:
             apu->channel_two.initial_volume = (value >> 4) & 0xf;
             apu->channel_two.env_incrementing = (value >> 3) & 1;
-            apu->channel_two.env_period = value & 0x3;
+            apu->channel_two.env_period = value & 0x7;
             apu->channel_two.dac_enabled = value & 0xf8;
             if (!apu->channel_two.dac_enabled)
                 apu->channel_two.enabled = false;
@@ -145,7 +145,7 @@ uint8_t apu_read(gameboy *gb, uint16_t address)
         case NR22_REGISTER:
             value = (apu->channel_two.initial_volume & 0xf) << 4
                     | apu->channel_two.env_incrementing << 3
-                    | (apu->channel_two.env_period & 0x3);
+                    | (apu->channel_two.env_period & 0x7);
             break;
 
         case NR23_REGISTER:
