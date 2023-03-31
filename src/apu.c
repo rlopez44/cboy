@@ -2,13 +2,12 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <SDL.h>
-#include "SDL_audio.h"
 #include "cboy/gameboy.h"
 #include "cboy/apu.h"
 #include "cboy/log.h"
 #include "cboy/mbc.h"
 
-static void init_channel_two(apu_channel_two *chan);
+static void init_pulse_channel(apu_pulse_channel *chan, APU_CHANNELS channelno);
 static void sample_audio(gb_apu *apu);
 static void tick_frame_sequencer(gb_apu *apu);
 static void trigger_channel(gb_apu *apu, APU_CHANNELS channel);
@@ -37,7 +36,8 @@ gb_apu *init_apu(void)
 
     apu->num_samples = 0;
 
-    init_channel_two(&apu->channel_two);
+    init_pulse_channel(&apu->channel_one, CHANNEL_ONE);
+    init_pulse_channel(&apu->channel_two, CHANNEL_TWO);
 
     if (SDL_Init(SDL_INIT_AUDIO) < 0)
         goto init_error;
@@ -84,31 +84,83 @@ void apu_write(gameboy *gb, uint16_t address, uint8_t value)
     gb_apu *apu = gb->apu;
     switch (address)
     {
+        case NR10_REGISTER:
+        {
+            apu_pulse_channel *chan = &apu->channel_one;
+            chan->sweep_slope = value & 0x7;
+            chan->sweep_incrementing = (value >> 3) & 1;
+            chan->sweep_period = (value >> 4) & 0x7;
+            chan->sweep_enabled = chan->sweep_period;
+            break;
+        }
+
+        case NR11_REGISTER:
         case NR21_REGISTER:
-            apu->channel_two.length_timer = value & 0x3f;
-            apu->channel_two.duty_number = (value >> 6) & 0x3;
-            break;
+        {
+            apu_pulse_channel *chan;
+            if (address == NR11_REGISTER)
+                chan = &apu->channel_one;
+            else
+                chan = &apu->channel_two;
 
+            chan->length_timer = value & 0x3f;
+            chan->duty_number = (value >> 6) & 0x3;
+            break;
+        }
+
+        case NR12_REGISTER:
         case NR22_REGISTER:
-            apu->channel_two.initial_volume = (value >> 4) & 0xf;
-            apu->channel_two.env_incrementing = (value >> 3) & 1;
-            apu->channel_two.env_period = value & 0x7;
-            apu->channel_two.dac_enabled = value & 0xf8;
-            if (!apu->channel_two.dac_enabled)
-                apu->channel_two.enabled = false;
-            break;
+        {
+            apu_pulse_channel *chan;
+            if (address == NR12_REGISTER)
+                chan = &apu->channel_one;
+            else
+                chan = &apu->channel_two;
 
+            chan->initial_volume = (value >> 4) & 0xf;
+            chan->env_incrementing = (value >> 3) & 1;
+            chan->env_period = value & 0x7;
+            chan->dac_enabled = value & 0xf8;
+            if (!chan->dac_enabled)
+                chan->enabled = false;
+            break;
+        }
+
+        case NR13_REGISTER:
         case NR23_REGISTER:
-            apu->channel_two.wavelength = (apu->channel_two.wavelength & 0x0700) | value;
-            break;
+        {
+            apu_pulse_channel *chan;
+            if (address == NR13_REGISTER)
+                chan = &apu->channel_one;
+            else
+                chan = &apu->channel_two;
 
-        case NR24_REGISTER:
-            if ((value >> 7) & 1)
-                trigger_channel(apu, CHANNEL_TWO);
-            apu->channel_two.length_timer_enable = (value >> 6) & 1;
-            apu->channel_two.wavelength = (apu->channel_two.wavelength & 0x00ff)
-                                    | (value & 0x7) << 8;
+            chan->wavelength = (chan->wavelength & 0x0700) | value;
             break;
+        }
+
+        case NR14_REGISTER:
+        case NR24_REGISTER:
+        {
+            apu_pulse_channel *chan;
+            APU_CHANNELS channelno;
+            if (address == NR14_REGISTER)
+            {
+                chan = &apu->channel_one;
+                channelno = CHANNEL_ONE;
+            }
+            else
+            {
+                chan = &apu->channel_two;
+                channelno = CHANNEL_TWO;
+            }
+
+            if ((value >> 7) & 1)
+                trigger_channel(apu, channelno);
+            chan->length_timer_enable = (value >> 6) & 1;
+            chan->wavelength = (chan->wavelength & 0x00ff) | (value & 0x7) << 8;
+            break;
+        }
 
         case NR50_REGISTER:
             apu->mix_vin_left = (value >> 7) & 1;
@@ -137,24 +189,70 @@ uint8_t apu_read(gameboy *gb, uint16_t address)
     uint8_t value = 0xff;
     switch (address)
     {
+        case NR10_REGISTER:
+        {
+            apu_pulse_channel *chan = &apu->channel_one;
+            value = 0x80
+                    | (chan->sweep_period & 0x7) << 4
+                    | (chan->sweep_incrementing << 3)
+                    | (chan->sweep_slope & 0x7);
+            break;
+        }
+
+        case NR11_REGISTER:
         case NR21_REGISTER:
-            value = (apu->channel_two.duty_number & 0x3) << 6
-                    | (apu->channel_two.length_timer & 0x3f);
-            break;
+        {
+            apu_pulse_channel *chan;
+            if (address == NR11_REGISTER)
+                chan = &apu->channel_one;
+            else
+                chan = &apu->channel_two;
 
+            value = (chan->duty_number & 0x3) << 6
+                    | (chan->length_timer & 0x3f);
+            break;
+        }
+
+        case NR12_REGISTER:
         case NR22_REGISTER:
-            value = (apu->channel_two.initial_volume & 0xf) << 4
-                    | apu->channel_two.env_incrementing << 3
-                    | (apu->channel_two.env_period & 0x7);
-            break;
+        {
+            apu_pulse_channel *chan;
+            if (address == NR12_REGISTER)
+                chan = &apu->channel_one;
+            else
+                chan = &apu->channel_two;
 
+            value = (chan->initial_volume & 0xf) << 4
+                    | chan->env_incrementing << 3
+                    | (chan->env_period & 0x7);
+            break;
+        }
+
+        case NR13_REGISTER:
         case NR23_REGISTER:
-            value = apu->channel_two.wavelength & 0xff;
-            break;
+        {
+            apu_pulse_channel *chan;
+            if (address == NR13_REGISTER)
+                chan = &apu->channel_one;
+            else
+                chan = &apu->channel_two;
 
-        case NR24_REGISTER:
-            value = 0xbf | (apu->channel_two.length_timer_enable << 6);
+            value = chan->wavelength & 0xff;
             break;
+        }
+
+        case NR14_REGISTER:
+        case NR24_REGISTER:
+        {
+            apu_pulse_channel *chan;
+            if (address == NR14_REGISTER)
+                chan = &apu->channel_one;
+            else
+                chan = &apu->channel_two;
+
+            value = 0xbf | (chan->length_timer_enable << 6);
+            break;
+        }
 
         case NR50_REGISTER:
             value = apu->mix_vin_left << 7
@@ -172,7 +270,7 @@ uint8_t apu_read(gameboy *gb, uint16_t address)
             value = apu->enabled << 7
                     | 0x3 << 2
                     | apu->channel_two.enabled << 1
-                    | 1;
+                    | apu->channel_one.enabled;
             break;
 
         default:
@@ -216,27 +314,72 @@ void run_apu(gameboy *gb, uint8_t num_clocks)
     }
 }
 
-static void init_channel_two(apu_channel_two *chan)
+static void init_pulse_channel(apu_pulse_channel *chan, APU_CHANNELS channelno)
 {
-    chan->duty_number = 0;
-    chan->duty_pos = 0;
+    switch (channelno)
+    {
+        case CHANNEL_ONE:
+        case CHANNEL_TWO:
+            // sweep actually only used by channel 1
+            chan->sweep_enabled = false;
+            chan->sweep_period = 0;
+            chan->sweep_period_timer = chan->sweep_period;
+            chan->sweep_incrementing = false;
+            chan->sweep_slope = 0;
 
-    chan->length_timer = 0x3f;
+            chan->duty_number = channelno == CHANNEL_ONE ? 0x2 : 0;
+            chan->duty_pos = 0;
 
-    chan->initial_volume = 0;
-    chan->current_volume = chan->initial_volume;
+            chan->length_timer = 0x3f;
 
-    chan->env_incrementing = 0;
+            chan->initial_volume = channelno == CHANNEL_ONE ? 0xf : 0;
+            chan->current_volume = chan->initial_volume;
 
-    chan->env_period = 0;
-    chan->env_period_timer = chan->env_period;
+            chan->env_incrementing = 0;
 
-    chan->wavelength = 0x0700;
-    chan->wavelength_timer = (2048 - chan->wavelength) * 4;
+            chan->env_period = channelno == CHANNEL_ONE ? 0x3 : 0;
+            chan->env_period_timer = chan->env_period;
 
-    chan->length_timer_enable = false;
-    chan->enabled = false;
-    chan->dac_enabled = false;
+            chan->wavelength = 0x0700;
+            chan->wavelength_timer = (2048 - chan->wavelength) * 4;
+
+            chan->length_timer_enable = false;
+            chan->enabled = false;
+            chan->dac_enabled = false;
+            break;
+
+        default:
+            LOG_ERROR("Tried to initialize wave or noise"
+                      " channel with pulse channel initializer.\n");
+            exit(1);
+            break;
+    }
+}
+
+static inline uint16_t sweep_frequency(apu_pulse_channel *chan)
+{
+    // L_{t+1} = L_{t} +- L_{t} / 2^{sweep_slope} (L_{t+1} can never underflow)
+    uint16_t increment = chan->wavelength >> chan->sweep_slope;
+    uint16_t new_wavelength = chan->wavelength;
+    if (chan->sweep_incrementing)
+        new_wavelength += increment;
+    else
+        new_wavelength -= increment;
+
+    return new_wavelength;
+}
+
+static bool sweep_overflow_check(apu_pulse_channel *chan)
+{
+    uint16_t new_wavelength = sweep_frequency(chan);
+    // channel is disabled instead of overflowing wavelength
+    if (new_wavelength > 0x07ff)
+    {
+        chan->enabled = false;
+        return true;
+    }
+
+    return false;
 }
 
 static void trigger_channel(gb_apu *apu, APU_CHANNELS channel)
@@ -244,7 +387,30 @@ static void trigger_channel(gb_apu *apu, APU_CHANNELS channel)
     switch (channel)
     {
         case CHANNEL_ONE:
+        {
+            apu_pulse_channel *chan = &apu->channel_one;
+            if (chan->dac_enabled)
+            {
+                chan->enabled = true;
+
+                // envelope
+                chan->env_period_timer = chan->env_period;
+                chan->current_volume = chan->initial_volume;
+
+                // wavelength sweep
+                if (chan->sweep_period)
+                    chan->sweep_period_timer = chan->sweep_period;
+                else // sweep_period = 0 sets internal timer to 8 for some reason
+                    chan->sweep_period_timer = 8;
+
+                chan->sweep_enabled = chan->sweep_period || chan->sweep_slope;
+
+                // nonzero sweep slope results in wavelength overflow check
+                if (chan->sweep_slope)
+                    sweep_overflow_check(chan);
+            }
             break;
+        }
 
         case CHANNEL_TWO:
             if (apu->channel_two.dac_enabled)
@@ -263,22 +429,52 @@ static void trigger_channel(gb_apu *apu, APU_CHANNELS channel)
     }
 }
 
+// Tick the APU channel 1 wavelength sweep
+static void tick_sweep(apu_pulse_channel *chan)
+{
+    if (chan->sweep_period_timer)
+        --chan->sweep_period_timer;
+
+    if (!chan->sweep_period_timer)
+    {
+        if (chan->sweep_period)
+            chan->sweep_period_timer = chan->sweep_period;
+        else // sweep_period = 0 sets internal timer to 8 for some reason
+            chan->sweep_period_timer = 8;
+
+        if (chan->sweep_enabled && chan->sweep_period)
+        {
+            // sweep slope of zero causes sweeping to have no
+            // effect but wavelength overflow check still happens
+            uint16_t new_wavelength = sweep_frequency(chan);
+            if (!sweep_overflow_check(chan) && chan->sweep_slope)
+                chan->wavelength = new_wavelength;
+        }
+    }
+}
+
 static void tick_channel(gb_apu *apu, APU_CHANNELS channel)
 {
     switch (channel)
     {
         case CHANNEL_ONE:
-            break;
-
         case CHANNEL_TWO:
-            if (!apu->channel_two.wavelength_timer)
+        {
+            apu_pulse_channel *chan;
+            if (channel == CHANNEL_ONE)
+                chan = &apu->channel_one;
+            else
+                chan = &apu->channel_two;
+
+            if (!chan->wavelength_timer)
             {
-                apu->channel_two.wavelength_timer = (2048 - apu->channel_two.wavelength) * 4;
-                apu->channel_two.duty_pos = (apu->channel_two.duty_pos + 1) & 0x7;
+                chan->wavelength_timer = (2048 - chan->wavelength) * 4;
+                chan->duty_pos = (chan->duty_pos + 1) & 0x7;
             }
 
-            --apu->channel_two.wavelength_timer;
+            --chan->wavelength_timer;
             break;
+        }
 
         case CHANNEL_THREE:
             break;
@@ -293,19 +489,24 @@ static void tick_length_counter(gb_apu *apu, APU_CHANNELS channel)
     switch (channel)
     {
         case CHANNEL_ONE:
-            break;
-
         case CHANNEL_TWO:
-            if (apu->channel_two.length_timer_enable
-                && apu->channel_two.length_timer)
+        {
+            apu_pulse_channel *chan;
+            if (channel == CHANNEL_ONE)
+                chan = &apu->channel_one;
+            else
+                chan = &apu->channel_two;
+
+            if (chan->length_timer_enable && chan->length_timer)
             {
-                --apu->channel_two.length_timer;
+                --chan->length_timer;
 
                 // channel is disabled when the timer runs out
-                if (!apu->channel_two.length_timer)
-                    apu->channel_two.enabled = false;
+                if (!chan->length_timer)
+                    chan->enabled = false;
             }
             break;
+        }
 
         case CHANNEL_THREE:
             break;
@@ -320,11 +521,13 @@ static void tick_volume(gb_apu *apu, APU_CHANNELS channel)
     switch (channel)
     {
         case CHANNEL_ONE:
-            break;
-
         case CHANNEL_TWO:
         {
-            apu_channel_two *chan = &apu->channel_two;
+            apu_pulse_channel *chan;
+            if (channel == CHANNEL_ONE)
+                chan = &apu->channel_one;
+            else
+                chan = &apu->channel_two;
 
             // envelope period of zero disables volume sweeping
             if (chan->env_period)
@@ -369,11 +572,14 @@ static float get_channel_amplitude(gb_apu *apu, APU_CHANNELS channel)
     switch (channel)
     {
         case CHANNEL_ONE:
-            break;
-
         case CHANNEL_TWO:
         {
-            apu_channel_two *chan = &apu->channel_two;
+            apu_pulse_channel *chan;
+            if (channel == CHANNEL_ONE)
+                chan = &apu->channel_one;
+            else
+                chan = &apu->channel_two;
+
             if (chan->dac_enabled && chan->enabled)
             {
                 float dac_input = duty_cycles[8*chan->duty_number + chan->duty_pos];
@@ -454,7 +660,7 @@ static void tick_frame_sequencer(gb_apu *apu)
 
         case 2:
             tick_length_counters(apu);
-            // TODO: channel one sweep
+            tick_sweep(&apu->channel_one);
             break;
 
         case 4:
@@ -463,7 +669,7 @@ static void tick_frame_sequencer(gb_apu *apu)
 
         case 6:
             tick_length_counters(apu);
-            // TODO: channel one sweep
+            tick_sweep(&apu->channel_one);
             break;
 
         case 7:
@@ -482,12 +688,18 @@ static void sample_audio(gb_apu *apu)
     // left and right output amplitudes
     float left_amplitude = 0, right_amplitude = 0;
     if (apu->panning_info & 0x20)
-        left_amplitude += get_channel_amplitude(apu, CHANNEL_TWO);
+    {
+        left_amplitude += get_channel_amplitude(apu, CHANNEL_ONE)
+                          + get_channel_amplitude(apu, CHANNEL_TWO);
+    }
 
     if (apu->panning_info & 0x02)
-        right_amplitude += get_channel_amplitude(apu, CHANNEL_TWO);
+    {
+        right_amplitude += get_channel_amplitude(apu, CHANNEL_ONE)
+                          + get_channel_amplitude(apu, CHANNEL_TWO);
+    }
 
-    // fianl output is average of all four channels
+    // final output is average of all four channels
     // scaled by normalized stereo channel volume
     apu->sample_buffer[apu->num_samples++] = (apu->left_volume / 7.0)
                                              * left_amplitude / 4;

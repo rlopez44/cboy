@@ -56,7 +56,7 @@ static const uint8_t duty_cycles[4*8] = {
     0, 1, 1, 1, 1, 1, 1, 0, // 75%
 };
 
-typedef struct apu_channel_two {
+typedef struct apu_pulse_channel {
     uint8_t duty_number;
     uint8_t duty_pos;
 
@@ -74,8 +74,15 @@ typedef struct apu_channel_two {
     uint8_t current_volume;
     uint8_t env_period_timer;
 
+    // sweep variables only used by channel 1
+    bool sweep_enabled;
+    uint8_t sweep_period;
+    uint8_t sweep_period_timer;
+    bool sweep_incrementing;
+    uint8_t sweep_slope;
+
     bool enabled, dac_enabled;
-} apu_channel_two;
+} apu_pulse_channel;
 
 typedef struct gb_apu {
     SDL_AudioDeviceID audio_dev;
@@ -99,7 +106,8 @@ typedef struct gb_apu {
     uint8_t frame_seq_pos;
     uint16_t clock;
 
-    apu_channel_two channel_two;
+    apu_pulse_channel channel_one;
+    apu_pulse_channel channel_two;
 } gb_apu;
 
 typedef struct gameboy gameboy;
