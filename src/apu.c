@@ -230,16 +230,8 @@ uint8_t apu_read(gameboy *gb, uint16_t address)
 
         case NR13_REGISTER:
         case NR23_REGISTER:
-        {
-            apu_pulse_channel *chan;
-            if (address == NR13_REGISTER)
-                chan = &apu->channel_one;
-            else
-                chan = &apu->channel_two;
-
-            value = chan->wavelength & 0xff;
+            // wavelength is write-only
             break;
-        }
 
         case NR14_REGISTER:
         case NR24_REGISTER:
@@ -268,6 +260,7 @@ uint8_t apu_read(gameboy *gb, uint16_t address)
         case NR52_REGISTER:
             // unimplemented channels report as turned on
             value = apu->enabled << 7
+                    | 0x7 << 4 // bits 4-6 are unused
                     | 0x3 << 2
                     | apu->channel_two.enabled << 1
                     | apu->channel_one.enabled;
