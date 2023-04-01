@@ -262,6 +262,7 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom)
     gb->renderer = NULL;
     gb->screen = NULL;
     gb->next_frame_time = GB_FRAME_DURATION_MS;
+    gb->maintain_framerate_signal = false;
     gb->run_boot_rom = false;
     gb->is_on = true; // the Game Boy is running
 
@@ -505,28 +506,6 @@ void increment_clock_counter(gameboy *gb, uint16_t num_clocks)
     }
 }
 
-void poll_input(gameboy *gb)
-{
-    SDL_Event event;
-    while(SDL_PollEvent(&event))
-    {
-        switch (event.type)
-        {
-            case SDL_QUIT:
-                gb->is_on = false;
-                break;
-
-            case SDL_KEYDOWN:
-            case SDL_KEYUP:
-                handle_keypress(gb, &event.key);
-                break;
-
-            default:
-                break;
-        }
-    }
-}
-
 /* Check if a DMA transfer needs to be performed
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  * To emulate the DMA transfer timing, we wait until the
@@ -569,6 +548,42 @@ static void check_halt_wakeup(gameboy *gb)
     }
 }
 
+/* Poll emulator input.
+ * Should be called once per frame.
+ */
+static inline void poll_input(gameboy *gb)
+{
+    SDL_Event event;
+    while(SDL_PollEvent(&event))
+    {
+        switch (event.type)
+        {
+            case SDL_QUIT:
+                gb->is_on = false;
+                break;
+
+            case SDL_KEYDOWN:
+            case SDL_KEYUP:
+                handle_keypress(gb, &event.key);
+                break;
+
+            default:
+                break;
+        }
+    }
+}
+
+// Pauses the emulator as needed after each frame is displayed
+// to maintain the appropriate Game Boy frame rate.
+static inline void maintain_framerate(gameboy *gb)
+{
+    uint64_t curr_time = SDL_GetTicks64();
+    if (curr_time < gb->next_frame_time)
+        SDL_Delay(gb->next_frame_time - curr_time);
+
+    gb->next_frame_time = SDL_GetTicks64() + GB_FRAME_DURATION_MS;
+}
+
 // run the emulator
 void run_gameboy(gameboy *gb)
 {
@@ -606,5 +621,13 @@ void run_gameboy(gameboy *gb)
         run_apu(gb, num_clocks);
 
         run_ppu(gb, num_clocks);
+
+        // new frame was just displayed
+        if (gb->maintain_framerate_signal)
+        {
+            gb->maintain_framerate_signal = false;
+            poll_input(gb);
+            maintain_framerate(gb);
+        }
     }
 }

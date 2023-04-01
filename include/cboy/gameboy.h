@@ -40,6 +40,7 @@ typedef struct gameboy {
 
     // to maintain the appropriate frame rate
     uint64_t next_frame_time;
+    bool maintain_framerate_signal;
 
     /* The Game Boy's internal 16-bit clock counter.
      * The DIV register at memory address 0xff04 is
@@ -79,11 +80,6 @@ void increment_tima(gameboy *gb);
  * incrementing the DIV and TIMA registers as needed.
  */
 void increment_clock_counter(gameboy *gb, uint16_t num_clocks);
-
-/* Poll emulator input.
- * Should be called once per frame.
- */
-void poll_input(gameboy *gb);
 
 // the emulator's game loop
 void run_gameboy(gameboy *gb);
