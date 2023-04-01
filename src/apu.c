@@ -680,17 +680,22 @@ static void sample_audio(gb_apu *apu)
 {
     // left and right output amplitudes
     float left_amplitude = 0, right_amplitude = 0;
+    float chan1_amplitude = get_channel_amplitude(apu, CHANNEL_ONE);
+    float chan2_amplitude = get_channel_amplitude(apu, CHANNEL_TWO);
+
+    /************ left output channel panning ************/
+    if (apu->panning_info & 0x10)
+        left_amplitude += chan1_amplitude;
+
     if (apu->panning_info & 0x20)
-    {
-        left_amplitude += get_channel_amplitude(apu, CHANNEL_ONE)
-                          + get_channel_amplitude(apu, CHANNEL_TWO);
-    }
+        left_amplitude += chan2_amplitude;
+
+    /************ right output channel panning ************/
+    if (apu->panning_info & 0x01)
+        right_amplitude += chan1_amplitude;
 
     if (apu->panning_info & 0x02)
-    {
-        right_amplitude += get_channel_amplitude(apu, CHANNEL_ONE)
-                          + get_channel_amplitude(apu, CHANNEL_TWO);
-    }
+        right_amplitude += chan2_amplitude;
 
     // final output is average of all four channels
     // scaled by normalized stereo channel volume
