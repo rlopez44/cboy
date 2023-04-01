@@ -23,8 +23,8 @@ void dump_memory(gameboy *gb)
            gb->memory->mmap + 0xc000,
            (0xddff - 0xc000 + 1) * sizeof(uint8_t));
 
-    // APU registers
-    for (uint16_t address = 0xff10; address <= 0xff26; ++address)
+    // APU registers and wave RAM
+    for (uint16_t address = 0xff10; address <= 0xff3f; ++address)
         gb->memory->mmap[address] = apu_read(gb, address);
 
     const char *dumpfile_path = "/tmp/gb.dump";

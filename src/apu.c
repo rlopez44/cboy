@@ -8,6 +8,7 @@
 #include "cboy/mbc.h"
 
 static void init_pulse_channel(apu_pulse_channel *chan, APU_CHANNELS channelno);
+static void init_wave_channel(apu_wave_channel *chan);
 static void sample_audio(gb_apu *apu);
 static void tick_frame_sequencer(gb_apu *apu);
 static void trigger_channel(gb_apu *apu, APU_CHANNELS channel);
@@ -38,6 +39,7 @@ gb_apu *init_apu(void)
 
     init_pulse_channel(&apu->channel_one, CHANNEL_ONE);
     init_pulse_channel(&apu->channel_two, CHANNEL_TWO);
+    init_wave_channel(&apu->channel_three);
 
     if (SDL_Init(SDL_INIT_AUDIO) < 0)
         goto init_error;
@@ -82,6 +84,14 @@ void deinit_apu(gb_apu *apu)
 void apu_write(gameboy *gb, uint16_t address, uint8_t value)
 {
     gb_apu *apu = gb->apu;
+
+    // write to channel 3 wave RAM
+    if (address >= 0xff30 && address <= 0xff3f)
+    {
+        apu->channel_three.wave_ram[address - 0xff30] = value;
+        return;
+    }
+
     switch (address)
     {
         case NR10_REGISTER:
@@ -162,6 +172,38 @@ void apu_write(gameboy *gb, uint16_t address, uint8_t value)
             break;
         }
 
+        case NR30_REGISTER:
+            apu->channel_three.dac_enabled = value & 0x80;
+            break;
+
+        case NR31_REGISTER:
+            apu->channel_three.length_timer = 256 - value;
+            break;
+
+        case NR32_REGISTER:
+            apu->channel_three.output_level = (value >> 5) & 0x3;
+            break;
+
+        case NR33_REGISTER:
+            apu->channel_three.wavelength &= 0xff00;
+            apu->channel_three.wavelength |= value;
+            break;
+
+        case NR34_REGISTER:
+            if (value & 0x80)
+                trigger_channel(apu, CHANNEL_THREE);
+
+            apu->channel_three.length_timer_enable = (value >> 6) & 1;
+
+            // reload timer if it's zero
+            if (!apu->channel_three.length_timer)
+                apu->channel_three.length_timer = 256;
+
+            // high three bits of 11-bit wavelenth
+            apu->channel_three.wavelength &= 0x00ff;
+            apu->channel_three.wavelength |= (value & 0x7) << 8;
+            break;
+
         case NR50_REGISTER:
             apu->mix_vin_left = (value >> 7) & 1;
             apu->left_volume = (value >> 4) & 0x7;
@@ -185,6 +227,10 @@ void apu_write(gameboy *gb, uint16_t address, uint8_t value)
 uint8_t apu_read(gameboy *gb, uint16_t address)
 {
     gb_apu *apu = gb->apu;
+
+    // read from channel 3 wave RAM
+    if (address >= 0xff30 && address <= 0xff3f)
+        return apu->channel_three.wave_ram[address - 0xff30];
 
     uint8_t value = 0xff;
     switch (address)
@@ -245,6 +291,26 @@ uint8_t apu_read(gameboy *gb, uint16_t address)
             value = 0xbf | (chan->length_timer_enable << 6);
             break;
         }
+
+        case NR30_REGISTER:
+            value = 0xff & apu->channel_three.dac_enabled << 7;
+            break;
+
+        // channel 3 length timer is write-only
+        case NR31_REGISTER:
+            break;
+
+        case NR32_REGISTER:
+            value = 0xff & (apu->channel_three.output_level & 0x3) << 5;
+            break;
+
+        // channel 3 wavelength low is write-only
+        case NR33_REGISTER:
+            break;
+
+        case NR34_REGISTER:
+            value = 0xff & apu->channel_three.length_timer_enable << 6;
+            break;
 
         case NR50_REGISTER:
             value = apu->mix_vin_left << 7
@@ -349,6 +415,25 @@ static void init_pulse_channel(apu_pulse_channel *chan, APU_CHANNELS channelno)
     }
 }
 
+static void init_wave_channel(apu_wave_channel *chan)
+{
+    chan->length_timer = 0xff;
+    chan->length_timer_enable = false;
+
+    chan->output_level = 0;
+
+    chan->wavelength = 0x0700;
+    // NOTE: this is a factor of 2 different
+    // from calculation for channels 1 and 2
+    chan->wavelength_timer = (2048 - chan->wavelength) * 2;
+
+    chan->wave_loc = 0;
+    memset(chan->wave_ram, 0, WAVE_RAM_SIZE);
+
+    chan->enabled = false;
+    chan->dac_enabled = false;
+}
+
 static inline uint16_t sweep_frequency(apu_pulse_channel *chan)
 {
     // L_{t+1} = L_{t} +- L_{t} / 2^{sweep_slope} (L_{t+1} can never underflow)
@@ -415,6 +500,8 @@ static void trigger_channel(gb_apu *apu, APU_CHANNELS channel)
             break;
 
         case CHANNEL_THREE:
+            if (apu->channel_three.dac_enabled)
+                apu->channel_three.enabled = true;
             break;
 
         case CHANNEL_FOUR:
@@ -470,7 +557,23 @@ static void tick_channel(gb_apu *apu, APU_CHANNELS channel)
         }
 
         case CHANNEL_THREE:
+        {
+            apu_wave_channel *chan = &apu->channel_three;
+
+            if (!chan->wavelength_timer)
+            {
+                // NOTE: this is a factor of 2 different
+                // from calculation for channels 1 and 2
+                chan->wavelength_timer = (2048 - chan->wavelength) * 2;
+
+                // the wave RAM pointer wraps around
+                // Recall: this points to a nibble, so wrap at 32
+                chan->wave_loc = (chan->wave_loc + 1) & 0x1f;
+            }
+
+            --chan->wavelength_timer;
             break;
+        }
 
         case CHANNEL_FOUR:
             break;
@@ -502,7 +605,19 @@ static void tick_length_counter(gb_apu *apu, APU_CHANNELS channel)
         }
 
         case CHANNEL_THREE:
+        {
+            apu_wave_channel *chan = &apu->channel_three;
+
+            if (chan->length_timer_enable && chan->length_timer)
+            {
+                --chan->length_timer;
+
+                // channel is disabled when the timer runs out
+                if (!chan->length_timer)
+                    chan->enabled = false;
+            }
             break;
+        }
 
         case CHANNEL_FOUR:
             break;
@@ -549,12 +664,38 @@ static void tick_volume(gb_apu *apu, APU_CHANNELS channel)
             break;
         }
 
+        // channel three does not support volume envelope
         case CHANNEL_THREE:
             break;
 
         case CHANNEL_FOUR:
             break;
     }
+}
+
+static uint8_t get_volume_shift(apu_wave_channel *chan)
+{
+    uint8_t volume_shift;
+    switch(chan->output_level & 0x3)
+    {
+        case 0:
+            volume_shift = 4;
+            break;
+
+        case 1:
+            volume_shift = 0;
+            break;
+
+        case 2:
+            volume_shift = 1;
+            break;
+
+        case 3:
+            volume_shift = 2;
+            break;
+    }
+
+    return volume_shift;
 }
 
 // translates the given channel's volume into
@@ -585,7 +726,24 @@ static float get_channel_amplitude(gb_apu *apu, APU_CHANNELS channel)
             break;
 
         case CHANNEL_THREE:
+        {
+            apu_wave_channel *chan = &apu->channel_three;
+
+            if (chan->dac_enabled && chan->enabled)
+            {
+                // get current sample nibble
+                uint8_t sample = chan->wave_ram[chan->wave_loc / 2];
+                uint8_t volume_shift = get_volume_shift(chan);
+
+                if (!(chan->wave_loc & 1)) // upper nibbles read first
+                    sample >>= 4;
+
+                sample &= 0x0f;
+
+                dac_output = ((sample >> volume_shift) / 7.5) - 1;
+            }
             break;
+        }
 
         case CHANNEL_FOUR:
             break;
@@ -614,7 +772,6 @@ static inline void tick_volumes(gb_apu *apu)
 {
     tick_volume(apu, CHANNEL_ONE);
     tick_volume(apu, CHANNEL_TWO);
-    tick_volume(apu, CHANNEL_THREE);
     tick_volume(apu, CHANNEL_FOUR);
 }
 
@@ -682,6 +839,7 @@ static void sample_audio(gb_apu *apu)
     float left_amplitude = 0, right_amplitude = 0;
     float chan1_amplitude = get_channel_amplitude(apu, CHANNEL_ONE);
     float chan2_amplitude = get_channel_amplitude(apu, CHANNEL_TWO);
+    float chan3_amplitude = get_channel_amplitude(apu, CHANNEL_THREE);
 
     /************ left output channel panning ************/
     if (apu->panning_info & 0x10)
@@ -690,12 +848,18 @@ static void sample_audio(gb_apu *apu)
     if (apu->panning_info & 0x20)
         left_amplitude += chan2_amplitude;
 
+    if (apu->panning_info & 0x40)
+        left_amplitude += chan3_amplitude;
+
     /************ right output channel panning ************/
     if (apu->panning_info & 0x01)
         right_amplitude += chan1_amplitude;
 
     if (apu->panning_info & 0x02)
         right_amplitude += chan2_amplitude;
+
+    if (apu->panning_info & 0x04)
+        right_amplitude += chan3_amplitude;
 
     // final output is average of all four channels
     // scaled by normalized stereo channel volume

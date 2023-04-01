@@ -88,7 +88,7 @@ uint8_t read_byte(gameboy *gb, uint16_t address)
     {
         return cartridge_read(gb, address);
     }
-    else if (address >= 0xff10 && address <= 0xff26)
+    else if (address >= 0xff10 && address <= 0xff3f) // APU registers + wave RAM
     {
         return apu_read(gb, address);
     }
@@ -302,7 +302,7 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
         cartridge_write(gb, address, value);
         return;
     }
-    else if (address >= 0xff10 && address <= 0xff26)
+    else if (address >= 0xff10 && address <= 0xff3f) // APU registers + wave RAM
     {
         apu_write(gb, address, value);
         return;

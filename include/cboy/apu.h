@@ -42,6 +42,9 @@
 #define GP_CPU_FREQUENCY    4194304.0
 #define T_CYCLES_PER_SAMPLE ((uint16_t)(GP_CPU_FREQUENCY / AUDIO_SAMPLE_RATE))
 
+/* number of bytes in wave RAM */
+#define WAVE_RAM_SIZE 16
+
 typedef enum APU_CHANNELS {
     CHANNEL_ONE,
     CHANNEL_TWO,
@@ -84,6 +87,22 @@ typedef struct apu_pulse_channel {
     bool enabled, dac_enabled;
 } apu_pulse_channel;
 
+typedef struct apu_wave_channel {
+    uint16_t length_timer;
+    bool length_timer_enable;
+
+    uint8_t output_level;
+
+    uint16_t wavelength;
+    uint16_t wavelength_timer;
+
+    // pointer to current nibble in wave RAM
+    uint8_t wave_loc;
+    uint8_t wave_ram[WAVE_RAM_SIZE];
+
+    bool enabled, dac_enabled;
+} apu_wave_channel;
+
 typedef struct gb_apu {
     SDL_AudioDeviceID audio_dev;
     SDL_AudioSpec audio_spec;
@@ -108,6 +127,7 @@ typedef struct gb_apu {
 
     apu_pulse_channel channel_one;
     apu_pulse_channel channel_two;
+    apu_wave_channel channel_three;
 } gb_apu;
 
 typedef struct gameboy gameboy;
