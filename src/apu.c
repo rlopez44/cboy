@@ -113,7 +113,7 @@ void apu_write(gameboy *gb, uint16_t address, uint8_t value)
             else
                 chan = &apu->channel_two;
 
-            chan->length_timer = value & 0x3f;
+            chan->length_timer = 64 - (value & 0x3f);
             chan->duty_number = (value >> 6) & 0x3;
             break;
         }
@@ -169,6 +169,10 @@ void apu_write(gameboy *gb, uint16_t address, uint8_t value)
                 trigger_channel(apu, channelno);
             chan->length_timer_enable = (value >> 6) & 1;
             chan->wavelength = (chan->wavelength & 0x00ff) | (value & 0x7) << 8;
+
+            // reload timer if it's zero
+            if (!chan->length_timer)
+                chan->length_timer = 64;
             break;
         }
 
@@ -254,8 +258,7 @@ uint8_t apu_read(gameboy *gb, uint16_t address)
             else
                 chan = &apu->channel_two;
 
-            value = (chan->duty_number & 0x3) << 6
-                    | (chan->length_timer & 0x3f);
+            value = 0xff & (chan->duty_number & 0x3) << 6;
             break;
         }
 
