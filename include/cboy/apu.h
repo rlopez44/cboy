@@ -52,13 +52,6 @@ typedef enum APU_CHANNELS {
     CHANNEL_FOUR,
 } APU_CHANNELS;
 
-static const uint8_t duty_cycles[4*8] = {
-    0, 0, 0, 0, 0, 0, 0, 1, // 12.5%
-    1, 0, 0, 0, 0, 0, 0, 1, // 25%
-    1, 0, 0, 0, 0, 1, 1, 1, // 50%
-    0, 1, 1, 1, 1, 1, 1, 0, // 75%
-};
-
 typedef struct apu_pulse_channel {
     uint8_t duty_number;
     uint8_t duty_pos;
@@ -103,6 +96,25 @@ typedef struct apu_wave_channel {
     bool enabled, dac_enabled;
 } apu_wave_channel;
 
+typedef struct apu_noise_channel {
+    uint8_t length_timer;
+    bool length_timer_enable;
+
+    uint8_t initial_volume;
+    uint8_t current_volume;
+    uint8_t env_period;
+    uint8_t env_period_timer;
+    bool env_incrementing;
+
+    uint8_t clock_shift, clock_div_code;
+    bool lfsr_width_flag;
+    uint16_t lfsr;
+
+    uint16_t wavelength_timer;
+
+    bool enabled, dac_enabled;
+} apu_noise_channel;
+
 typedef struct gb_apu {
     SDL_AudioDeviceID audio_dev;
     SDL_AudioSpec audio_spec;
@@ -128,6 +140,7 @@ typedef struct gb_apu {
     apu_pulse_channel channel_one;
     apu_pulse_channel channel_two;
     apu_wave_channel channel_three;
+    apu_noise_channel channel_four;
 } gb_apu;
 
 typedef struct gameboy gameboy;

@@ -7,8 +7,16 @@
 #include "cboy/log.h"
 #include "cboy/mbc.h"
 
+static const uint8_t duty_cycles[4*8] = {
+    0, 0, 0, 0, 0, 0, 0, 1, // 12.5%
+    1, 0, 0, 0, 0, 0, 0, 1, // 25%
+    1, 0, 0, 0, 0, 1, 1, 1, // 50%
+    0, 1, 1, 1, 1, 1, 1, 0, // 75%
+};
+
 static void init_pulse_channel(apu_pulse_channel *chan, APU_CHANNELS channelno);
 static void init_wave_channel(apu_wave_channel *chan);
+static void init_noise_channel(apu_noise_channel *chan);
 static void sample_audio(gb_apu *apu);
 static void tick_frame_sequencer(gb_apu *apu);
 static void trigger_channel(gb_apu *apu, APU_CHANNELS channel);
@@ -40,6 +48,7 @@ gb_apu *init_apu(void)
     init_pulse_channel(&apu->channel_one, CHANNEL_ONE);
     init_pulse_channel(&apu->channel_two, CHANNEL_TWO);
     init_wave_channel(&apu->channel_three);
+    init_noise_channel(&apu->channel_four);
 
     if (SDL_Init(SDL_INIT_AUDIO) < 0)
         goto init_error;
@@ -208,6 +217,36 @@ void apu_write(gameboy *gb, uint16_t address, uint8_t value)
             apu->channel_three.wavelength |= (value & 0x7) << 8;
             break;
 
+        case NR41_REGISTER:
+            apu->channel_four.length_timer = 64 - (value & 0x3f);
+            break;
+
+        case NR42_REGISTER:
+            apu->channel_four.initial_volume = (value >> 4) & 0xf;
+            apu->channel_four.env_incrementing = (value >> 3) & 1;
+            apu->channel_four.env_period = value & 0x7;
+            apu->channel_four.dac_enabled = value & 0xf8;
+            if (!apu->channel_four.dac_enabled)
+                apu->channel_four.enabled = false;
+            break;
+
+        case NR43_REGISTER:
+            apu->channel_four.clock_shift = (value >> 4) & 0xf;
+            apu->channel_four.lfsr_width_flag = (value >> 3) & 1;
+            apu->channel_four.clock_div_code = value & 0x7;
+            break;
+
+        case NR44_REGISTER:
+            if (value & 0x80)
+                trigger_channel(apu, CHANNEL_FOUR);
+
+            apu->channel_four.length_timer_enable = (value >> 6) & 1;
+
+            // reload timer if it's zero
+            if (!apu->channel_four.length_timer)
+                apu->channel_four.length_timer = 64;
+            break;
+
         case NR50_REGISTER:
             apu->mix_vin_left = (value >> 7) & 1;
             apu->left_volume = (value >> 4) & 0x7;
@@ -315,6 +354,26 @@ uint8_t apu_read(gameboy *gb, uint16_t address)
             value = 0xff & apu->channel_three.length_timer_enable << 6;
             break;
 
+        case NR41_REGISTER:
+            // length timer is write-only
+            break;
+
+        case NR42_REGISTER:
+            value = (apu->channel_four.initial_volume & 0xf) << 4
+                    | (apu->channel_four.env_incrementing) << 3
+                    | (apu->channel_four.env_period & 0x7);
+            break;
+
+        case NR43_REGISTER:
+            value = (apu->channel_four.clock_shift & 0xf) << 4
+                    | (apu->channel_four.lfsr_width_flag) << 3
+                    | (apu->channel_four.clock_div_code & 0x7);
+            break;
+
+        case NR44_REGISTER:
+            value = 0xff & (apu->channel_four.length_timer_enable << 6);
+            break;
+
         case NR50_REGISTER:
             value = apu->mix_vin_left << 7
                     | (apu->left_volume & 0x7) << 4
@@ -330,7 +389,8 @@ uint8_t apu_read(gameboy *gb, uint16_t address)
             // unimplemented channels report as turned on
             value = apu->enabled << 7
                     | 0x7 << 4 // bits 4-6 are unused
-                    | 0x3 << 2
+                    | apu->channel_four.enabled << 3
+                    | apu->channel_three.enabled << 2
                     | apu->channel_two.enabled << 1
                     | apu->channel_one.enabled;
             break;
@@ -437,6 +497,31 @@ static void init_wave_channel(apu_wave_channel *chan)
     chan->dac_enabled = false;
 }
 
+static void init_noise_channel(apu_noise_channel *chan)
+{
+    chan->length_timer = 64 - 0x3f;
+    chan->length_timer_enable = false;
+
+    chan->initial_volume = 0;
+    chan->current_volume = chan->initial_volume;
+    chan->env_incrementing = false;
+    chan->env_period = 0;
+    chan->env_period_timer = chan->env_period;
+
+    chan->clock_shift = 0;
+    chan->lfsr_width_flag = false;
+    chan->lfsr = 0;
+    chan->clock_div_code = 0;
+
+    uint16_t divisor = chan->clock_div_code
+                       ? chan->clock_div_code << 4
+                       : 8;
+    chan->wavelength_timer = divisor << chan->clock_shift;
+
+    chan->enabled = false;
+    chan->dac_enabled = false;
+}
+
 static inline uint16_t sweep_frequency(apu_pulse_channel *chan)
 {
     // L_{t+1} = L_{t} +- L_{t} / 2^{sweep_slope} (L_{t+1} can never underflow)
@@ -508,7 +593,16 @@ static void trigger_channel(gb_apu *apu, APU_CHANNELS channel)
             break;
 
         case CHANNEL_FOUR:
+        {
+            apu_noise_channel *chan = &apu->channel_four;
+            if (chan->dac_enabled)
+                chan->enabled = true;
+
+            chan->env_period_timer = chan->env_period;
+            chan->current_volume = chan->initial_volume;
+            chan->lfsr = 0x7fff;
             break;
+        }
     }
 }
 
@@ -579,7 +673,35 @@ static void tick_channel(gb_apu *apu, APU_CHANNELS channel)
         }
 
         case CHANNEL_FOUR:
+        {
+            apu_noise_channel *chan = &apu->channel_four;
+
+            if (!chan->wavelength_timer)
+            {
+                uint16_t divisor = chan->clock_div_code
+                                   ? chan->clock_div_code << 4
+                                   : 8;
+
+                chan->wavelength_timer = divisor << chan->clock_shift;
+
+                // First two bits of LFSR are XORed together,
+                // LFSR is shifted left by one bit, then result
+                // is stored into LFSR bit 14.If lfsr_width_flag
+                // is set then this value is also stored in bit
+                // 6 after shifting LFSR.
+                bool bitcalc = (chan->lfsr ^ (chan->lfsr >> 1)) & 1;
+                chan->lfsr = (chan->lfsr >> 1) | (bitcalc << 14);
+
+                if (chan->lfsr_width_flag)
+                {
+                    chan->lfsr &= ~(1 << 6);
+                    chan->lfsr |= bitcalc << 6;
+                }
+            }
+
+            --chan->wavelength_timer;
             break;
+        }
     }
 }
 
@@ -623,7 +745,19 @@ static void tick_length_counter(gb_apu *apu, APU_CHANNELS channel)
         }
 
         case CHANNEL_FOUR:
+        {
+            apu_noise_channel *chan = &apu->channel_four;
+
+            if (chan->length_timer_enable && chan->length_timer)
+            {
+                --chan->length_timer;
+
+                // channel is disabled when the timer runs out
+                if (!chan->length_timer)
+                    chan->enabled = false;
+            }
             break;
+        }
     }
 }
 
@@ -672,7 +806,35 @@ static void tick_volume(gb_apu *apu, APU_CHANNELS channel)
             break;
 
         case CHANNEL_FOUR:
+        {
+            apu_noise_channel *chan = &apu->channel_four;
+
+            // envelope period of zero disables volume sweeping
+            if (chan->env_period)
+            {
+                if (chan->env_period_timer)
+                    --chan->env_period_timer;
+
+                if (!chan->env_period_timer)
+                {
+                    chan->env_period_timer = chan->env_period;
+
+                    // increment/decrement volume if we're not
+                    // already at max/min volume
+                    if (chan->current_volume < 0xf
+                        && chan->env_incrementing)
+                    {
+                        ++chan->current_volume;
+                    }
+                    else if(chan->current_volume > 0
+                            && !chan->env_incrementing)
+                    {
+                        --chan->current_volume;
+                    }
+                }
+            }
             break;
+        }
     }
 }
 
@@ -749,7 +911,18 @@ static float get_channel_amplitude(gb_apu *apu, APU_CHANNELS channel)
         }
 
         case CHANNEL_FOUR:
+        {
+            apu_noise_channel *chan = &apu->channel_four;
+            if (chan->dac_enabled && chan->enabled)
+            {
+                float dac_input = ~chan->lfsr & 1;
+                dac_input *= chan->current_volume;
+
+                // dac_input is a value between 0 and 15, inclusive
+                dac_output = (dac_input / 7.5) - 1;
+            }
             break;
+        }
     }
 
     return dac_output;
@@ -843,6 +1016,7 @@ static void sample_audio(gb_apu *apu)
     float chan1_amplitude = get_channel_amplitude(apu, CHANNEL_ONE);
     float chan2_amplitude = get_channel_amplitude(apu, CHANNEL_TWO);
     float chan3_amplitude = get_channel_amplitude(apu, CHANNEL_THREE);
+    float chan4_amplitude = get_channel_amplitude(apu, CHANNEL_FOUR);
 
     /************ left output channel panning ************/
     if (apu->panning_info & 0x10)
@@ -854,6 +1028,9 @@ static void sample_audio(gb_apu *apu)
     if (apu->panning_info & 0x40)
         left_amplitude += chan3_amplitude;
 
+    if (apu->panning_info & 0x80)
+        left_amplitude += chan4_amplitude;
+
     /************ right output channel panning ************/
     if (apu->panning_info & 0x01)
         right_amplitude += chan1_amplitude;
@@ -863,6 +1040,9 @@ static void sample_audio(gb_apu *apu)
 
     if (apu->panning_info & 0x04)
         right_amplitude += chan3_amplitude;
+
+    if (apu->panning_info & 0x08)
+        right_amplitude += chan4_amplitude;
 
     // final output is average of all four channels
     // scaled by normalized stereo channel volume
