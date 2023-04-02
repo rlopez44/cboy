@@ -1044,10 +1044,15 @@ static void sample_audio(gb_apu *apu)
     if (apu->panning_info & 0x08)
         right_amplitude += chan4_amplitude;
 
-    // final output is average of all four channels
-    // scaled by normalized stereo channel volume
-    apu->sample_buffer[apu->num_samples++] = (apu->left_volume / 7.0)
+    /* Final output is average of all four channels
+     * scaled by normalized stereo channel volume.
+     * NOTE: a stereo channel volume of 0 is treated as
+     * a volume of 1/8 (i.e., very quiet) and a value of
+     * 7 is treated as a volume of 8/8 (no reduction).
+     * The stereo channels don't mute non-silent samples.
+     */
+    apu->sample_buffer[apu->num_samples++] = ((1 + apu->left_volume) / 8.0)
                                              * left_amplitude / 4;
-    apu->sample_buffer[apu->num_samples++] = (apu->right_volume / 7.0)
+    apu->sample_buffer[apu->num_samples++] = ((1 + apu->right_volume) / 8.0)
                                              * right_amplitude / 4;
 }
