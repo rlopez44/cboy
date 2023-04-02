@@ -74,7 +74,7 @@ typedef struct apu_pulse_channel {
     bool sweep_enabled;
     uint8_t sweep_period;
     uint8_t sweep_period_timer;
-    bool sweep_incrementing;
+    bool sweep_decrementing;
     uint8_t sweep_slope;
 
     bool enabled, dac_enabled;

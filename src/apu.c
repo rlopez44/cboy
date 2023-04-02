@@ -107,7 +107,8 @@ void apu_write(gameboy *gb, uint16_t address, uint8_t value)
         {
             apu_pulse_channel *chan = &apu->channel_one;
             chan->sweep_slope = value & 0x7;
-            chan->sweep_incrementing = (value >> 3) & 1;
+            // whether *frequency* is increasing (i.e., wavelength decreasing)
+            chan->sweep_decrementing = (value >> 3) & 1;
             chan->sweep_period = (value >> 4) & 0x7;
             chan->sweep_enabled = chan->sweep_period;
             break;
@@ -283,7 +284,7 @@ uint8_t apu_read(gameboy *gb, uint16_t address)
             apu_pulse_channel *chan = &apu->channel_one;
             value = 0x80
                     | (chan->sweep_period & 0x7) << 4
-                    | (chan->sweep_incrementing << 3)
+                    | (chan->sweep_decrementing << 3)
                     | (chan->sweep_slope & 0x7);
             break;
         }
@@ -446,7 +447,7 @@ static void init_pulse_channel(apu_pulse_channel *chan, APU_CHANNELS channelno)
             chan->sweep_enabled = false;
             chan->sweep_period = 0;
             chan->sweep_period_timer = chan->sweep_period;
-            chan->sweep_incrementing = false;
+            chan->sweep_decrementing = false;
             chan->sweep_slope = 0;
 
             chan->duty_number = channelno == CHANNEL_ONE ? 0x2 : 0;
@@ -527,10 +528,10 @@ static inline uint16_t sweep_frequency(apu_pulse_channel *chan)
     // L_{t+1} = L_{t} +- L_{t} / 2^{sweep_slope} (L_{t+1} can never underflow)
     uint16_t increment = chan->wavelength >> chan->sweep_slope;
     uint16_t new_wavelength = chan->wavelength;
-    if (chan->sweep_incrementing)
-        new_wavelength += increment;
-    else
+    if (chan->sweep_decrementing)
         new_wavelength -= increment;
+    else
+        new_wavelength += increment;
 
     return new_wavelength;
 }
