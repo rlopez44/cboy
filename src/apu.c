@@ -40,7 +40,7 @@ gb_apu *init_apu(void)
     apu->frame_seq_pos = 0;
     apu->clock = 0;
 
-    for (uint16_t i = 0; i < AUDIO_BUFFER_SIZE; ++i)
+    for (uint16_t i = 0; i < AUDIO_BUFFER_SAMPLE_SIZE; ++i)
         apu->sample_buffer[i] = 0;
 
     apu->num_samples = 0;
@@ -57,7 +57,7 @@ gb_apu *init_apu(void)
         .freq = AUDIO_SAMPLE_RATE,
         .format = AUDIO_F32SYS,
         .channels = NUM_CHANNELS,
-        .samples = AUDIO_BUFFER_SIZE / NUM_CHANNELS,
+        .samples = AUDIO_BUFFER_FRAME_SIZE,
         .callback = NULL,
         .userdata = NULL
     };
@@ -429,7 +429,7 @@ void run_apu(gameboy *gb, uint8_t num_clocks)
         }
 
         // audio buffer full, queue to audio device
-        if (gb->apu->num_samples == AUDIO_BUFFER_SIZE)
+        if (gb->apu->num_samples == AUDIO_BUFFER_SAMPLE_SIZE)
         {
             queue_audio(gb->apu);
             gb->apu->num_samples = 0;
@@ -956,7 +956,7 @@ static inline void queue_audio(gb_apu *apu)
 {
     SDL_QueueAudio(apu->audio_dev,
                    apu->sample_buffer,
-                   AUDIO_BUFFER_SIZE * sizeof(float));
+                   AUDIO_BUFFER_SAMPLE_SIZE * sizeof(float));
 }
 
 /* The frame sequencer ticks other components
