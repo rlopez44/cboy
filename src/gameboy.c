@@ -192,50 +192,50 @@ static bool init_screen(gameboy *gb)
  * is reset and the CPU's program counter is set to 0x00
  * (the boot ROM is mapped to the first 256 bytes of ROM bank 0).
  */
- static void maybe_load_bootrom(gameboy *gb, const char *bootrom)
- {
-    FILE *bootrom_file = fopen(bootrom, "rb");
-    if (bootrom_file == NULL)
-    {
-        LOG_ERROR("Unable to load the boot ROM (incorrect path?).\n");
-    }
-    else
-    {
-        size_t nbytes_read = fread(gb->boot_rom, sizeof(uint8_t), BOOT_ROM_SIZE, bootrom_file);
-        if (BOOT_ROM_SIZE != nbytes_read)
-        {
-            // either an I/O error occurred, or there weren't enough bytes in the file
-            if (ferror(bootrom_file))
-                LOG_ERROR("Unable to read from the boot ROM (I/O error).\n");
+static void maybe_load_bootrom(gameboy *gb, const char *bootrom)
+{
+   FILE *bootrom_file = fopen(bootrom, "rb");
+   if (bootrom_file == NULL)
+   {
+       LOG_ERROR("Unable to load the boot ROM (incorrect path?).\n");
+   }
+   else
+   {
+       size_t nbytes_read = fread(gb->boot_rom, sizeof(uint8_t), BOOT_ROM_SIZE, bootrom_file);
+       if (BOOT_ROM_SIZE != nbytes_read)
+       {
+           // either an I/O error occurred, or there weren't enough bytes in the file
+           if (ferror(bootrom_file))
+               LOG_ERROR("Unable to read from the boot ROM (I/O error).\n");
 
-            // the ROM was too small
-            LOG_ERROR("The specified boot ROM is only %zu "
-                    "bytes large (expected %d bytes).\n",
-                    nbytes_read,
-                    BOOT_ROM_SIZE);
-        }
-        else
-        {
-            // succeeded in reading in the boot ROM
-            gb->run_boot_rom = true;
-        }
+           // the ROM was too small
+           LOG_ERROR("The specified boot ROM is only %zu "
+                   "bytes large (expected %d bytes).\n",
+                   nbytes_read,
+                   BOOT_ROM_SIZE);
+       }
+       else
+       {
+           // succeeded in reading in the boot ROM
+           gb->run_boot_rom = true;
+       }
 
-        fclose(bootrom_file);
-    }
+       fclose(bootrom_file);
+   }
 
-    if (gb->run_boot_rom)
-    {
-        LOG_INFO("Boot ROM loaded successfully.\n\n");
-        // set the program counter to the beginning of the boot ROM
-        gb->cpu->reg->pc = 0x0000;
-    }
-    else
-    {
-        LOG_INFO("The emulator will continue without using a boot ROM.\n\n");
-        // disable the boot ROM
-        gb->memory->mmap[0xff50] = 1;
-    }
- }
+   if (gb->run_boot_rom)
+   {
+       LOG_INFO("Boot ROM loaded successfully.\n\n");
+       // set the program counter to the beginning of the boot ROM
+       gb->cpu->reg->pc = 0x0000;
+   }
+   else
+   {
+       LOG_INFO("The emulator will continue without using a boot ROM.\n\n");
+       // disable the boot ROM
+       gb->memory->mmap[0xff50] = 1;
+   }
+}
 
 /* Allocates memory for the Game Boy struct
  * and initializes the Game Boy and its components.
