@@ -38,9 +38,11 @@ typedef struct gameboy {
 
     bool is_stopped, dma_requested;
 
-    // to maintain the appropriate frame rate
-    uint64_t next_frame_time;
-    bool maintain_framerate_signal;
+    // so we can poll input once per frame
+    bool frame_presented_signal;
+
+    // we use sync-to-audio to maintain appropriate emulation speed
+    bool audio_sync_signal;
 
     /* The Game Boy's internal 16-bit clock counter.
      * The DIV register at memory address 0xff04 is

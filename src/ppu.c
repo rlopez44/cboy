@@ -778,7 +778,7 @@ void run_ppu(gameboy *gb, uint8_t num_clocks)
             display_frame(gb);
             gb->ppu->curr_frame_displayed = true;
             gb->ppu->window_line_counter = 0;
-            gb->maintain_framerate_signal = true;
+            gb->frame_presented_signal = true;
         }
 
         // check if we're done with the current scanline

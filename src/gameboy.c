@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <SDL_events.h>
+#include <SDL_audio.h>
 #include "cboy/gameboy.h"
 #include "cboy/memory.h"
 #include "cboy/cartridge.h"
@@ -261,10 +262,10 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom)
     gb->window = NULL;
     gb->renderer = NULL;
     gb->screen = NULL;
-    gb->next_frame_time = GB_FRAME_DURATION_MS;
-    gb->maintain_framerate_signal = false;
+    gb->frame_presented_signal = false;
     gb->run_boot_rom = false;
     gb->is_on = true; // the Game Boy is running
+    gb->audio_sync_signal = true;
 
     // allocate and init the joypad
     gb->joypad = init_joypad();
@@ -573,15 +574,18 @@ static inline void poll_input(gameboy *gb)
     }
 }
 
-// Pauses the emulator as needed after each frame is displayed
-// to maintain the appropriate Game Boy frame rate.
-static inline void maintain_framerate(gameboy *gb)
+// wait for half the audio buffer to be
+// consumed before resuming emulation
+static inline void throttle_emulation(gameboy *gb)
 {
-    uint64_t curr_time = SDL_GetTicks64();
-    if (curr_time < gb->next_frame_time)
-        SDL_Delay(gb->next_frame_time - curr_time);
-
-    gb->next_frame_time = SDL_GetTicks64() + GB_FRAME_DURATION_MS;
+    bool wait = true;
+    do
+    {
+        SDL_Delay(1);
+        SDL_LockAudioDevice(gb->apu->audio_dev);
+        wait = gb->apu->num_frames > AUDIO_BUFFER_FRAME_SIZE / 2;
+        SDL_UnlockAudioDevice(gb->apu->audio_dev);
+    } while (wait);
 }
 
 // run the emulator
@@ -622,12 +626,16 @@ void run_gameboy(gameboy *gb)
 
         run_ppu(gb, num_clocks);
 
-        // new frame was just displayed
-        if (gb->maintain_framerate_signal)
+        if (gb->frame_presented_signal)
         {
-            gb->maintain_framerate_signal = false;
+            gb->frame_presented_signal = false;
             poll_input(gb);
-            maintain_framerate(gb);
+        }
+
+        if (gb->audio_sync_signal)
+        {
+            gb->audio_sync_signal = false;
+            throttle_emulation(gb);
         }
     }
 }

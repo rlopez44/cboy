@@ -36,12 +36,13 @@
 #define NR51_REGISTER 0xff25
 #define NR52_REGISTER 0xff26
 
-#define NUM_CHANNELS             2 // 1 = mono, 2 = stereo
-#define AUDIO_BUFFER_FRAME_SIZE  512
+#define NUM_CHANNELS             2 /* stereo */
+/* nearest power of 2 >= number of audio frames per video frame @44.1 kHz */
+#define AUDIO_BUFFER_FRAME_SIZE  1024
 #define AUDIO_BUFFER_SAMPLE_SIZE (NUM_CHANNELS * AUDIO_BUFFER_FRAME_SIZE)
-#define AUDIO_SAMPLE_RATE        44100
+#define AUDIO_FRAME_RATE         44100
 #define GP_CPU_FREQUENCY         4194304
-#define T_CYCLES_PER_SAMPLE      ((uint16_t)(GP_CPU_FREQUENCY / AUDIO_SAMPLE_RATE))
+#define T_CYCLES_PER_SAMPLE      ((uint16_t)(GP_CPU_FREQUENCY / AUDIO_FRAME_RATE))
 
 /* number of bytes in wave RAM */
 #define WAVE_RAM_SIZE 16
@@ -132,8 +133,10 @@ typedef struct gb_apu {
     bool mix_vin_left;
     bool mix_vin_right;
 
+    // ring buffer for the audio stream
     float sample_buffer[AUDIO_BUFFER_SAMPLE_SIZE];
-    uint16_t num_samples;
+    uint16_t num_frames;
+    uint16_t frame_start, frame_end;
 
     uint8_t frame_seq_pos;
     uint16_t clock;

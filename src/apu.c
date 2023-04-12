@@ -17,11 +17,11 @@ static const uint8_t duty_cycles[4*8] = {
 static void init_pulse_channel(apu_pulse_channel *chan, APU_CHANNELS channelno);
 static void init_wave_channel(apu_wave_channel *chan);
 static void init_noise_channel(apu_noise_channel *chan);
-static void sample_audio(gb_apu *apu);
+static void sample_audio(gameboy *gb);
 static void tick_frame_sequencer(gb_apu *apu);
 static void trigger_channel(gb_apu *apu, APU_CHANNELS channel);
 
-static inline void queue_audio(gb_apu *apu);
+static void queue_audio(void *userdata, uint8_t *stream, int len);
 static inline void tick_channels(gb_apu *apu);
 
 gb_apu *init_apu(void)
@@ -40,10 +40,13 @@ gb_apu *init_apu(void)
     apu->frame_seq_pos = 0;
     apu->clock = 0;
 
+    // sample buffer initialized full of silence
     for (uint16_t i = 0; i < AUDIO_BUFFER_SAMPLE_SIZE; ++i)
         apu->sample_buffer[i] = 0;
 
-    apu->num_samples = 0;
+    apu->num_frames = AUDIO_BUFFER_FRAME_SIZE;
+    apu->frame_start = 0;
+    apu->frame_end = 0;
 
     init_pulse_channel(&apu->channel_one, CHANNEL_ONE);
     init_pulse_channel(&apu->channel_two, CHANNEL_TWO);
@@ -54,21 +57,24 @@ gb_apu *init_apu(void)
         goto init_error;
 
     SDL_AudioSpec desired_spec = {
-        .freq = AUDIO_SAMPLE_RATE,
+        .freq = AUDIO_FRAME_RATE,
         .format = AUDIO_F32SYS,
         .channels = NUM_CHANNELS,
         .samples = AUDIO_BUFFER_FRAME_SIZE,
-        .callback = NULL,
-        .userdata = NULL
+        .callback = queue_audio,
+        .userdata = apu
     };
 
-    apu->audio_dev = SDL_OpenAudioDevice(NULL, 0, &desired_spec, &apu->audio_spec, 0);
+    apu->audio_dev = SDL_OpenAudioDevice(NULL,
+                                         false,
+                                         &desired_spec,
+                                         &apu->audio_spec,
+                                         false);
 
     if (!apu->audio_dev)
         goto init_error;
 
-    queue_audio(apu);
-    SDL_PauseAudioDevice(apu->audio_dev, 0);
+    SDL_PauseAudioDevice(apu->audio_dev, false);
 
     return apu;
 
@@ -405,34 +411,29 @@ uint8_t apu_read(gameboy *gb, uint16_t address)
 
 void run_apu(gameboy *gb, uint8_t num_clocks)
 {
-    if (!gb->apu->enabled)
-        return;
-
     for (; num_clocks; --num_clocks)
     {
-        ++gb->apu->clock;
-        --gb->apu->sample_timer;
-        tick_channels(gb->apu);
-
-        // frame sequencer is ticked every 8192 T-cycles (512 Hz)
-        if (!(gb->apu->clock & 0x1fff))
+        // we only update channel states when the APU is on
+        if (gb->apu->enabled)
         {
-            gb->apu->clock = 0;
-            tick_frame_sequencer(gb->apu);
+            ++gb->apu->clock;
+            tick_channels(gb->apu);
+
+            // frame sequencer is ticked every 8192 T-cycles (512 Hz)
+            if (!(gb->apu->clock & 0x1fff))
+            {
+                gb->apu->clock = 0;
+                tick_frame_sequencer(gb->apu);
+            }
         }
 
-        // gather sample
+        // gather samples periodically, even when the APU is off
+        // because we need this to throttle emulation correctly
+        --gb->apu->sample_timer;
         if (!gb->apu->sample_timer)
         {
             gb->apu->sample_timer = T_CYCLES_PER_SAMPLE;
-            sample_audio(gb->apu);
-        }
-
-        // audio buffer full, queue to audio device
-        if (gb->apu->num_samples == AUDIO_BUFFER_SAMPLE_SIZE)
-        {
-            queue_audio(gb->apu);
-            gb->apu->num_samples = 0;
+            sample_audio(gb);
         }
     }
 }
@@ -952,11 +953,31 @@ static inline void tick_volumes(gb_apu *apu)
     tick_volume(apu, CHANNEL_FOUR);
 }
 
-static inline void queue_audio(gb_apu *apu)
+static void queue_audio(void *userdata, uint8_t *stream, int len)
 {
-    SDL_QueueAudio(apu->audio_dev,
-                   apu->sample_buffer,
-                   AUDIO_BUFFER_SAMPLE_SIZE * sizeof(float));
+    gb_apu *apu = (gb_apu *)userdata;
+    float *buff = (float *)stream;
+    int sample_len = len / sizeof(float);
+
+    // we use stereo audio, so LR sample pairs
+    // are pushed together for each audio frame
+    for (int i = 0; i < sample_len; i += NUM_CHANNELS)
+    {
+        if (!apu->num_frames)
+        {
+            // starved buffer, fill with silence
+            buff[i] = 0;
+            buff[i + 1] = 0;
+        }
+        else
+        {
+            buff[i] = apu->sample_buffer[NUM_CHANNELS*apu->frame_start];
+            buff[i + 1] = apu->sample_buffer[NUM_CHANNELS*apu->frame_start + 1];
+            ++apu->frame_start;
+            apu->frame_start %= AUDIO_BUFFER_FRAME_SIZE;
+            --apu->num_frames;
+        }
+    }
 }
 
 /* The frame sequencer ticks other components
@@ -1010,40 +1031,67 @@ static void tick_frame_sequencer(gb_apu *apu)
     apu->frame_seq_pos = (apu->frame_seq_pos + 1) & 0x7;
 }
 
-static void sample_audio(gb_apu *apu)
+// Push an LR stereo sample frame to the internal audio buffer
+static void push_audio_frame(gameboy *gb, float left, float right)
 {
+    gb_apu *apu = gb->apu;
+    SDL_LockAudioDevice(apu->audio_dev);
+
+    apu->sample_buffer[NUM_CHANNELS*apu->frame_end] = left;
+    apu->sample_buffer[NUM_CHANNELS*apu->frame_end + 1] = right;
+    ++apu->frame_end;
+    apu->frame_end %= AUDIO_BUFFER_FRAME_SIZE;
+
+    if (apu->num_frames < AUDIO_BUFFER_FRAME_SIZE)
+        ++apu->num_frames;
+
+    // audio buffer is full, signal to pause emulation until half consumed
+    gb->audio_sync_signal = apu->num_frames == AUDIO_BUFFER_FRAME_SIZE;
+
+    SDL_UnlockAudioDevice(apu->audio_dev);
+}
+
+static void sample_audio(gameboy *gb)
+{
+    gb_apu *apu = gb->apu;
+
     // left and right output amplitudes
     float left_amplitude = 0, right_amplitude = 0;
-    float chan1_amplitude = get_channel_amplitude(apu, CHANNEL_ONE);
-    float chan2_amplitude = get_channel_amplitude(apu, CHANNEL_TWO);
-    float chan3_amplitude = get_channel_amplitude(apu, CHANNEL_THREE);
-    float chan4_amplitude = get_channel_amplitude(apu, CHANNEL_FOUR);
 
-    /************ left output channel panning ************/
-    if (apu->panning_info & 0x10)
-        left_amplitude += chan1_amplitude;
+    // we write silence to the audio buffer when the APU is off
+    if (gb->apu->enabled)
+    {
+        float chan1_amplitude = get_channel_amplitude(apu, CHANNEL_ONE);
+        float chan2_amplitude = get_channel_amplitude(apu, CHANNEL_TWO);
+        float chan3_amplitude = get_channel_amplitude(apu, CHANNEL_THREE);
+        float chan4_amplitude = get_channel_amplitude(apu, CHANNEL_FOUR);
 
-    if (apu->panning_info & 0x20)
-        left_amplitude += chan2_amplitude;
+        /************ left output channel panning ************/
+        if (apu->panning_info & 0x10)
+            left_amplitude += chan1_amplitude;
 
-    if (apu->panning_info & 0x40)
-        left_amplitude += chan3_amplitude;
+        if (apu->panning_info & 0x20)
+            left_amplitude += chan2_amplitude;
 
-    if (apu->panning_info & 0x80)
-        left_amplitude += chan4_amplitude;
+        if (apu->panning_info & 0x40)
+            left_amplitude += chan3_amplitude;
 
-    /************ right output channel panning ************/
-    if (apu->panning_info & 0x01)
-        right_amplitude += chan1_amplitude;
+        if (apu->panning_info & 0x80)
+            left_amplitude += chan4_amplitude;
 
-    if (apu->panning_info & 0x02)
-        right_amplitude += chan2_amplitude;
+        /************ right output channel panning ************/
+        if (apu->panning_info & 0x01)
+            right_amplitude += chan1_amplitude;
 
-    if (apu->panning_info & 0x04)
-        right_amplitude += chan3_amplitude;
+        if (apu->panning_info & 0x02)
+            right_amplitude += chan2_amplitude;
 
-    if (apu->panning_info & 0x08)
-        right_amplitude += chan4_amplitude;
+        if (apu->panning_info & 0x04)
+            right_amplitude += chan3_amplitude;
+
+        if (apu->panning_info & 0x08)
+            right_amplitude += chan4_amplitude;
+    }
 
     /* Final output is average of all four channels
      * scaled by normalized stereo channel volume.
@@ -1052,8 +1100,8 @@ static void sample_audio(gb_apu *apu)
      * 7 is treated as a volume of 8/8 (no reduction).
      * The stereo channels don't mute non-silent samples.
      */
-    apu->sample_buffer[apu->num_samples++] = ((1 + apu->left_volume) / 8.0)
-                                             * left_amplitude / 4;
-    apu->sample_buffer[apu->num_samples++] = ((1 + apu->right_volume) / 8.0)
-                                             * right_amplitude / 4;
+    float left_sample  = ((1 + apu->left_volume) / 8.0) * left_amplitude / 4,
+          right_sample = ((1 + apu->right_volume) / 8.0) * right_amplitude / 4;
+
+    push_audio_frame(gb, left_sample, right_sample);
 }
