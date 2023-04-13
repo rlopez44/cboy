@@ -36,6 +36,9 @@
 #define NR51_REGISTER 0xff25
 #define NR52_REGISTER 0xff26
 
+/* so that "100% volume" isn't unbearably loud */
+#define BASE_VOLUME_SCALEDOWN_FACTOR 0.25
+
 #define NUM_CHANNELS             2 /* stereo */
 /* nearest power of 2 >= number of audio frames per video frame @44.1 kHz */
 #define AUDIO_BUFFER_FRAME_SIZE  1024

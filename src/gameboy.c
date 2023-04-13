@@ -18,6 +18,22 @@
 /* 3 seems like a good scale factor */
 #define WINDOW_SCALE 3
 
+void report_volume_level(gameboy *gb, bool add_newline)
+{
+    const char *fmt = "%s\rCurrent volume:%*s%d/100";
+    const char *lead = add_newline ? "\n" : "";
+    uint8_t spaces;
+    if (gb->volume_slider < 10)
+        spaces = 3;
+    else if (gb->volume_slider < 100)
+        spaces = 2;
+    else
+        spaces = 1;
+
+    LOG_INFO(fmt, lead, spaces, "", gb->volume_slider);
+    fflush(stdout);
+}
+
 // Stack pop and push operations
 void stack_push(gameboy *gb, uint16_t value)
 {
@@ -266,6 +282,7 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom)
     gb->run_boot_rom = false;
     gb->is_on = true; // the Game Boy is running
     gb->audio_sync_signal = true;
+    gb->volume_slider = 100;
 
     // allocate and init the joypad
     gb->joypad = init_joypad();

@@ -1034,6 +1034,11 @@ static void tick_frame_sequencer(gb_apu *apu)
 // Push an LR stereo sample frame to the internal audio buffer
 static void push_audio_frame(gameboy *gb, float left, float right)
 {
+    // APU samples are scaled by the Game Boy's volume
+    // slider and by our base volume scaledown factor
+    left  *= BASE_VOLUME_SCALEDOWN_FACTOR * gb->volume_slider / 100.;
+    right *= BASE_VOLUME_SCALEDOWN_FACTOR * gb->volume_slider / 100.;
+
     gb_apu *apu = gb->apu;
     SDL_LockAudioDevice(apu->audio_dev);
 

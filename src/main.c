@@ -78,6 +78,8 @@ int main(int argc, char *argv[])
 
     print_button_mappings();
 
+    report_volume_level(gb, true);
+
     run_gameboy(gb);
 
 #ifdef DEBUG
@@ -87,7 +89,7 @@ int main(int argc, char *argv[])
     save_cartridge_ram(gb->cart, romfile);
 
     // display the total number of frames rendered
-    LOG_INFO("\nFrames rendered: %" PRIu64 "\n", gb->ppu->frames_rendered);
+    LOG_INFO("\n\nFrames rendered: %" PRIu64 "\n", gb->ppu->frames_rendered);
 
     free_gameboy(gb);
     return 0;

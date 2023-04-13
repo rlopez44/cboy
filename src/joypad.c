@@ -62,22 +62,44 @@ uint8_t report_button_states(gameboy *gb, uint8_t joyp)
 // handle Game Boy key presses
 void handle_keypress(gameboy *gb, SDL_KeyboardEvent *key)
 {
+    SDL_Keycode keycode = key->keysym.sym;
+
     // when a button is pressed, its key
     // state will switch from High to Low
     bool key_pressed = key->type == SDL_KEYDOWN;
     bool bit_val = !key_pressed;
 
-    // special key, not actually GB button
-    if (key->keysym.sym == SDLK_c && key_pressed)
+    // special keys that aren't actually GB buttons
+    if (keycode == SDLK_c && key_pressed) // cycle display colors
     {
         bool cycle_forward = !(key->keysym.mod & KMOD_SHIFT);
         cycle_display_colors(&gb->ppu->colors, cycle_forward);
         return;
     }
+    else if (keycode == SDLK_EQUALS && key_pressed) // volume slider up
+    {
+        if (gb->volume_slider < 95)
+            gb->volume_slider += 5;
+        else
+            gb->volume_slider = 100;
+
+        report_volume_level(gb, false);
+        return;
+    }
+    else if (keycode == SDLK_MINUS && key_pressed) // volume slider down
+    {
+        if (gb->volume_slider > 5)
+            gb->volume_slider -= 5;
+        else
+            gb->volume_slider = 0;
+
+        report_volume_level(gb, false);
+        return;
+    }
 
     // determine bit mask and new bit value
     uint8_t mask, bit;
-    switch(key->keysym.sym)
+    switch(keycode)
     {
         case SDLK_s:
         case SDLK_RETURN:
@@ -106,7 +128,7 @@ void handle_keypress(gameboy *gb, SDL_KeyboardEvent *key)
 
     // handle button state change and Joypad interrupt (button selected and pressed)
     uint8_t joyp = gb->memory->mmap[JOYP_REGISTER];
-    switch (key->keysym.sym)
+    switch (keycode)
     {
         case SDLK_s:
         case SDLK_w:
@@ -134,6 +156,7 @@ void print_button_mappings(void)
              "Button Mappings\n"
              "---------------\n"
              "Cycle display palettes: <c>/<Shift-c>\n"
+             "Volume up/down: <Equals>/<Minus>\n"
              "B:      <j>\n"
              "A:      <k>\n"
              "Up:     <w>\n"

@@ -57,6 +57,8 @@ typedef struct gameboy {
      */
     uint16_t dma_counter;
 
+    uint8_t volume_slider;
+
     // our Game Boy screen
     SDL_Window *window;
     SDL_Renderer *renderer;
@@ -85,4 +87,7 @@ void increment_clock_counter(gameboy *gb, uint16_t num_clocks);
 
 // the emulator's game loop
 void run_gameboy(gameboy *gb);
+
+void report_volume_level(gameboy *gb, bool add_newline);
+
 #endif /* GAME_BOY_H */
