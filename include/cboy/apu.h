@@ -36,16 +36,22 @@
 #define NR51_REGISTER 0xff25
 #define NR52_REGISTER 0xff26
 
+#define GB_CPU_FREQUENCY 4194304
+
 /* so that "100% volume" isn't unbearably loud */
 #define BASE_VOLUME_SCALEDOWN_FACTOR 0.25
 
 #define NUM_CHANNELS             2 /* stereo */
+#define AUDIO_FRAME_RATE         44100
+#define T_CYCLES_PER_SAMPLE      (GB_CPU_FREQUENCY / AUDIO_FRAME_RATE)
+
 /* nearest power of 2 >= number of audio frames per video frame @44.1 kHz */
 #define AUDIO_BUFFER_FRAME_SIZE  1024
 #define AUDIO_BUFFER_SAMPLE_SIZE (NUM_CHANNELS * AUDIO_BUFFER_FRAME_SIZE)
-#define AUDIO_FRAME_RATE         44100
-#define GP_CPU_FREQUENCY         4194304
-#define T_CYCLES_PER_SAMPLE      ((uint16_t)(GP_CPU_FREQUENCY / AUDIO_FRAME_RATE))
+
+/* low pass filter constant \alpha = \delta t / \tau (\tau >> \delta t)*/
+#define NYQUIST_FREQUENCY        ((float)AUDIO_FRAME_RATE / 2)
+#define LOW_PASS_FILTER_CONST    (NYQUIST_FREQUENCY / (float)GB_CPU_FREQUENCY)
 
 /* number of bytes in wave RAM */
 #define WAVE_RAM_SIZE 16
@@ -140,6 +146,9 @@ typedef struct gb_apu {
     float sample_buffer[AUDIO_BUFFER_SAMPLE_SIZE];
     uint16_t num_frames;
     uint16_t frame_start, frame_end;
+
+    // for downsampling, one sample per channel
+    float curr_channel_samples[4];
 
     uint8_t frame_seq_pos;
     uint16_t clock;

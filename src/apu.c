@@ -40,6 +40,9 @@ gb_apu *init_apu(void)
     apu->frame_seq_pos = 0;
     apu->clock = 0;
 
+    for (uint8_t i = 0; i < 4; ++i)
+        apu->curr_channel_samples[i] = 0;
+
     // sample buffer initialized full of silence
     for (uint16_t i = 0; i < AUDIO_BUFFER_SAMPLE_SIZE; ++i)
         apu->sample_buffer[i] = 0;
@@ -427,14 +430,9 @@ void run_apu(gameboy *gb, uint8_t num_clocks)
             }
         }
 
-        // gather samples periodically, even when the APU is off
-        // because we need this to throttle emulation correctly
-        --gb->apu->sample_timer;
-        if (!gb->apu->sample_timer)
-        {
-            gb->apu->sample_timer = T_CYCLES_PER_SAMPLE;
-            sample_audio(gb);
-        }
+        // gather samples even when the APU is off because
+        // we need this to throttle emulation correctly
+        sample_audio(gb);
     }
 }
 
@@ -1032,70 +1030,38 @@ static void tick_frame_sequencer(gb_apu *apu)
 }
 
 // Push an LR stereo sample frame to the internal audio buffer
-static void push_audio_frame(gameboy *gb, float left, float right)
-{
-    // APU samples are scaled by the Game Boy's volume
-    // slider and by our base volume scaledown factor
-    left  *= BASE_VOLUME_SCALEDOWN_FACTOR * gb->volume_slider / 100.;
-    right *= BASE_VOLUME_SCALEDOWN_FACTOR * gb->volume_slider / 100.;
-
-    gb_apu *apu = gb->apu;
-    SDL_LockAudioDevice(apu->audio_dev);
-
-    apu->sample_buffer[NUM_CHANNELS*apu->frame_end] = left;
-    apu->sample_buffer[NUM_CHANNELS*apu->frame_end + 1] = right;
-    ++apu->frame_end;
-    apu->frame_end %= AUDIO_BUFFER_FRAME_SIZE;
-
-    if (apu->num_frames < AUDIO_BUFFER_FRAME_SIZE)
-        ++apu->num_frames;
-
-    // audio buffer is full, signal to pause emulation until half consumed
-    gb->audio_sync_signal = apu->num_frames == AUDIO_BUFFER_FRAME_SIZE;
-
-    SDL_UnlockAudioDevice(apu->audio_dev);
-}
-
-static void sample_audio(gameboy *gb)
+static void push_audio_frame(gameboy *gb)
 {
     gb_apu *apu = gb->apu;
-
-    // left and right output amplitudes
     float left_amplitude = 0, right_amplitude = 0;
 
-    // we write silence to the audio buffer when the APU is off
-    if (gb->apu->enabled)
+    if (apu->enabled)
     {
-        float chan1_amplitude = get_channel_amplitude(apu, CHANNEL_ONE);
-        float chan2_amplitude = get_channel_amplitude(apu, CHANNEL_TWO);
-        float chan3_amplitude = get_channel_amplitude(apu, CHANNEL_THREE);
-        float chan4_amplitude = get_channel_amplitude(apu, CHANNEL_FOUR);
-
         /************ left output channel panning ************/
         if (apu->panning_info & 0x10)
-            left_amplitude += chan1_amplitude;
+            left_amplitude += apu->curr_channel_samples[CHANNEL_ONE];
 
         if (apu->panning_info & 0x20)
-            left_amplitude += chan2_amplitude;
+            left_amplitude += apu->curr_channel_samples[CHANNEL_TWO];
 
         if (apu->panning_info & 0x40)
-            left_amplitude += chan3_amplitude;
+            left_amplitude += apu->curr_channel_samples[CHANNEL_THREE];
 
         if (apu->panning_info & 0x80)
-            left_amplitude += chan4_amplitude;
+            left_amplitude += apu->curr_channel_samples[CHANNEL_FOUR];
 
         /************ right output channel panning ************/
         if (apu->panning_info & 0x01)
-            right_amplitude += chan1_amplitude;
+            right_amplitude += apu->curr_channel_samples[CHANNEL_ONE];
 
         if (apu->panning_info & 0x02)
-            right_amplitude += chan2_amplitude;
+            right_amplitude += apu->curr_channel_samples[CHANNEL_TWO];
 
         if (apu->panning_info & 0x04)
-            right_amplitude += chan3_amplitude;
+            right_amplitude += apu->curr_channel_samples[CHANNEL_THREE];
 
         if (apu->panning_info & 0x08)
-            right_amplitude += chan4_amplitude;
+            right_amplitude += apu->curr_channel_samples[CHANNEL_FOUR];
     }
 
     /* Final output is average of all four channels
@@ -1108,5 +1074,60 @@ static void sample_audio(gameboy *gb)
     float left_sample  = ((1 + apu->left_volume) / 8.0) * left_amplitude / 4,
           right_sample = ((1 + apu->right_volume) / 8.0) * right_amplitude / 4;
 
-    push_audio_frame(gb, left_sample, right_sample);
+    // APU samples are scaled by the Game Boy's volume
+    // slider and by our base volume scaledown factor
+    left_sample  *= BASE_VOLUME_SCALEDOWN_FACTOR * gb->volume_slider / 100.;
+    right_sample *= BASE_VOLUME_SCALEDOWN_FACTOR * gb->volume_slider / 100.;
+
+    SDL_LockAudioDevice(apu->audio_dev);
+
+    apu->sample_buffer[NUM_CHANNELS*apu->frame_end] = left_sample;
+    apu->sample_buffer[NUM_CHANNELS*apu->frame_end + 1] = right_sample;
+    ++apu->frame_end;
+    apu->frame_end %= AUDIO_BUFFER_FRAME_SIZE;
+
+    if (apu->num_frames < AUDIO_BUFFER_FRAME_SIZE)
+        ++apu->num_frames;
+
+    // audio buffer is full, signal to pause emulation until half consumed
+    gb->audio_sync_signal = apu->num_frames == AUDIO_BUFFER_FRAME_SIZE;
+
+    SDL_UnlockAudioDevice(apu->audio_dev);
+}
+
+// Single-pole infinite impulse response low-pass filter.
+// See: https://www.embeddedrelated.com/showarticle/779.php
+static inline float low_pass_filter(float in, float prev_out)
+{
+    return prev_out + LOW_PASS_FILTER_CONST * (in - prev_out);
+}
+
+// sample at APU native rate so we can apply a low-pass filter
+// before downsampling to the audio device native rate
+static void sample_audio(gameboy *gb)
+{
+    gb_apu *apu = gb->apu;
+    --apu->sample_timer;
+
+    // we write silence to the audio buffer when the APU is off
+    float amplitudes[4] = {0};
+    if (gb->apu->enabled)
+    {
+        for (uint8_t i = 0; i < 4; ++i)
+            amplitudes[i] = get_channel_amplitude(apu, i);
+    }
+
+    float in, prev_out;
+    for (uint8_t i = 0; i < 4; ++i)
+    {
+        in = amplitudes[i];
+        prev_out = apu->curr_channel_samples[i];
+        apu->curr_channel_samples[i] = low_pass_filter(in, prev_out);
+    }
+
+    if (!apu->sample_timer)
+    {
+        apu->sample_timer = T_CYCLES_PER_SAMPLE;
+        push_audio_frame(gb);
+    }
 }
