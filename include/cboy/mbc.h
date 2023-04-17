@@ -41,6 +41,13 @@ typedef struct cartridge_mbc3 {
     uint8_t rom_bankno;
     uint8_t ram_or_rtc_select;
     uint8_t rtc_latch;
+
+    uint32_t rtc_tick_timer;
+    uint8_t rtc_latched_values[5];
+    uint8_t rtc_s, rtc_m, rtc_h;
+    uint16_t rtc_d;
+    bool rtc_halt;
+    bool day_carry;
 } cartridge_mbc3;
 
 typedef struct cartridge_mbc5 {
@@ -79,5 +86,13 @@ uint8_t cartridge_read(gameboy *gb, uint16_t address);
 
 /* Handle writes to cartridge ROM/RAM */
 void cartridge_write(gameboy *gb, uint16_t address, uint8_t value);
+
+/* MBC3 only: tick the RTC by the given number of clocks */
+void tick_rtc(gameboy *gb, uint8_t num_clocks);
+
+/* MBC3 only: update the RTC registers by the given number of seconds.
+ * Should only be used to update the RTC between emulator sessions.
+ */
+void fast_forward_rtc(cartridge_mbc3 *mbc, uint64_t num_seconds);
 
 #endif /* GB_MBC_H */

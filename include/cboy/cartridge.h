@@ -41,6 +41,8 @@ typedef struct gb_cartridge {
     uint16_t num_ram_banks, ram_bank_size;
     uint16_t ram_banks_bitsize;
 
+    bool has_rtc;
+
     /* the cartridge's MBC */
     MBC_TYPE mbc_type;
     cartridge_mbc *mbc;

@@ -15,6 +15,8 @@
 #define TMA_REGISTER 0xff06
 #define TAC_REGISTER 0xff07
 
+#define GB_CPU_FREQUENCY 4194304
+
 /* frame duration is 16.74 ms */
 #define GB_FRAME_DURATION_MS 17
 

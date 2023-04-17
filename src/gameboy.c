@@ -7,6 +7,7 @@
 #include <SDL_audio.h>
 #include "cboy/gameboy.h"
 #include "cboy/memory.h"
+#include "cboy/mbc.h"
 #include "cboy/cartridge.h"
 #include "cboy/ppu.h"
 #include "cboy/interrupts.h"
@@ -638,6 +639,9 @@ void run_gameboy(gameboy *gb)
         increment_clock_counter(gb, num_clocks);
 
         dma_transfer_check(gb, num_clocks);
+
+        if (gb->cart->has_rtc)
+            tick_rtc(gb, num_clocks);
 
         run_apu(gb, num_clocks);
 

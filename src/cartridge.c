@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "cboy/gameboy.h"
 #include "cboy/cartridge.h"
@@ -343,6 +344,26 @@ static uint16_t get_num_ram_banks(uint8_t ext_ram_size_kb)
     return ext_ram_size_kb / 8;
 }
 
+// Use byte 0x147 of the cartridge header to see if
+// the loaded cartridge has a Real Time Clock.
+static bool detect_rtc_support(uint8_t *rom0)
+{
+    bool has_rtc;
+    switch (rom0[0x147])
+    {
+        case 0x0f:
+        case 0x10:
+            has_rtc = true;
+            break;
+
+        default:
+            has_rtc = false;
+            break;
+    }
+
+    return has_rtc;
+}
+
 /* Loads the ROM file into the cartridge passed in.
  * Assumes the cartridge has already been initialized
  * by init_cartridge.
@@ -375,6 +396,8 @@ ROM_LOAD_STATUS load_rom(gb_cartridge *cart, FILE *rom_file)
 
     // get the MBC type from the ROM header
     cart->mbc_type = get_mbc_type(rom_bank_buffer);
+
+    cart->has_rtc = detect_rtc_support(rom_bank_buffer);
 
     // we now know which MBC type to initialize
     init_mbc(cart->mbc_type, cart->mbc);
@@ -532,7 +555,7 @@ static char *get_ramsav_filename(const char *romfile)
 
 void maybe_import_cartridge_ram(gb_cartridge *cart, const char *romfile)
 {
-    if (!cart->num_ram_banks)
+    if (!cart->num_ram_banks && !cart->has_rtc)
         return;
 
     char *filepath = get_ramsav_filename(romfile);
@@ -552,25 +575,63 @@ void maybe_import_cartridge_ram(gb_cartridge *cart, const char *romfile)
                            ramfile);
 
         if (bytes_read != cart->ram_bank_size)
-            goto write_error;
+            goto read_error;
+    }
+
+    // see `save_cartridge_ram()` for format info
+    if (cart->has_rtc)
+    {
+        cartridge_mbc3 *mbc = &cart->mbc->mbc3;
+        uint64_t snapshot_time = 0;
+        uint8_t rtc_data[48];
+
+        bytes_read = fread(rtc_data, 1, sizeof rtc_data, ramfile);
+
+        if (bytes_read != sizeof rtc_data)
+            goto read_error;
+
+        // internal RTC registers
+        mbc->rtc_s = rtc_data[0];
+        mbc->rtc_m = rtc_data[4];
+        mbc->rtc_h = rtc_data[8];
+        mbc->rtc_d = rtc_data[12];
+        mbc->rtc_d |= (rtc_data[16] & 1) << 8;
+        mbc->day_carry = (rtc_data[16] >> 7) & 1;
+        mbc->rtc_halt = (rtc_data[16] >> 6) & 1;
+
+        // latched RTC registers
+        for (uint8_t i = 0; i < 5; ++i)
+            mbc->rtc_latched_values[i] = rtc_data[20 + 4*i];
+
+        // timestamp
+        for (uint8_t i = 0; i < 8; ++i)
+            snapshot_time |= rtc_data[40 + i] << (8 * i);
+
+        // tick the RTC registers to get them up to date
+        uint64_t seconds_elapsed = (uint64_t)time(NULL) - snapshot_time;
+        fast_forward_rtc(mbc, seconds_elapsed);
     }
 
     fclose(ramfile);
     free(filepath);
     return;
 
-write_error:
+read_error:
     fclose(ramfile);
 fopen_error:
     free(filepath);
 mem_error:
     for (int i = 0; i < cart->num_ram_banks; ++i)
         memset(cart->ram_banks[i], 0, cart->ram_bank_size);
+
+    // we didn't fully read the RTC data, so reset the MBC
+    if (cart->has_rtc)
+        init_mbc(cart->mbc_type, cart->mbc);
 }
 
 void save_cartridge_ram(gb_cartridge *cart, const char *romfile)
 {
-    if (!cart->num_ram_banks)
+    if (!cart->num_ram_banks && !cart->has_rtc)
         return;
 
     char *savepath = get_ramsav_filename(romfile);
@@ -593,12 +654,48 @@ void save_cartridge_ram(gb_cartridge *cart, const char *romfile)
             goto write_error;
     }
 
+    // If the cartridge has an RTC, we append RTC info to the save
+    // file following: https://bgb.bircd.org/rtcsave.html.
+    // The registers are one byte in size, but are stored in the save file
+    // as 4 byte little endian data with appropriate zero padding.
+    if (cart->has_rtc)
+    {
+        cartridge_mbc3 *mbc = &cart->mbc->mbc3;
+        uint64_t curr_time = time(NULL);
+        uint8_t rtc_data[48] = {0};
+
+        // internal RTC registers
+        rtc_data[0]  = mbc->rtc_s;
+        rtc_data[4]  = mbc->rtc_m;
+        rtc_data[8]  = mbc->rtc_h;
+        rtc_data[12] = mbc->rtc_d & 0xff;
+        rtc_data[16] = mbc->day_carry << 7
+                       | mbc->rtc_halt << 6
+                       | ((mbc->rtc_d >> 8) & 1);
+
+        // latched RTC registers
+        for (uint8_t i = 0; i < 5; ++i)
+            rtc_data[20 + 4*i] = mbc->rtc_latched_values[i];
+
+        // timestamp
+        for (uint8_t i = 0; i < 8; ++i)
+        {
+            rtc_data[40 + i] = curr_time & 0xff;
+            curr_time >>= 8;
+        }
+        bytes_written = fwrite(rtc_data, 1, sizeof rtc_data, savefile);
+
+        if (bytes_written != sizeof rtc_data)
+            goto write_error;
+    }
+
     free(savepath);
     fclose(savefile);
     return;
 
 write_error:
     fclose(savefile);
+    remove(savepath);
 fopen_error:
     free(savepath);
 mem_error:

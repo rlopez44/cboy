@@ -105,7 +105,18 @@ void init_mbc(MBC_TYPE mbc_type, cartridge_mbc *mbc)
             mbc->mbc3.ram_and_rtc_enabled = false;
             mbc->mbc3.rom_bankno = 0;
             mbc->mbc3.ram_or_rtc_select = 0;
-            mbc->mbc3.rtc_latch = 0;
+            mbc->mbc3.rtc_latch = 1;
+            mbc->mbc3.rtc_tick_timer = GB_CPU_FREQUENCY;
+
+            for (uint8_t i = 0; i < 5; ++i)
+                mbc->mbc3.rtc_latched_values[i] = 0xff;
+
+            mbc->mbc3.rtc_s = 0;
+            mbc->mbc3.rtc_m = 0;
+            mbc->mbc3.rtc_h = 0;
+            mbc->mbc3.rtc_d = 0;
+            mbc->mbc3.rtc_halt = false;
+            mbc->mbc3.day_carry = false;
             break;
 
         case MBC5:

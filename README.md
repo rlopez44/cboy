@@ -42,7 +42,7 @@ the POSIX `getopt` function is used for command line options processing.
 CBoy currently supports the following Memory Bank Controllers:
 * No MBC
 * MBC1 (except for MBC1M)
-* MBC3 (no RTC)
+* MBC3 (including RTC)
 * MBC5 (no rumble)
 
 # Test ROM Coverage
@@ -77,3 +77,4 @@ The emulator currently passes the following test ROMS.
 * [The `GiiBiiAdvance` GB, GBC, and GBA emulator](https://github.com/AntonioND/giibiiadvance)
 * [Game Boy: Complete Technical Reference](https://gekkio.fi/files/gb-docs/gbctr.pdf)
 * [*Game Boy Sound Emulation*](https://nightshade256.github.io/2021/03/27/gb-sound-emulation.html)
+* [Gameboy Emulator Development Guide](https://github.com/Hacktix/GBEDG)
