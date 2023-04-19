@@ -1081,15 +1081,18 @@ static void push_audio_frame(gameboy *gb)
 
     SDL_LockAudioDevice(apu->audio_dev);
 
-    apu->sample_buffer[NUM_CHANNELS*apu->frame_end] = left_sample;
-    apu->sample_buffer[NUM_CHANNELS*apu->frame_end + 1] = right_sample;
-    ++apu->frame_end;
-    apu->frame_end %= AUDIO_BUFFER_FRAME_SIZE;
-
+    // drop samples when the audio buffer is full
+    // (only needed when the FPS limiter is off)
     if (apu->num_frames < AUDIO_BUFFER_FRAME_SIZE)
+    {
+        apu->sample_buffer[NUM_CHANNELS*apu->frame_end] = left_sample;
+        apu->sample_buffer[NUM_CHANNELS*apu->frame_end + 1] = right_sample;
+        ++apu->frame_end;
+        apu->frame_end %= AUDIO_BUFFER_FRAME_SIZE;
         ++apu->num_frames;
+    }
 
-    // audio buffer is full, signal to pause emulation until half consumed
+    // audio buffer is full, signal to throttle emulation
     gb->audio_sync_signal = apu->num_frames == AUDIO_BUFFER_FRAME_SIZE;
 
     SDL_UnlockAudioDevice(apu->audio_dev);

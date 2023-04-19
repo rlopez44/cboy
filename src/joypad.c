@@ -96,6 +96,11 @@ void handle_keypress(gameboy *gb, SDL_KeyboardEvent *key)
         report_volume_level(gb, false);
         return;
     }
+    else if (keycode == SDLK_TAB && key_pressed) // toggle FPS throttle
+    {
+        gb->throttle_fps = !gb->throttle_fps;
+        return;
+    }
 
     // determine bit mask and new bit value
     uint8_t mask, bit;
@@ -157,6 +162,7 @@ void print_button_mappings(void)
              "---------------\n"
              "Cycle display palettes: <c>/<Shift-c>\n"
              "Volume up/down: <Equals>/<Minus>\n"
+             "Toggle FPS throttle: <Tab>\n"
              "B:      <j>\n"
              "A:      <k>\n"
              "Up:     <w>\n"

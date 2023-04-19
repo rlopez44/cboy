@@ -284,6 +284,7 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom)
     gb->is_on = true; // the Game Boy is running
     gb->audio_sync_signal = true;
     gb->volume_slider = 100;
+    gb->throttle_fps = true;
 
     // allocate and init the joypad
     gb->joypad = init_joypad();
@@ -656,7 +657,8 @@ void run_gameboy(gameboy *gb)
         if (gb->audio_sync_signal)
         {
             gb->audio_sync_signal = false;
-            throttle_emulation(gb);
+            if (gb->throttle_fps)
+                throttle_emulation(gb);
         }
     }
 }

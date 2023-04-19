@@ -46,6 +46,8 @@ typedef struct gameboy {
     // we use sync-to-audio to maintain appropriate emulation speed
     bool audio_sync_signal;
 
+    bool throttle_fps;
+
     /* The Game Boy's internal 16-bit clock counter.
      * The DIV register at memory address 0xff04 is
      * really the upper byte of this counter mapped
