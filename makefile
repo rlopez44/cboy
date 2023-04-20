@@ -14,15 +14,23 @@ vpath %.c src/ src/instructions/ src/mbcs/
 # list of all our source files without directories
 SRC = $(notdir $(wildcard src/*.c) $(wildcard src/instructions/*.c) $(wildcard src/mbcs/*.c))
 
-# list of object file names for debug and regular builds
+# list of object file names for debug, profiling, and release builds
 OBJS = $(patsubst %.c, $(OBJ_DIR)/%.o, $(SRC))
 PROFILE_OBJS = $(patsubst %.c, $(OBJ_DIR)/$(PROFILE_DIR)/%.o, $(SRC))
 DEBUG_OBJS = $(patsubst %.c, $(OBJ_DIR)/$(DEBUG_DIR)/%.o, $(SRC))
 
-all: CFLAGS += -O3 -flto
+# file dependencies for debug, profiling, and release builds
+# these will be created by gcc when compiling object files
+DEPENDS = $(patsubst %.o, %.d, $(OBJS))
+PROFILE_DEPENDS = $(patsubst %.o, %.d, $(PROFILE_OBJS))
+DEBUG_DEPENDS = $(patsubst %.o, %.d, $(DEBUG_OBJS))
+
+.PHONY: all profile debug clean full-clean
+
+all: CFLAGS += -O3 -flto=auto
 all: $(BIN_DIR)/$(BIN)
 
-profile: CFLAGS += -O3 -flto -pg
+profile: CFLAGS += -O3 -flto=auto -pg
 profile: $(BIN_DIR)/$(PROFILE_DIR)/$(BIN)
 
 debug: CFLAGS += -g -DDEBUG
@@ -46,10 +54,12 @@ $(BIN_DIR)/$(PROFILE_DIR)/$(BIN): $(PROFILE_OBJS) | $(BIN_DIR)/$(PROFILE_DIR)
 $(BIN_DIR)/$(DEBUG_DIR)/$(BIN): $(DEBUG_OBJS) | $(BIN_DIR)/$(DEBUG_DIR)
 	$(CC) $(CFLAGS) $^ $(LDLIBS) -o $@
 
-# object files
+-include $(DEPENDS) $(PROFILE_DEPENDS) $(DEBUG_DEPENDS)
+
+# object files (plus dependency files from -MMD -MP)
 .SECONDEXPANSION:
-%.o: $$(*F).c | $$(@D)
-	$(CC) $(CFLAGS) -c $< -o $@
+%.o: $$(*F).c makefile | $$(@D)
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 # clean object files directory
 clean:
