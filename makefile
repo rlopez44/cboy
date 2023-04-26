@@ -6,6 +6,7 @@ OBJ_DIR = obj
 BIN_DIR = bin
 PROFILE_DIR = profile
 DEBUG_DIR = debug
+INSTALL_DIR = /usr/local/bin
 BIN = cboy
 
 # so we can reference all our source files without directories
@@ -25,7 +26,7 @@ DEPENDS = $(patsubst %.o, %.d, $(OBJS))
 PROFILE_DEPENDS = $(patsubst %.o, %.d, $(PROFILE_OBJS))
 DEBUG_DEPENDS = $(patsubst %.o, %.d, $(DEBUG_OBJS))
 
-.PHONY: all profile debug clean full-clean
+.PHONY: all profile debug install clean full-clean
 
 all: CFLAGS += -O3 -flto=auto
 all: $(BIN_DIR)/$(BIN)
@@ -68,3 +69,6 @@ clean:
 # clean object files and binary directories
 full-clean: clean
 	rm -rf $(BIN_DIR)/
+
+install:
+	cp $(BIN_DIR)/$(BIN) $(INSTALL_DIR)
