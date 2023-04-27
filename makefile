@@ -70,5 +70,5 @@ clean:
 full-clean: clean
 	rm -rf $(BIN_DIR)/
 
-install:
+install: all
 	cp $(BIN_DIR)/$(BIN) $(INSTALL_DIR)

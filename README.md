@@ -33,6 +33,11 @@ To clean up object files used in prior compilations, run `make clean`.
 To clean up both object files and the emulator from prior compilations,
 run `make full-clean`.
 
+# Installation
+To make the emulator accessible in your `$PATH`, run `sudo make install`.
+This will compile the release build of the emulator and copy it into
+`/usr/local/bin`.
+
 # Notes
 Currently, the emulator can't be run on Windows because the debug mode
 memory dumping functionality writes to the `/tmp/` directory and because
