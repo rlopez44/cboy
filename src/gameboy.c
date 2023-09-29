@@ -212,47 +212,70 @@ static bool init_screen(gameboy *gb)
  */
 static void maybe_load_bootrom(gameboy *gb, const char *bootrom)
 {
-   FILE *bootrom_file = fopen(bootrom, "rb");
-   if (bootrom_file == NULL)
-   {
-       LOG_ERROR("Unable to load the boot ROM (incorrect path?).\n");
-   }
-   else
-   {
-       size_t nbytes_read = fread(gb->boot_rom, sizeof(uint8_t), BOOT_ROM_SIZE, bootrom_file);
-       if (BOOT_ROM_SIZE != nbytes_read)
-       {
-           // either an I/O error occurred, or there weren't enough bytes in the file
-           if (ferror(bootrom_file))
-               LOG_ERROR("Unable to read from the boot ROM (I/O error).\n");
+    if (gb->run_mode == GB_CGB_MODE)
+    {
+        LOG_INFO("Note: boot ROM playback not yet supported for GBC games. Skipping...\n\n");
+        return;
+    }
 
-           // the ROM was too small
-           LOG_ERROR("The specified boot ROM is only %zu "
-                   "bytes large (expected %d bytes).\n",
-                   nbytes_read,
-                   BOOT_ROM_SIZE);
-       }
-       else
-       {
-           // succeeded in reading in the boot ROM
-           gb->run_boot_rom = true;
-       }
+    FILE *bootrom_file = fopen(bootrom, "rb");
+    if (bootrom_file == NULL)
+    {
+        LOG_ERROR("Unable to load the boot ROM (incorrect path?).\n");
+    }
+    else
+    {
+        size_t nbytes_read = fread(gb->boot_rom, sizeof(uint8_t), BOOT_ROM_SIZE, bootrom_file);
+        if (BOOT_ROM_SIZE != nbytes_read)
+        {
+            // either an I/O error occurred, or there weren't enough bytes in the file
+            if (ferror(bootrom_file))
+                LOG_ERROR("Unable to read from the boot ROM (I/O error).\n");
 
-       fclose(bootrom_file);
-   }
+            // the ROM was too small
+            LOG_ERROR("The specified boot ROM is only %zu "
+                    "bytes large (expected %d bytes).\n",
+                    nbytes_read,
+                    BOOT_ROM_SIZE);
+        }
+        else
+        {
+            // succeeded in reading in the boot ROM
+            gb->run_boot_rom = true;
+        }
 
-   if (gb->run_boot_rom)
-   {
-       LOG_INFO("Boot ROM loaded successfully.\n\n");
-       // set the program counter to the beginning of the boot ROM
-       gb->cpu->reg->pc = 0x0000;
-   }
-   else
-   {
-       LOG_INFO("The emulator will continue without using a boot ROM.\n\n");
-       // disable the boot ROM
-       gb->memory->mmap[0xff50] = 1;
-   }
+        fclose(bootrom_file);
+    }
+
+    if (gb->run_boot_rom)
+    {
+        LOG_INFO("Boot ROM loaded successfully.\n\n");
+        // set the program counter to the beginning of the boot ROM
+        gb->cpu->reg->pc = 0x0000;
+    }
+    else
+    {
+        LOG_INFO("The emulator will continue without using a boot ROM.\n\n");
+        // disable the boot ROM
+        gb->memory->mmap[0xff50] = 1;
+    }
+}
+
+// Determine whether to run in DMG or CGB mode
+static void determine_and_report_run_mode(gameboy *gb)
+{
+    switch (gb->cart->rom_banks[0][0x143] & 0xbf) // hardware ignores bit 6
+    {
+        case 0x80:
+            gb->run_mode = GB_CGB_MODE;
+            LOG_INFO("GB Mode: Game Boy Color\n");
+            break;
+
+        default:
+            gb->run_mode = GB_DMG_MODE;
+            LOG_INFO("GB Mode: monochrome Game Boy\n");
+            break;
+    }
 }
 
 /* Allocates memory for the Game Boy struct
@@ -285,6 +308,7 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom)
     gb->audio_sync_signal = true;
     gb->volume_slider = 100;
     gb->throttle_fps = true;
+    gb->run_mode = GB_DMG_MODE; // updated once game ROM is read in
 
     // allocate and init the joypad
     gb->joypad = init_joypad();
@@ -363,6 +387,8 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom)
         free(gb);
         return NULL;
     }
+
+    determine_and_report_run_mode(gb);
 
     maybe_import_cartridge_ram(gb->cart, rom_file_path);
 

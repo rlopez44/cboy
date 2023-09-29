@@ -23,6 +23,11 @@
 /* boot ROM size in bytes */
 #define BOOT_ROM_SIZE 256
 
+enum GAMEBOY_MODE {
+    GB_DMG_MODE,
+    GB_CGB_MODE,
+};
+
 typedef struct gameboy {
     gb_cpu *cpu;
     gb_memory *memory;
@@ -33,6 +38,8 @@ typedef struct gameboy {
 
     // if the Game Boy is still on
     bool is_on;
+
+    enum GAMEBOY_MODE run_mode;
 
     // Game Boy boot ROM, if passed into the emulator
     uint8_t boot_rom[BOOT_ROM_SIZE];
