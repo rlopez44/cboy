@@ -25,22 +25,21 @@ static uint16_t count_bits(uint16_t n)
 /* free the allocated memory for the cartridge struct */
 void unload_cartridge(gb_cartridge *cart)
 {
-    // free the ROM banks
-    for (int i = 0; i < cart->num_rom_banks; ++i)
-    {
-        free(cart->rom_banks[i]);
-    }
+    if (!cart)
+        return;
 
-    // free the ROM banks array
+    // free the ROM banks
+    if (cart->rom_banks)
+        for (int i = 0; i < cart->num_rom_banks; ++i)
+            free(cart->rom_banks[i]);
+
     free(cart->rom_banks);
 
     // free the RAM banks, if any
-    for (int i = 0; i < cart->num_ram_banks; ++i)
-    {
-        free(cart->ram_banks[i]);
-    }
+    if (cart->ram_banks)
+        for (int i = 0; i < cart->num_ram_banks; ++i)
+            free(cart->ram_banks[i]);
 
-    // free the RAM banks array, if any
     free(cart->ram_banks);
 
     // free the MBC, if any
@@ -87,102 +86,18 @@ static ROM_LOAD_STATUS load_rom_bank(uint8_t *buffer, FILE *rom_file)
 
 gb_cartridge *init_cartridge(void)
 {
-    gb_cartridge *cart = malloc(sizeof(gb_cartridge));
+    gb_cartridge *cart = calloc(1, sizeof(gb_cartridge));
 
-    // cartridge allocation failed
     if (cart == NULL)
-    {
         return NULL;
-    }
 
-    // allocate the memory bank controller
     cart->mbc = malloc(sizeof(cartridge_mbc));
     if (cart->mbc == NULL)
     {
-        free(cart);
-        return NULL;
-    }
-
-    // allocate the ROM and RAM banks array
-    cart->rom_banks = malloc(MAX_ROM_BANKS * sizeof(uint8_t *));
-    cart->ram_banks = malloc(MAX_RAM_BANKS * sizeof(uint8_t *));
-
-    // allocation failed for ROM and/or RAM banks array
-    if (cart->rom_banks == NULL || cart->ram_banks == NULL)
-    {
-        free(cart->rom_banks);
-        free(cart->ram_banks);
-        free(cart->mbc);
-        free(cart);
-        return NULL;
-    }
-
-    // allocate the ROM banks and initialize values to zero
-    int num_alloced_banks = 0;
-    for (int i = 0; i < MAX_ROM_BANKS; ++i)
-    {
-        cart->rom_banks[i] = calloc(ROM_BANK_SIZE, sizeof(uint8_t));
-
-        // ROM bank allocation failed
-        if (cart->rom_banks[i] == NULL)
-        {
-            break;
-        }
-
-        // bank successfully allocated
-        ++num_alloced_banks;
-    }
-
-    // one (or more) ROM banks failed to be allocated
-    if (num_alloced_banks < MAX_ROM_BANKS)
-    {
-        // free the successfully alloced banks
-        for (int i = 0; i < num_alloced_banks; ++i)
-        {
-            free(cart->rom_banks[i]);
-        }
-
-        free(cart->rom_banks);
-        free(cart->ram_banks);
-        free(cart->mbc);
-        free(cart);
-        return NULL;
-    }
-    // ROM banks allocation successful
-    cart->num_rom_banks = MAX_ROM_BANKS;
-
-    /* Allocate the RAM banks and initialize value to zero.
-     * We allocate MAX_RAM_BANKS banks of size 8KB each.
-     * When the ROM file is being loaded, the number of
-     * banks and bank size will need to be adjusted
-     * according to the ROM's specification.
-     */
-    num_alloced_banks = 0;
-    for (int i = 0; i < MAX_RAM_BANKS; ++i)
-    {
-        cart->ram_banks[i] = calloc(8 * KB, sizeof(uint8_t));
-
-        // RAM bank allocation failed
-        if (cart->ram_banks[i] == NULL)
-        {
-            break;
-        }
-
-        // bank successfully allocated
-        ++num_alloced_banks;
-    }
-
-    // one (or more) RAM banks failed to be allocated
-    if (num_alloced_banks < MAX_RAM_BANKS)
-    {
-        cart->num_ram_banks = num_alloced_banks;
         unload_cartridge(cart);
         return NULL;
     }
 
-    // all allocations were successful
-    cart->num_ram_banks = MAX_RAM_BANKS;
-    cart->ram_bank_size = 8 * KB;
     return cart;
 }
 
@@ -300,48 +215,46 @@ static MBC_TYPE get_mbc_type(uint8_t *rom0)
     return mbc;
 }
 
-/* determine the external RAM size in KB */
-static int16_t get_ext_ram_size(uint8_t *rom0)
+/* determine the external RAM size */
+static int get_ext_ram_size(uint8_t *rom0)
 {
     // byte 0x149 tells us the external RAM size
-    int16_t ram_size_kb;
+    int ram_size;
     switch (rom0[0x149])
     {
         case 0x00:
-            ram_size_kb = 0;
+            ram_size = 0;
             break;
         case 0x01:
-            ram_size_kb = 2;
+            ram_size = 2*KB;
             break;
         case 0x02:
-            ram_size_kb = 8;
+            ram_size = 8*KB;
             break;
         case 0x03:
-            ram_size_kb = 32;
+            ram_size = 32*KB;
             break;
         case 0x04:
-            ram_size_kb = 128;
+            ram_size = 128*KB;
             break;
         case 0x05:
-            ram_size_kb = 64;
+            ram_size = 64*KB;
             break;
         default: // invalid byte
-            ram_size_kb = -1;
+            ram_size = -1;
             break;
     }
-    return ram_size_kb;
+    return ram_size;
 }
 
 /* determine the number of RAM banks in the cartridge */
-static uint16_t get_num_ram_banks(uint8_t ext_ram_size_kb)
+static uint16_t get_num_ram_banks(int ext_ram_size)
 {
     // special case of one partial RAM bank of size 2 KB (rather than full 8 KB)
-    if (ext_ram_size_kb == 2)
-    {
+    if (ext_ram_size == 2*KB)
         return 1;
-    }
 
-    return ext_ram_size_kb / 8;
+    return ext_ram_size / (8 * KB);
 }
 
 // Use byte 0x147 of the cartridge header to see if
@@ -364,6 +277,53 @@ static bool detect_rtc_support(uint8_t *rom0)
     return has_rtc;
 }
 
+// Allocates banks for ROM and RAM.
+static ROM_LOAD_STATUS init_banks(gb_cartridge *cart, int n_rombanks, int n_rambanks)
+{
+    cart->num_rom_banks = 0;
+    cart->num_ram_banks = 0;
+
+    cart->rom_banks = calloc(n_rombanks, sizeof(uint8_t *));
+    if (!cart->rom_banks)
+        return ROM_LOAD_ERROR;
+
+    for (int i = 0; i < n_rombanks; ++i)
+    {
+        cart->rom_banks[i] = calloc(ROM_BANK_SIZE, 1);
+        if (!cart->rom_banks[i])
+            return ROM_LOAD_ERROR;
+
+        ++cart->num_rom_banks;
+    }
+
+    cart->ram_banks = NULL;
+    if (n_rambanks)
+        cart->ram_banks = calloc(n_rambanks, sizeof(uint8_t *));
+
+    // it's possible for a cartridge to have no RAM
+    if (!cart->ram_banks && n_rambanks)
+        return ROM_LOAD_ERROR;
+
+    for (int i = 0; i < n_rambanks; ++i)
+    {
+        cart->ram_banks[i] = calloc(cart->ram_bank_size, 1);
+        if (!cart->ram_banks[i])
+            return ROM_LOAD_ERROR;
+
+        ++cart->num_ram_banks;
+    }
+
+    // used by the MBC for ROM/RAM addressing (0..num_banks - 1)
+    cart->rom_banks_bitsize = cart->num_rom_banks
+                              ? count_bits(cart->num_rom_banks - 1)
+                              : 0;
+    cart->ram_banks_bitsize = cart->num_ram_banks
+                              ? count_bits(cart->num_ram_banks - 1)
+                              : 0;
+
+    return ROM_LOAD_SUCCESS;
+}
+
 /* Loads the ROM file into the cartridge passed in.
  * Assumes the cartridge has already been initialized
  * by init_cartridge.
@@ -377,152 +337,46 @@ ROM_LOAD_STATUS load_rom(gb_cartridge *cart, FILE *rom_file)
     uint8_t rom_bank_buffer[ROM_BANK_SIZE] = {0};
 
     /* The first 16 KB (2^14 bytes) are guaranteed
-     * to be present in the ROM, since this is
-     * the zeroth ROM bank. The cartridge header
-     * is located here, and we will use its
-     * information to determine the total ROM size,
-     * allowing us to load the rest of the ROM.
-     *
-     * We check here if we were able to load the
-     * full ROM bank 0 and return an error code
-     * if we couldn't.
+     * to be present in the ROM. The cartridge header
+     * is located here and we use its information to
+     * finish cartridge initialization.
      */
     ROM_LOAD_STATUS bank_load_status = load_rom_bank(rom_bank_buffer, rom_file);
 
     if (bank_load_status != ROM_LOAD_SUCCESS)
-    {
         return bank_load_status;
-    }
-
-    // get the MBC type from the ROM header
-    cart->mbc_type = get_mbc_type(rom_bank_buffer);
-
-    cart->has_rtc = detect_rtc_support(rom_bank_buffer);
-
-    // we now know which MBC type to initialize
-    init_mbc(cart->mbc_type, cart->mbc);
-
-    if (cart->mbc_type == UNKNOWN_MBC)
-    {
-        return MALFORMED_ROM;
-    }
-
-    // get the external RAM size in KB
-    int16_t ext_ram_size_kb = get_ext_ram_size(rom_bank_buffer);
-
-    if (ext_ram_size_kb == -1)
-    {
-        return MALFORMED_ROM;
-    }
 
     // use the header info to load the rest of the ROM
-    uint16_t num_rom_banks = get_num_rom_banks(rom_bank_buffer);
+    int num_rom_banks = get_num_rom_banks(rom_bank_buffer);
+    int ext_ram_size = get_ext_ram_size(rom_bank_buffer);
+    cart->mbc_type = get_mbc_type(rom_bank_buffer);
+    cart->has_rtc = detect_rtc_support(rom_bank_buffer);
 
-    // invalid ROM size byte
-    if (!num_rom_banks)
-    {
+    if (!num_rom_banks || ext_ram_size == -1 || cart->mbc_type == UNKNOWN_MBC)
         return MALFORMED_ROM;
-    }
+
+    init_mbc(cart->mbc_type, cart->mbc);
+    cart->ram_bank_size = ext_ram_size;
+
+    bank_load_status = init_banks(cart, num_rom_banks, get_num_ram_banks(ext_ram_size));
+
+    if (bank_load_status != ROM_LOAD_SUCCESS)
+        return bank_load_status;
 
     // copy ROM bank 0 from buffer to the actual bank
-    memcpy(cart->rom_banks[0], rom_bank_buffer, ROM_BANK_SIZE * sizeof(uint8_t));
+    memcpy(cart->rom_banks[0], rom_bank_buffer, ROM_BANK_SIZE);
 
     // copy the remaining ROM banks
-    for (int i = 1; i < num_rom_banks; ++i)
+    for (int i = 1; i < cart->num_rom_banks; ++i)
     {
         bank_load_status = load_rom_bank(rom_bank_buffer, rom_file);
 
         // I/O error or malformed ROM
         if (bank_load_status != ROM_LOAD_SUCCESS)
-        {
             return bank_load_status;
-        }
 
-        // bank copied successfully, so move it out of the buffer
-        memcpy(cart->rom_banks[i], rom_bank_buffer, ROM_BANK_SIZE * sizeof(uint8_t));
+        memcpy(cart->rom_banks[i], rom_bank_buffer, ROM_BANK_SIZE);
     }
-
-
-    /* All banks copied successfully, so resize ROM banks array if needed.
-     * Since the cartridge is initialized with the maximum number of ROM
-     * banks, we only need to shrink down the ROM banks array.
-     */
-    if (num_rom_banks != MAX_ROM_BANKS)
-    {
-        // free the unused banks before resizing the banks array
-        for (int i = num_rom_banks; i < MAX_ROM_BANKS; ++i)
-        {
-            free(cart->rom_banks[i]);
-        }
-
-        uint8_t **tmp = realloc(cart->rom_banks, num_rom_banks * sizeof(uint8_t *));
-
-        if (tmp == NULL)
-        {
-            return ROM_LOAD_ERROR;
-        }
-        else if (tmp != cart->rom_banks)
-        {
-            cart->rom_banks = tmp;
-        }
-        tmp = NULL;
-
-        // realloc was successful, so we update the number of banks in the cartridge
-        cart->num_rom_banks = num_rom_banks;
-    }
-
-    // resize to appropriate number of RAM banks of appropriate size
-    uint16_t ram_bank_size, num_ram_banks = get_num_ram_banks((uint8_t)ext_ram_size_kb);
-
-    if (!ext_ram_size_kb)
-    {
-        ram_bank_size = 0;
-    }
-    else
-    {
-        ram_bank_size = ext_ram_size_kb == 2 ? 2 * KB : 8 * KB;
-    }
-
-    if (num_ram_banks != MAX_RAM_BANKS)
-    {
-        // free the unused banks before resizing the banks array
-        for (int i = num_ram_banks; i < MAX_RAM_BANKS; ++i)
-        {
-            free(cart->ram_banks[i]);
-        }
-
-        uint8_t **tmp = realloc(cart->ram_banks, num_ram_banks * sizeof(uint8_t *));
-
-        /* NOTE: unlike for the ROM banks array, it is possible for the
-         * cartridge to have no external RAM. If this is the case, the
-         * realloc call directly above will simply free the RAM banks array
-         * and return NULL. In this special case, the NULL is expected,
-         * and does not indicate that an error occurred. Hence, we must
-         * check that NULL was returned and that we expected a non-empty
-         * RAM banks array before returning an error code.
-         */
-        if (tmp == NULL && num_ram_banks)
-        {
-            return ROM_LOAD_ERROR;
-        }
-        else if (tmp != cart->ram_banks)
-        {
-            cart->ram_banks = tmp;
-        }
-        tmp = NULL;
-
-        // realloc was successful, so update number of RAM banks and their size
-        cart->num_ram_banks = num_ram_banks;
-        cart->ram_bank_size = ram_bank_size;
-    }
-
-    // used by the MBC for ROM/RAM addressing (0..num_banks - 1)
-    cart->rom_banks_bitsize = cart->num_rom_banks
-                              ? count_bits(cart->num_rom_banks - 1)
-                              : 0;
-    cart->ram_banks_bitsize = cart->num_ram_banks
-                              ? count_bits(cart->num_ram_banks - 1)
-                              : 0;
 
     return ROM_LOAD_SUCCESS;
 }

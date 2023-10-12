@@ -186,6 +186,7 @@ gb_cpu *init_cpu(void)
 /* Free the allocated memory for the CPU struct */
 void free_cpu(gb_cpu *cpu)
 {
-    free(cpu->reg);
+    if (cpu)
+        free(cpu->reg);
     free(cpu);
 }

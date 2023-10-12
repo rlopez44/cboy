@@ -287,69 +287,33 @@ static void determine_and_report_run_mode(gameboy *gb)
  */
 gameboy *init_gameboy(const char *rom_file_path, const char *bootrom)
 {
-    // allocate the Game Boy struct
-    gameboy *gb = malloc(sizeof(gameboy));
+    gameboy *gb = calloc(1, sizeof(gameboy));
 
     if (gb == NULL)
     {
         LOG_ERROR("Not enough memory to initialize the emulator\n");
         return NULL;
     }
-    gb->is_stopped = false;
-    gb->dma_requested = false;
-    gb->clock_counter = 0;
-    gb->dma_counter = 0;
-    gb->window = NULL;
-    gb->renderer = NULL;
-    gb->screen = NULL;
-    gb->frame_presented_signal = false;
-    gb->run_boot_rom = false;
+
     gb->is_on = true; // the Game Boy is running
     gb->audio_sync_signal = true;
     gb->volume_slider = 100;
     gb->throttle_fps = true;
     gb->run_mode = GB_DMG_MODE; // updated once game ROM is read in
 
-    // allocate and init the joypad
     gb->joypad = init_joypad();
-    if (gb->joypad == NULL)
-    {
-        free(gb);
-        return NULL;
-    }
-
-    // allocate and init the CPU
     gb->cpu = init_cpu();
-
-    if (gb->cpu == NULL)
-    {
-        free_joypad(gb->joypad);
-        free(gb);
-        return NULL;
-    }
-
-    // allocate and init the cartridge
     gb->cart = init_cartridge();
-
-    if (gb->cart == NULL)
-    {
-        free_joypad(gb->joypad);
-        free_cpu(gb->cpu);
-        free(gb);
-        return NULL;
-    }
-
-    // allocate and init the PPU
     gb->ppu = init_ppu();
+    gb->apu = init_apu();
 
-    if (gb->ppu == NULL)
-    {
-        free_joypad(gb->joypad);
-        free_cpu(gb->cpu);
-        unload_cartridge(gb->cart);
-        free(gb);
-        return NULL;
-    }
+    bool all_alloc = gb->joypad
+                     && gb->cpu
+                     && gb->cart
+                     && gb->ppu
+                     && gb->apu;
+    if (!all_alloc)
+        goto init_error;
 
     // open the ROM file to load it into the emulator
     FILE *rom_file = fopen(rom_file_path, "rb");
@@ -357,12 +321,7 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom)
     if (rom_file == NULL)
     {
         LOG_ERROR("Failed to open the ROM file (incorrect path?)\n");
-        free_joypad(gb->joypad);
-        unload_cartridge(gb->cart);
-        free_cpu(gb->cpu);
-        free_ppu(gb->ppu);
-        free(gb);
-        return NULL;
+        goto init_error;
     }
 
     // load the ROM file into the emulator
@@ -372,20 +331,11 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom)
     if (load_status != ROM_LOAD_SUCCESS)
     {
         if (load_status == MALFORMED_ROM)
-        {
             LOG_ERROR("ROM file is incorrectly formatted\n");
-        }
         else if (load_status == ROM_LOAD_ERROR)
-        {
             LOG_ERROR("Failed to load the ROM into the emulator (I/O or memory error)\n");
-        }
 
-        free_joypad(gb->joypad);
-        unload_cartridge(gb->cart);
-        free_cpu(gb->cpu);
-        free_ppu(gb->ppu);
-        free(gb);
-        return NULL;
+        goto init_error;
     }
 
     determine_and_report_run_mode(gb);
@@ -396,14 +346,7 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom)
     gb->memory = init_memory_map(gb->cart);
 
     if (gb->memory == NULL)
-    {
-        free_joypad(gb->joypad);
-        unload_cartridge(gb->cart);
-        free_cpu(gb->cpu);
-        free_ppu(gb->ppu);
-        free(gb);
-        return NULL;
-    }
+        goto init_error;
 
     /* Load the boot ROM into the emulator if it was passed in.
      * We need to do this after the memory map is initialized
@@ -414,28 +357,18 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom)
     if (bootrom != NULL)
         maybe_load_bootrom(gb, bootrom);
 
-    gb->apu = init_apu();
-    if (gb->apu == NULL)
-    {
-        free_gameboy(gb);
-        return NULL;
-    }
-
     // initialize the screen after all other components
     if (!init_screen(gb))
-    {
-        free_gameboy(gb);
-        return NULL;
-    }
+        goto init_error;
 
-    // verify the ROM's Nintendo logo bitmap
     verify_logo(gb);
-
-    // verify the ROM's header checksum
     verify_checksum(gb);
 
-    // init successful and ROM loaded
     return gb;
+
+init_error:
+    free_gameboy(gb);
+    return NULL;
 }
 
 /* Free the allocated memory for the Game Boy struct */
@@ -447,9 +380,16 @@ void free_gameboy(gameboy *gb)
     free_ppu(gb->ppu);
     free_joypad(gb->joypad);
     deinit_apu(gb->apu);
-    SDL_DestroyTexture(gb->screen);
-    SDL_DestroyRenderer(gb->renderer);
-    SDL_DestroyWindow(gb->window);
+
+    if (gb->screen)
+        SDL_DestroyTexture(gb->screen);
+
+    if (gb->renderer)
+        SDL_DestroyRenderer(gb->renderer);
+
+    if (gb->window)
+        SDL_DestroyWindow(gb->window);
+
     SDL_Quit();
     free(gb);
 }

@@ -30,6 +30,7 @@ gb_apu *init_apu(void)
     if (apu == NULL)
         return NULL;
 
+    apu->audio_dev = 0;
     apu->enabled = false;
     apu->panning_info = 0;
     apu->left_volume = 0x7;
