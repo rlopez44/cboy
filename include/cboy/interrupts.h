@@ -4,10 +4,6 @@
 #include <stdbool.h>
 #include "cboy/gameboy.h"
 
-#define IF_REGISTER 0xff0f
-#define IE_REGISTER 0xffff
-
-
 // The five interrupt types. These interrupts are listed
 // such that their value is also their appropriate bit in IF
 // and IE registers

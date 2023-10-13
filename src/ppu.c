@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <SDL.h>
+#include "cboy/common.h"
 #include "cboy/gameboy.h"
 #include "cboy/ppu.h"
 #include "cboy/interrupts.h"

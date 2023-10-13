@@ -1,5 +1,6 @@
 #include <SDL_events.h>
 #include <SDL_keycode.h>
+#include "cboy/common.h"
 #include "cboy/gameboy.h"
 #include "cboy/interrupts.h"
 #include "cboy/joypad.h"

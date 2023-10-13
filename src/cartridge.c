@@ -4,6 +4,7 @@
 #include <string.h>
 #include <time.h>
 
+#include "cboy/common.h"
 #include "cboy/gameboy.h"
 #include "cboy/cartridge.h"
 #include "cboy/mbc.h"

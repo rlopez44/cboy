@@ -4,39 +4,7 @@
 #include <stdint.h>
 #include <SDL_audio.h>
 #include <stdbool.h>
-
-/* square wave (envelope and sweep) */
-#define NR10_REGISTER 0xff10
-#define NR11_REGISTER 0xff11
-#define NR12_REGISTER 0xff12
-#define NR13_REGISTER 0xff13
-#define NR14_REGISTER 0xff14
-
-/* square wave (envelope only) */
-#define NR21_REGISTER 0xff16
-#define NR22_REGISTER 0xff17
-#define NR23_REGISTER 0xff18
-#define NR24_REGISTER 0xff19
-
-/* custom wave */
-#define NR30_REGISTER 0xff1a
-#define NR31_REGISTER 0xff1b
-#define NR32_REGISTER 0xff1c
-#define NR33_REGISTER 0xff1d
-#define NR34_REGISTER 0xff1e
-
-/* noise */
-#define NR41_REGISTER 0xff20
-#define NR42_REGISTER 0xff21
-#define NR43_REGISTER 0xff22
-#define NR44_REGISTER 0xff23
-
-/* global to APU */
-#define NR50_REGISTER 0xff24
-#define NR51_REGISTER 0xff25
-#define NR52_REGISTER 0xff26
-
-#define GB_CPU_FREQUENCY 4194304
+#include "cboy/common.h"
 
 /* so that "100% volume" isn't unbearably loud */
 #define BASE_VOLUME_SCALEDOWN_FACTOR 0.25

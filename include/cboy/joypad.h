@@ -4,8 +4,6 @@
 #include <stdbool.h>
 #include <SDL_events.h>
 
-#define JOYP_REGISTER 0xff00
-
 /* use to track the Joypad's state (bottom nibble of JOYP) */
 typedef struct gb_joypad {
     // D-pad: down, up, left, right

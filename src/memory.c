@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include "cboy/common.h"
 #include "cboy/gameboy.h"
 #include "cboy/apu.h"
 #include "cboy/joypad.h"

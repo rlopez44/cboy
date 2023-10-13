@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <string.h>
+#include "cboy/common.h"
 #include "cboy/log.h"
 #include "cboy/gameboy.h"
 #include "cboy/ppu.h"

@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include "cboy/common.h"
 #include "cboy/interrupts.h"
 #include "cboy/gameboy.h"
 #include "cboy/memory.h"

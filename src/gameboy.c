@@ -5,6 +5,7 @@
 #include <string.h>
 #include <SDL_events.h>
 #include <SDL_audio.h>
+#include "cboy/common.h"
 #include "cboy/gameboy.h"
 #include "cboy/memory.h"
 #include "cboy/mbc.h"

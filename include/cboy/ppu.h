@@ -8,20 +8,6 @@
 #define FRAME_WIDTH  160
 #define FRAME_HEIGHT 144
 
-/* PPU-related registers */
-#define LCDC_REGISTER 0xff40
-#define STAT_REGISTER 0xff41
-#define SCY_REGISTER  0xff42
-#define SCX_REGISTER  0xff43
-#define LY_REGISTER   0xff44
-#define LYC_REGISTER  0xff45
-#define DMA_REGISTER  0xff46
-#define BGP_REGISTER  0xff47
-#define OBP0_REGISTER 0xff48
-#define OBP1_REGISTER 0xff49
-#define WY_REGISTER   0xff4a
-#define WX_REGISTER   0xff4b
-
 typedef struct gameboy gameboy;
 
 /* Sprite rendering data */
