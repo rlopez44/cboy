@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include "cboy/common.h"
 #include "cboy/cpu.h"
 #include "cboy/log.h"
 
@@ -142,7 +143,7 @@ bool read_carry_flag(gb_registers *reg)
  *
  * Returns NULL if the allocation fails.
  */
-gb_cpu *init_cpu(void)
+gb_cpu *init_cpu(enum GAMEBOY_MODE gb_mode)
 {
     gb_cpu *cpu = malloc(sizeof(gb_cpu));
 
@@ -173,10 +174,21 @@ gb_cpu *init_cpu(void)
     }
 
     // set the initial register values
-    write_af(cpu->reg, 0x01b0);
-    write_bc(cpu->reg, 0x0013);
-    write_de(cpu->reg, 0x00d8);
-    write_hl(cpu->reg, 0x014d);
+    if (gb_mode == GB_DMG_MODE)
+    {
+        write_af(cpu->reg, 0x01b0);
+        write_bc(cpu->reg, 0x0013);
+        write_de(cpu->reg, 0x00d8);
+        write_hl(cpu->reg, 0x014d);
+    }
+    else
+    {
+        write_af(cpu->reg, 0x1180);
+        write_bc(cpu->reg, 0x0000);
+        write_de(cpu->reg, 0xff56);
+        write_hl(cpu->reg, 0x000d);
+    }
+
     cpu->reg->sp = 0xfffe;
     cpu->reg->pc = 0x0100;
 

@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "cboy/common.h"
 
 // the Game Boy CPU registers
 typedef struct gb_registers {
@@ -41,7 +42,7 @@ typedef struct gb_cpu {
 } gb_cpu;
 
 // initializes the Game Boy's CPU
-gb_cpu *init_cpu(void);
+gb_cpu *init_cpu(enum GAMEBOY_MODE gb_mode);
 
 // free the CPU struct
 void free_cpu(gb_cpu *cpu);
