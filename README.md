@@ -24,9 +24,11 @@ respectively. The corresponding executables are located at `bin/cboy`,
 
 # Running the Emulator
 The emulator accepts a game ROM file and, optionally,
-a DMG boot ROM file to play before starting the game ROM. For example,
-the release mode of the emulator is invoked as follows:
-`bin/cboy [-b bootrom] <romfile>`.
+a DMG boot ROM file to play before starting the game ROM.
+The emulator can also be forced to run in DMG mode regardless
+of game ROM supplied with the `-m` option. For example, the
+release mode of the emulator is invoked as follows:
+`bin/cboy [-m] [-b bootrom] <romfile>`.
 
 # Clean Up
 To clean up object files used in prior compilations, run `make clean`.

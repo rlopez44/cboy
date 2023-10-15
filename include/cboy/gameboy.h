@@ -68,7 +68,7 @@ void stack_push(gameboy *gb, uint16_t value);
 uint16_t stack_pop(gameboy *gb);
 
 // initialize the Game Boy
-gameboy *init_gameboy(const char *rom_file_path, const char *bootrom);
+gameboy *init_gameboy(const char *rom_file_path, const char *bootrom, bool force_dmg);
 
 // free the Game Boy
 void free_gameboy(gameboy *gb);

@@ -263,9 +263,14 @@ static void maybe_load_bootrom(gameboy *gb, const char *bootrom)
 }
 
 // Determine whether to run in DMG or CGB mode
-static void determine_and_report_run_mode(gameboy *gb)
+static void determine_and_report_run_mode(gameboy *gb, bool force_dmg)
 {
-    switch (gb->cart->rom_banks[0][0x143] & 0xbf) // hardware ignores bit 6
+    if (force_dmg)
+    {
+        gb->run_mode = GB_DMG_MODE;
+        LOG_INFO("GB Mode: monochrome Game Boy (forced)\n");
+    }
+    else switch (gb->cart->rom_banks[0][0x143] & 0xbf) // hardware ignores bit 6
     {
         case 0x80:
             gb->run_mode = GB_CGB_MODE;
@@ -286,7 +291,7 @@ static void determine_and_report_run_mode(gameboy *gb)
  * If initialization fails then NULL is returned
  * and an error message is printed out.
  */
-gameboy *init_gameboy(const char *rom_file_path, const char *bootrom)
+gameboy *init_gameboy(const char *rom_file_path, const char *bootrom, bool force_dmg)
 {
     gameboy *gb = calloc(1, sizeof(gameboy));
 
@@ -337,7 +342,7 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom)
         goto init_error;
     }
 
-    determine_and_report_run_mode(gb);
+    determine_and_report_run_mode(gb, force_dmg);
     gb->cpu = init_cpu(gb->run_mode);
     if (!gb->cpu)
         goto init_error;
