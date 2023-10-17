@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    print_button_mappings();
+    print_button_mappings(gb->run_mode);
 
     report_volume_level(gb, true);
 

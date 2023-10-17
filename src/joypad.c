@@ -70,8 +70,9 @@ void handle_keypress(gameboy *gb, SDL_KeyboardEvent *key)
     bool key_pressed = key->type == SDL_KEYDOWN;
     bool bit_val = !key_pressed;
 
-    // special keys that aren't actually GB buttons
-    if (keycode == SDLK_c && key_pressed) // cycle display colors
+    /**** special keys that aren't actually GB buttons ****/
+    // cycle monochrome display colors (DMG mode only)
+    if (keycode == SDLK_c && gb->run_mode == GB_DMG_MODE && key_pressed)
     {
         bool cycle_forward = !(key->keysym.mod & KMOD_SHIFT);
         cycle_display_colors(&gb->ppu->colors, cycle_forward);
@@ -156,20 +157,26 @@ void handle_keypress(gameboy *gb, SDL_KeyboardEvent *key)
     }
 }
 
-void print_button_mappings(void)
+void print_button_mappings(enum GAMEBOY_MODE gb_mode)
 {
-    LOG_INFO("\n"
-             "Button Mappings\n"
-             "---------------\n"
-             "Cycle display palettes: <c>/<Shift-c>\n"
-             "Volume up/down: <Equals>/<Minus>\n"
-             "Toggle FPS throttle: <Tab>\n"
-             "B:      <j>\n"
-             "A:      <k>\n"
-             "Up:     <w>\n"
-             "Down:   <s>\n"
-             "Left:   <a>\n"
-             "Right:  <d>\n"
-             "Select: <Space>\n"
-             "Start:  <Enter>\n");
+    const char *header = "Button Mappings\n"
+                         "---------------";
+
+    const char *cycle_msg = "Cycle display palettes: <c>/<Shift-c>";
+
+    const char *base_msg = "Volume up/down: <Equals>/<Minus>\n"
+                           "Toggle FPS throttle: <Tab>\n"
+                           "B:      <j>\n"
+                           "A:      <k>\n"
+                           "Up:     <w>\n"
+                           "Down:   <s>\n"
+                           "Left:   <a>\n"
+                           "Right:  <d>\n"
+                           "Select: <Space>\n"
+                           "Start:  <Enter>";
+
+    if (gb_mode == GB_DMG_MODE)
+        LOG_INFO("\n%s\n%s\n%s\n", header, cycle_msg, base_msg);
+    else
+        LOG_INFO("\n%s\n%s\n", header, base_msg);
 }

@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <SDL_events.h>
+#include "cboy/common.h"
 
 /* use to track the Joypad's state (bottom nibble of JOYP) */
 typedef struct gb_joypad {
@@ -25,5 +26,5 @@ gb_joypad *init_joypad(void);
 
 void free_joypad(gb_joypad *joypad);
 
-void print_button_mappings(void);
+void print_button_mappings(enum GAMEBOY_MODE gb_mode);
 #endif /* GB_JOYPAD_H */
