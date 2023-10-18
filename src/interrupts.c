@@ -56,11 +56,14 @@ uint8_t service_interrupt(gameboy *gb)
             serial_mask = (1 << SERIAL),
             joypad_mask = (1 << JOYPAD);
 
-    /* an interrupt will be serviced only if the CPU's IME
+    /* An interrupt will be serviced only if the CPU's IME
      * flag is set and the interrupt's bits in the IE and
-     * IF registers are both set
+     * IF registers are both set.
+     *
+     * Recall that the top 3 bits of IF and IE are unused
+     * and so must be masked out here.
      */
-    uint8_t interrupts_to_service = (if_register & ie_register);
+    uint8_t interrupts_to_service = (if_register & ie_register & 0x1f);
 
     if (gb->cpu->ime_flag && interrupts_to_service)
     {
@@ -108,7 +111,13 @@ uint8_t service_interrupt(gameboy *gb)
             handler_addr = 0x60;
             LOG_DEBUG("Servicing Joypad IRQ\n");
         }
-        else {} // shouldn't get here
+        else // shouldn't get here
+        {
+            LOG_ERROR("Invalid interrupt service request."
+                      " IF: 0x%02x, IE: 0x%02x\n",
+                      if_register, ie_register);
+            exit(1);
+        }
 
         // set the high byte of the PC to zero and the low
         // byte to the address of the interrupt handler

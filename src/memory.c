@@ -318,10 +318,10 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
         // the offset is 0xe000 - 0xc000 = 0x2000
         address -= 0x2000;
     }
-    // make sure the IF and IE registers' upper three bits are always zero
-    else if (address == 0xff0f || address == 0xffff)
+    // make sure the IF and IE registers' upper three bits are always set
+    else if (address == IF_REGISTER || address == IE_REGISTER)
     {
-        value &= 0x1f;
+        value = (value & 0x1f) | 0xe0;
     }
     // can only write to bits 3-6 of the STAT register
     else if (address == STAT_REGISTER)
@@ -381,6 +381,7 @@ static void init_io_registers(gb_memory *memory, enum GAMEBOY_MODE gb_mode)
 {
     memory->mmap[JOYP_REGISTER] = 0xcf;
     memory->mmap[TAC_REGISTER]  = 0xf8;
+    memory->mmap[IF_REGISTER]   = 0xe1;
     memory->mmap[NR10_REGISTER] = 0x80;
     memory->mmap[NR11_REGISTER] = 0xbf;
     memory->mmap[NR12_REGISTER] = 0xf3;
