@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "cboy/cartridge.h"
+#include "cboy/common.h"
 
 /* 2^16 bytes */
 #define MEMORY_MAP_SIZE 65536
@@ -28,7 +29,7 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value);
 void dma_transfer(gameboy *gb);
 
 // function to initialize the memory struct
-gb_memory *init_memory_map(gb_cartridge *cart);
+gb_memory *init_memory_map(gb_cartridge *cart, enum GAMEBOY_MODE gb_mode);
 
 // function to free the memory struct
 void free_memory_map(gb_memory *memory);

@@ -350,7 +350,7 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom, bool force
     maybe_import_cartridge_ram(gb->cart, rom_file_path);
 
     // allocate and init the memory map
-    gb->memory = init_memory_map(gb->cart);
+    gb->memory = init_memory_map(gb->cart, gb->run_mode);
 
     if (gb->memory == NULL)
         goto init_error;

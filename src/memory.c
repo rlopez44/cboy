@@ -377,28 +377,53 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
  *
  * See: https://gbdev.io/pandocs/#power-up-sequence
  */
-static void init_io_registers(gb_memory *memory)
+static void init_io_registers(gb_memory *memory, enum GAMEBOY_MODE gb_mode)
 {
-    memory->mmap[0xff10] = 0x80; // NR10
-    memory->mmap[0xff11] = 0xbf; // NR11
-    memory->mmap[0xff12] = 0xf3; // NR12
-    memory->mmap[0xff14] = 0xbf; // NR14
-    memory->mmap[0xff16] = 0x3f; // NR21
-    memory->mmap[0xff19] = 0xbf; // NR24
-    memory->mmap[0xff1a] = 0x7f; // NR30
-    memory->mmap[0xff1b] = 0xff; // NR31
-    memory->mmap[0xff1c] = 0x9f; // NR32
-    memory->mmap[0xff1e] = 0xbf; // NR34
-    memory->mmap[0xff20] = 0xff; // NR41
-    memory->mmap[0xff23] = 0xbf; // NR44
-    memory->mmap[0xff24] = 0x77; // NR50
-    memory->mmap[0xff25] = 0xf3; // NR51
-    memory->mmap[0xff26] = 0xf1; // NR52
-    memory->mmap[0xff40] = 0x91; // LCDC
-    memory->mmap[0xff47] = 0xfc; // BGP
-    memory->mmap[0xff48] = 0xff; // OBP0
-    memory->mmap[0xff49] = 0xff; // OBP1
-    memory->mmap[0xff00] = 0xcf; // JOYP
+    memory->mmap[JOYP_REGISTER] = 0xcf;
+    memory->mmap[TAC_REGISTER]  = 0xf8;
+    memory->mmap[NR10_REGISTER] = 0x80;
+    memory->mmap[NR11_REGISTER] = 0xbf;
+    memory->mmap[NR12_REGISTER] = 0xf3;
+    memory->mmap[NR14_REGISTER] = 0xbf;
+    memory->mmap[NR21_REGISTER] = 0x3f;
+    memory->mmap[NR23_REGISTER] = 0xff;
+    memory->mmap[NR24_REGISTER] = 0xbf;
+    memory->mmap[NR30_REGISTER] = 0x7f;
+    memory->mmap[NR31_REGISTER] = 0xff;
+    memory->mmap[NR32_REGISTER] = 0x9f;
+    memory->mmap[NR34_REGISTER] = 0xbf;
+    memory->mmap[NR41_REGISTER] = 0xff;
+    memory->mmap[NR44_REGISTER] = 0xbf;
+    memory->mmap[NR50_REGISTER] = 0x77;
+    memory->mmap[NR51_REGISTER] = 0xf3;
+    memory->mmap[NR52_REGISTER] = 0xf1;
+    memory->mmap[LCDC_REGISTER] = 0x91;
+    memory->mmap[STAT_REGISTER] = 0x85;
+
+    if (gb_mode == GB_DMG_MODE)
+        memory->mmap[DMA_REGISTER] = 0xff;
+
+    memory->mmap[BGP_REGISTER]  = 0xfc;
+    memory->mmap[OBP0_REGISTER] = 0xff;
+    memory->mmap[OBP1_REGISTER] = 0xff;
+
+    // CGB-only registers
+    if (gb_mode == GB_CGB_MODE)
+    {
+        memory->mmap[KEY0_REGISTER]  = memory->mmap[0x0143];
+        memory->mmap[KEY1_REGISTER]  = 0xff;
+        memory->mmap[VBK_REGISTER]   = 0xff;
+        memory->mmap[HDMA1_REGISTER] = 0xff;
+        memory->mmap[HDMA2_REGISTER] = 0xff;
+        memory->mmap[HDMA3_REGISTER] = 0xff;
+        memory->mmap[HDMA4_REGISTER] = 0xff;
+        memory->mmap[HDMA5_REGISTER] = 0xff;
+        memory->mmap[BCPS_REGISTER]  = 0xff;
+        memory->mmap[BCPD_REGISTER]  = 0xff;
+        memory->mmap[OCPS_REGISTER]  = 0xff;
+        memory->mmap[OCPD_REGISTER]  = 0xff;
+        memory->mmap[SVBK_REGISTER]  = 0xff;
+    }
 }
 
 /* Allocate memory for the Game Boy's memory map and
@@ -433,7 +458,7 @@ static void init_io_registers(gb_memory *memory)
  *
  * Returns NULL if the allocation fails.
  */
-gb_memory *init_memory_map(gb_cartridge *cart)
+gb_memory *init_memory_map(gb_cartridge *cart, enum GAMEBOY_MODE gb_mode)
 {
     gb_memory *memory = malloc(sizeof(gb_memory));
 
@@ -449,10 +474,10 @@ gb_memory *init_memory_map(gb_cartridge *cart)
     }
 
     // mount the zeroth and first ROM banks
-    memcpy(memory->mmap, cart->rom_banks[0], ROM_BANK_SIZE * sizeof(uint8_t));
-    memcpy(memory->mmap + ROM_BANK_SIZE, cart->rom_banks[1], ROM_BANK_SIZE * sizeof(uint8_t));
+    memcpy(memory->mmap, cart->rom_banks[0], ROM_BANK_SIZE);
+    memcpy(memory->mmap + ROM_BANK_SIZE, cart->rom_banks[1], ROM_BANK_SIZE);
 
-    init_io_registers(memory);
+    init_io_registers(memory, gb_mode);
 
     return memory;
 }
