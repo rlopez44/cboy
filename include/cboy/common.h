@@ -74,6 +74,22 @@ enum GB_MMIO_REGISTER {
     WY_REGISTER    = 0xff4a,
     WX_REGISTER    = 0xff4b,
 
+    /* CGB-only registers */
+    KEY0_REGISTER  = 0xff4c,
+    KEY1_REGISTER  = 0xff4d,
+    VBK_REGISTER   = 0xff4f,
+    HDMA1_REGISTER = 0xff51,
+    HDMA2_REGISTER = 0xff52,
+    HDMA3_REGISTER = 0xff53,
+    HDMA4_REGISTER = 0xff54,
+    HDMA5_REGISTER = 0xff55,
+    BCPS_REGISTER  = 0xff68,
+    BCPD_REGISTER  = 0xff69,
+    OCPS_REGISTER  = 0xff6a,
+    OCPD_REGISTER  = 0xff6b,
+    OPRI_REGISTER  = 0xff6c,
+    SVBK_REGISTER  = 0xff70,
+
     /* interrupt enable */
     IE_REGISTER    = 0xffff,
 };
