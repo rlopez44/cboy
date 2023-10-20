@@ -24,16 +24,23 @@
 
 #define NUM_DISPLAY_PALETTES 4
 
-/* color codes are in ARGB8888 format */
-static const uint32_t display_color_palettes[4*NUM_DISPLAY_PALETTES] = {
+/* colors encoded in XBGR1555 format */
+static const uint16_t display_color_palettes[4*NUM_DISPLAY_PALETTES] = {
     // grayscale
-    0xff000000, 0xff555555, 0xffaaaaaa, 0xffffffff,
+    // #000000, #555555, #aaaaaa, #ffffff,
+    0x8000, 0xa94a, 0xd6b5, 0xffff,
+
     // green-tinted grayscale
-    0xff001000, 0xff80a080, 0xffc0d0c0, 0xfff4fff4,
+    // #001000, #80a080, #c0d0c0, #f4fff4,
+    0x8040, 0xc290, 0xe358, 0xfbfe,
+
     // pastel green shades
-    0xff081810, 0xff396139, 0xff84a563, 0xffc9de8c,
+    // #081810, #396139, #84a563, #c9de8c,
+    0x8861, 0x9d87, 0xb290, 0xc779,
+
     // acid green shades
-    0xff0f380f, 0xff306230, 0xff8bac0f, 0xff9bbc0f,
+    //#0f380f, #306230, #8bac0f, #9bbc0f,
+    0x84e1, 0x9986, 0x86b1, 0x86f3,
 };
 
 /* Use to sort sprites according to their drawing priority.
@@ -92,12 +99,13 @@ gb_ppu *init_ppu(void)
 
     init_display_colors(&ppu->colors);
 
-    memset(ppu->frame_buffer, 0,
-           FRAME_WIDTH * FRAME_HEIGHT * sizeof(uint32_t));
+    memset(ppu->frame_buffer, 0, sizeof ppu->frame_buffer);
     memset(ppu->scanline_palette_buff,
-           NO_PALETTE, FRAME_WIDTH * sizeof(uint16_t));
+           NO_PALETTE,
+           sizeof ppu->scanline_palette_buff);
     memset(ppu->scanline_coloridx_buff,
-           0, FRAME_WIDTH * sizeof(uint8_t));
+           0,
+           sizeof ppu->scanline_coloridx_buff);
 
     return ppu;
 }
@@ -202,13 +210,13 @@ static uint16_t tile_addr_from_index(bool tile_data_area_bit, uint8_t tile_index
 // and whether this color will be for a sprite tile.
 // Should be used on the completed scanline data as the final
 // step before outputting pixels.
-static inline uint32_t color_from_palette(gameboy *gb, uint16_t palette_reg, uint8_t color_idx)
+static inline uint16_t color_from_palette(gameboy *gb, uint16_t palette_reg, uint8_t color_idx)
 {
     // account for the bg/window disabled sentinel value
     // to ensure all non-sprite pixels are set to white
     uint8_t palette = palette_reg == NO_PALETTE ? 0 : gb->memory->mmap[palette_reg];
 
-    uint32_t color;
+    uint16_t color;
     switch((palette >> (2 * color_idx)) & 0x3)
     {
         case 0x0:
@@ -546,7 +554,7 @@ static void push_scanline_data(gameboy *gb)
 
     uint8_t color_idx;
     uint16_t palette_reg;
-    uint32_t color;
+    uint16_t color;
     for (uint16_t i = 0; i < FRAME_WIDTH; ++i)
     {
         palette_reg = scanline_palette_buff[i];
@@ -585,9 +593,9 @@ void render_scanline(gameboy *gb)
     {
         // all palettes and color indices set to 0 -> all white pixels
         memset(gb->ppu->scanline_palette_buff,
-               NO_PALETTE, FRAME_WIDTH * sizeof(uint16_t));
+               NO_PALETTE, sizeof gb->ppu->scanline_palette_buff);
         memset(gb->ppu->scanline_coloridx_buff,
-               0, FRAME_WIDTH * sizeof(uint8_t));
+               0, sizeof gb->ppu->scanline_coloridx_buff);
     }
 
     // render the sprites, if enabled
@@ -606,13 +614,13 @@ void display_frame(gameboy *gb)
 
     if (SDL_LockTexture(gb->screen, NULL, &texture_pixels, &pitch) < 0)
     {
-        LOG_ERROR("Error drawing to screen\n");
+        LOG_ERROR("Error drawing to screen: %s\n", SDL_GetError());
         exit(1);
     }
 
     // even though we have the pitch from the call to SDL_LockTexture,
     // I prefer to use FRAME_WIDTH and FRAME_HEIGHT for the memcpy
-    memcpy(texture_pixels, gb->ppu->frame_buffer, FRAME_WIDTH * FRAME_HEIGHT * sizeof(uint32_t));
+    memcpy(texture_pixels, gb->ppu->frame_buffer, sizeof gb->ppu->frame_buffer);
     SDL_UnlockTexture(gb->screen);
     SDL_RenderClear(gb->renderer);
     SDL_RenderCopy(gb->renderer, gb->screen, NULL, NULL);

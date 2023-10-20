@@ -5,6 +5,7 @@
 #include <string.h>
 #include <SDL_events.h>
 #include <SDL_audio.h>
+#include <SDL_pixels.h>
 #include "cboy/common.h"
 #include "cboy/gameboy.h"
 #include "cboy/memory.h"
@@ -179,7 +180,7 @@ static bool init_screen(gameboy *gb)
      * upscaled in size to fill the window.
      */
     gb->screen = SDL_CreateTexture(gb->renderer,
-                                   SDL_PIXELFORMAT_ARGB8888,
+                                   SDL_PIXELFORMAT_XBGR1555,
                                    SDL_TEXTUREACCESS_STREAMING,
                                    FRAME_WIDTH,
                                    FRAME_HEIGHT);
@@ -191,7 +192,10 @@ static bool init_screen(gameboy *gb)
         return false;
     }
 
-    SDL_UpdateTexture(gb->screen, NULL, gb->ppu->frame_buffer, FRAME_WIDTH * sizeof(uint32_t));
+    SDL_UpdateTexture(gb->screen,
+                      NULL,
+                      gb->ppu->frame_buffer,
+                      FRAME_WIDTH * sizeof gb->ppu->frame_buffer[0]);
     SDL_RenderClear(gb->renderer);
     SDL_RenderCopy(gb->renderer, gb->screen, NULL, NULL);
     SDL_RenderPresent(gb->renderer);

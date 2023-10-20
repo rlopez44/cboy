@@ -34,7 +34,7 @@ typedef struct gb_sprite {
 
 /* colors for use by the display */
 typedef struct display_colors {
-    uint32_t white,
+    uint16_t white,
              light_gray,
              dark_gray,
              black;
@@ -43,7 +43,7 @@ typedef struct display_colors {
 } display_colors;
 
 typedef struct gb_ppu {
-    uint32_t frame_buffer[FRAME_WIDTH * FRAME_HEIGHT];
+    uint16_t frame_buffer[FRAME_WIDTH * FRAME_HEIGHT];
     display_colors colors;
     uint32_t dot_clock;
     uint64_t frames_rendered;
