@@ -308,6 +308,14 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
         apu_write(gb, address, value);
         return;
     }
+    // until double speed mode implemented: return early
+    else if (address == KEY1_REGISTER && gb->run_mode == GB_CGB_MODE)
+    {
+        LOG_INFO("\nNote: Speed switching not implemented."
+                 " Continuing to run in normal speed mode\n");
+
+        return;
+    }
     /**************** END: Special writes where we return early **************/
 
 
