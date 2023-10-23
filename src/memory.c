@@ -33,7 +33,7 @@
  */
 uint8_t read_byte(gameboy *gb, uint16_t address)
 {
-    uint8_t ppu_status   = gb->memory->mmap[STAT_REGISTER] & 0x3,
+    uint8_t ppu_status   = gb->ppu->stat & 0x3,
             oam_blocked  = (ppu_status == 3) || (ppu_status == 2);
 
     bool boot_rom_enabled = !gb->memory->mmap[0xff50];
@@ -61,25 +61,9 @@ uint8_t read_byte(gameboy *gb, uint16_t address)
         // DIV is the upper byte of the internal clock counter
         return (uint8_t)(gb->clock_counter >> 8);
     }
-    else if (address == SCY_REGISTER)
+    else if (address >= LCDC_REGISTER && address <= WX_REGISTER)
     {
-        return gb->ppu->scy;
-    }
-    else if (address == SCX_REGISTER)
-    {
-        return gb->ppu->scx;
-    }
-    else if (address == LY_REGISTER)
-    {
-        return gb->ppu->ly;
-    }
-    else if (address == WY_REGISTER)
-    {
-        return gb->ppu->wy;
-    }
-    else if (address == WX_REGISTER)
-    {
-        return gb->ppu->wx;
+        return ppu_read(gb, address);
     }
     else if (address == JOYP_REGISTER)
         return report_button_states(gb, gb->memory->mmap[JOYP_REGISTER]);
@@ -126,7 +110,7 @@ uint8_t read_byte(gameboy *gb, uint16_t address)
  */
 void dma_transfer(gameboy *gb)
 {
-    uint8_t source_hi = gb->memory->mmap[DMA_REGISTER];
+    uint8_t source_hi = gb->ppu->dma;
     uint16_t source, dest;
     bool mbc_read;
 
@@ -308,6 +292,11 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
         apu_write(gb, address, value);
         return;
     }
+    else if (address >= LCDC_REGISTER && address <= WX_REGISTER)
+    {
+        ppu_write(gb, address, value);
+        return;
+    }
     // until double speed mode implemented: return early
     else if (address == KEY1_REGISTER && gb->run_mode == GB_CGB_MODE)
     {
@@ -330,48 +319,6 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
     else if (address == IF_REGISTER || address == IE_REGISTER)
     {
         value = (value & 0x1f) | 0xe0;
-    }
-    // can only write to bits 3-6 of the STAT register
-    else if (address == STAT_REGISTER)
-    {
-        uint8_t old_stat = gb->memory->mmap[address],
-                mask     = 0x78; // mask for bits 3-6
-
-        value = (value & mask) | (old_stat & ~mask);
-    }
-    else if (address == LCDC_REGISTER)
-    {
-        // reset the PPU when it's turned off (bit 7 of LCDC)
-        if (!(value & 0x80))
-            reset_ppu(gb);
-    }
-    else if (address == SCY_REGISTER)
-    {
-        gb->ppu->scy = value;
-    }
-    else if (address == SCX_REGISTER)
-    {
-        gb->ppu->scx = value;
-    }
-    else if (address == WY_REGISTER)
-    {
-        gb->ppu->wy = value;
-    }
-    else if (address == WX_REGISTER)
-    {
-        gb->ppu->wx = value;
-    }
-    else if (address == DMA_REGISTER)
-    {
-        /* Begin the DMA transfer process by requesting it.
-         * The written value must be between 0x00 and 0xdf,
-         * otherwise no DMA transfer will occur.
-         */
-        if (value <= 0xdf && !gb->dma_requested)
-        {
-            LOG_DEBUG("DMA Requested\n");
-            gb->dma_requested = true;
-        }
     }
     // writes to JOYP determine which set of buttons are reported
     else if (address == JOYP_REGISTER)
@@ -406,15 +353,6 @@ static void init_io_registers(gb_memory *memory, enum GAMEBOY_MODE gb_mode)
     memory->mmap[NR50_REGISTER] = 0x77;
     memory->mmap[NR51_REGISTER] = 0xf3;
     memory->mmap[NR52_REGISTER] = 0xf1;
-    memory->mmap[LCDC_REGISTER] = 0x91;
-    memory->mmap[STAT_REGISTER] = 0x85;
-
-    if (gb_mode == GB_DMG_MODE)
-        memory->mmap[DMA_REGISTER] = 0xff;
-
-    memory->mmap[BGP_REGISTER]  = 0xfc;
-    memory->mmap[OBP0_REGISTER] = 0xff;
-    memory->mmap[OBP1_REGISTER] = 0xff;
 
     // CGB-only registers
     if (gb_mode == GB_CGB_MODE)

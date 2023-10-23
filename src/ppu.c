@@ -73,39 +73,24 @@ static void init_display_colors(display_colors *colors)
     colors->palette_index = 0;
 }
 
-gb_ppu *init_ppu(void)
+gb_ppu *init_ppu(enum GAMEBOY_MODE gb_mode)
 {
-    gb_ppu *ppu = malloc(sizeof(gb_ppu));
+    gb_ppu *ppu = calloc(1, sizeof(gb_ppu));
 
     if (ppu == NULL)
     {
         return NULL;
     }
 
-    ppu->frames_rendered = 0;
-    ppu->dot_clock = 0;
-    ppu->scx = 0;
-    ppu->scy = 0;
-    ppu->ly = 0;
-    ppu->wx = 0;
-    ppu->wy = 0;
-    ppu->window_line_counter = 0;
-    ppu->curr_scanline_rendered = false;
-    ppu->curr_frame_displayed = false;
-    ppu->lyc_stat_line = false;
-    ppu->hblank_stat_line = false;
-    ppu->vblank_stat_line = false;
-    ppu->oam_stat_line = false;
+    ppu->lcdc = 0x91;
+    ppu->stat = 0x85;
+    if (gb_mode == GB_DMG_MODE)
+        ppu->dma = 0xff;
+    ppu->bgp = 0xfc;
+    ppu->obp0 = 0xff;
+    ppu->obp1 = 0xff;
 
     init_display_colors(&ppu->colors);
-
-    memset(ppu->frame_buffer, 0, sizeof ppu->frame_buffer);
-    memset(ppu->scanline_palette_buff,
-           NO_PALETTE,
-           sizeof ppu->scanline_palette_buff);
-    memset(ppu->scanline_coloridx_buff,
-           0,
-           sizeof ppu->scanline_coloridx_buff);
 
     return ppu;
 }
@@ -113,6 +98,77 @@ gb_ppu *init_ppu(void)
 void free_ppu(gb_ppu *ppu)
 {
     free(ppu);
+}
+
+uint8_t ppu_read(gameboy *gb, uint16_t address)
+{
+    gb_ppu *ppu = gb->ppu;
+    uint8_t value = 0xff;
+    switch (address)
+    {
+        case LCDC_REGISTER: value = ppu->lcdc; break;
+        case STAT_REGISTER: value = ppu->stat; break;
+        case SCY_REGISTER: value = ppu->scy; break;
+        case SCX_REGISTER: value = ppu->scx; break;
+        case LY_REGISTER: value = ppu->ly; break;
+        case LYC_REGISTER: value = ppu->lyc; break;
+        case DMA_REGISTER: value = ppu->dma; break;
+        case BGP_REGISTER: value = ppu->bgp; break;
+        case OBP0_REGISTER: value = ppu->obp0; break;
+        case OBP1_REGISTER: value = ppu->obp1; break;
+        case WY_REGISTER: value = ppu->wy; break;
+        case WX_REGISTER: value = ppu->wx; break;
+        default: break;
+    }
+
+    return value;
+}
+
+void ppu_write(gameboy *gb, uint16_t address, uint8_t value)
+{
+    gb_ppu *ppu = gb->ppu;
+    switch (address)
+    {
+        case LCDC_REGISTER:
+            // reset the PPU when it's turned off (bit 7 of LCDC)
+            if (!(value & 0x80))
+                reset_ppu(gb);
+
+            ppu->lcdc = value;
+            break;
+
+        case STAT_REGISTER:
+        {
+            // can only write to bits 3-6 of the STAT register
+            uint8_t mask = 0x78;
+            ppu->stat = (value & mask) | (ppu->stat & ~mask);
+            break;
+        }
+
+        case SCY_REGISTER: ppu->scy = value; break;
+        case SCX_REGISTER: ppu->scx = value; break;
+        case LYC_REGISTER: ppu->lyc = value; break;
+
+        case DMA_REGISTER:
+            /* Begin the DMA transfer process by requesting it.
+            * The written value must be between 0x00 and 0xdf,
+            * otherwise no DMA transfer will occur.
+            */
+            if (value <= 0xdf && !gb->dma_requested)
+            {
+                LOG_DEBUG("DMA Requested\n");
+                gb->dma_requested = true;
+            }
+            ppu->dma = value;
+            break;
+
+        case BGP_REGISTER: ppu->bgp = value; break;
+        case OBP0_REGISTER: ppu->obp0 = value; break;
+        case OBP1_REGISTER: ppu->obp1 = value; break;
+        case WY_REGISTER: ppu->wy = value; break;
+        case WX_REGISTER: ppu->wx = value; break;
+        default: break;
+    }
 }
 
 /* Reset the PPU.
@@ -128,7 +184,7 @@ void reset_ppu(gameboy *gb)
 {
     gb->ppu->ly = 0;
     gb->ppu->dot_clock = 0;
-    gb->memory->mmap[STAT_REGISTER] &= 0xf8;
+    gb->ppu->stat &= 0xf8;
     gb->ppu->curr_scanline_rendered = false;
     gb->ppu->curr_frame_displayed = false;
     gb->ppu->lyc_stat_line = false;
@@ -214,7 +270,30 @@ static inline uint16_t color_from_palette(gameboy *gb, uint16_t palette_reg, uin
 {
     // account for the bg/window disabled sentinel value
     // to ensure all non-sprite pixels are set to white
-    uint8_t palette = palette_reg == NO_PALETTE ? 0 : gb->memory->mmap[palette_reg];
+    uint8_t palette;
+    switch(palette_reg)
+    {
+        case NO_PALETTE:
+            palette = 0;
+            break;
+
+        case BGP_REGISTER:
+            palette = gb->ppu->bgp;
+            break;
+
+        case OBP0_REGISTER:
+            palette = gb->ppu->obp0;
+            break;
+
+        case OBP1_REGISTER:
+            palette = gb->ppu->obp1;
+            break;
+
+        default:
+            LOG_ERROR("Invalid palette register address: %04x\n", palette_reg);
+            exit(1);
+            break;
+    }
 
     uint16_t color;
     switch((palette >> (2 * color_idx)) & 0x3)
@@ -570,7 +649,7 @@ static void push_scanline_data(gameboy *gb)
 void render_scanline(gameboy *gb)
 {
     // get the bit info out of the LCDC register
-    uint8_t lcdc = gb->memory->mmap[LCDC_REGISTER];
+    uint8_t lcdc = gb->ppu->lcdc;
     bool window_tile_map_area_bit  = lcdc & 0x40,
          window_enable_bit         = lcdc & 0x20,
          bg_win_tile_data_area_bit = lcdc & 0x10,
@@ -641,16 +720,16 @@ void display_frame(gameboy *gb)
  */
 static bool ly_compare(gameboy *gb)
 {
-    bool equal_values = gb->ppu->ly == gb->memory->mmap[LYC_REGISTER];
+    bool equal_values = gb->ppu->ly == gb->ppu->lyc;
 
-    uint8_t stat          = gb->memory->mmap[STAT_REGISTER],
+    uint8_t stat          = gb->ppu->stat,
             cmp_flag      = 0x04, // mask for the LYC=LY flag
             cmp_interrupt = 0x40; // mask for the LYC=LY interrupt enable bit
 
     if (equal_values)
     {
         // set the LYC=LY flag
-        gb->memory->mmap[STAT_REGISTER] = stat | cmp_flag;
+        gb->ppu->stat = stat | cmp_flag;
 
         if (stat & cmp_interrupt && !stat_interrupt_line(gb->ppu))
         {
@@ -665,7 +744,7 @@ static bool ly_compare(gameboy *gb)
     else
     {
         // reset the LYC=LY flag
-        gb->memory->mmap[STAT_REGISTER] = stat & ~cmp_flag;
+        gb->ppu->stat = stat & ~cmp_flag;
         gb->ppu->lyc_stat_line = false;
     }
 
@@ -675,7 +754,7 @@ static bool ly_compare(gameboy *gb)
 // handle STAT interrupt requests based on PPU mode
 static void handle_ppu_mode_stat_interrupts(gameboy *gb)
 {
-    uint8_t stat                 = gb->memory->mmap[STAT_REGISTER],
+    uint8_t stat                 = gb->ppu->stat,
             ppu_mode             = stat & 0x03,
             oam_interrupt_bit    = (stat & 0x20) >> 5,
             vblank_interrupt_bit = (stat & 0x10) >> 4,
@@ -726,7 +805,7 @@ static void handle_ppu_mode_stat_interrupts(gameboy *gb)
 static uint8_t set_ppu_mode(gameboy *gb)
 {
     uint8_t ppu_mode,
-            old_stat        = gb->memory->mmap[STAT_REGISTER],
+            old_stat        = gb->ppu->stat,
             mode_mask       = 0x03,
             masked_old_stat = old_stat & ~mode_mask;
 
@@ -751,7 +830,7 @@ static uint8_t set_ppu_mode(gameboy *gb)
         }
     }
 
-    gb->memory->mmap[STAT_REGISTER] = masked_old_stat | ppu_mode;
+    gb->ppu->stat = masked_old_stat | ppu_mode;
     return ppu_mode;
 }
 
@@ -760,8 +839,7 @@ static uint8_t set_ppu_mode(gameboy *gb)
 void run_ppu(gameboy *gb, uint8_t num_clocks)
 {
     // if the PPU isn't on then there's nothing to do
-    uint8_t lcdc = gb->memory->mmap[LCDC_REGISTER];
-    bool ppu_enabled = (lcdc >> 7) & 1;
+    bool ppu_enabled = (gb->ppu->lcdc >> 7) & 1;
     if (!ppu_enabled)
         return;
 

@@ -313,12 +313,10 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom, bool force
 
     gb->joypad = init_joypad();
     gb->cart = init_cartridge();
-    gb->ppu = init_ppu();
     gb->apu = init_apu();
 
     bool all_alloc = gb->joypad
                      && gb->cart
-                     && gb->ppu
                      && gb->apu;
     if (!all_alloc)
         goto init_error;
@@ -347,8 +345,11 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom, bool force
     }
 
     determine_and_report_run_mode(gb, force_dmg);
+
     gb->cpu = init_cpu(gb->run_mode);
-    if (!gb->cpu)
+    gb->ppu = init_ppu(gb->run_mode);
+
+    if (!gb->cpu || !gb->ppu)
         goto init_error;
 
     maybe_import_cartridge_ram(gb->cart, rom_file_path);

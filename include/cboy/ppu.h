@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <SDL.h>
+#include "cboy/common.h"
 
 #define FRAME_WIDTH  160
 #define FRAME_HEIGHT 144
@@ -47,7 +48,6 @@ typedef struct gb_ppu {
     display_colors colors;
     uint32_t dot_clock;
     uint64_t frames_rendered;
-    uint8_t scx, scy, ly, wx, wy;
 
     // track palette and color index data for the scanline
     // being rendered so we can mix the background, window,
@@ -71,7 +71,15 @@ typedef struct gb_ppu {
          hblank_stat_line,
          vblank_stat_line,
          oam_stat_line;
+
+    // the PPU I/O registers
+    uint8_t lcdc, stat, scy, scx, ly, lyc;
+    uint8_t dma, bgp, obp0, obp1,  wx, wy;
 } gb_ppu;
+
+void ppu_write(gameboy *gb, uint16_t address, uint8_t value);
+
+uint8_t ppu_read(gameboy *gb, uint16_t address);
 
 void render_scanline(gameboy *gb);
 
@@ -81,7 +89,7 @@ void run_ppu(gameboy *gb, uint8_t num_clocks);
 
 void cycle_display_colors(display_colors *colors, bool cycle_forward);
 
-gb_ppu *init_ppu(void);
+gb_ppu *init_ppu(enum GAMEBOY_MODE gb_mode);
 
 void free_ppu(gb_ppu *ppu);
 
