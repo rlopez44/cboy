@@ -392,15 +392,10 @@ void stop(gameboy *gb)
  */
 void halt(gameboy *gb)
 {
-    uint8_t if_register = gb->memory->mmap[IF_REGISTER],
-            ie_register = gb->memory->mmap[IE_REGISTER];
-
-    bool interrupt_pending = if_register & ie_register;
-
     // IME not set and an interrupt is pending so
     // we never actually enter the HALTed state
     // and instead trigger the HALT bug
-    if (!gb->cpu->ime_flag && interrupt_pending)
+    if (!gb->cpu->ime_flag && pending_interrupts(gb))
     {
         gb->cpu->halt_bug = true;
         LOG_DEBUG("HALT bug\n");

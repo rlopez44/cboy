@@ -24,4 +24,7 @@ void enable_interrupt(gameboy *gb, INTERRUPT_TYPE interrupt);
 // handle an interrupt, if any needs to be handled
 uint8_t service_interrupt(gameboy *gb);
 
+// returns set bits for all interrupts that are both pending and enabled
+uint8_t pending_interrupts(gameboy *gb);
+
 #endif

@@ -535,11 +535,7 @@ static void dma_transfer_check(gameboy *gb, uint8_t num_clocks)
 static void check_halt_wakeup(gameboy *gb)
 {
     // we exit if an interrupt is pending
-    uint8_t if_register = gb->memory->mmap[IF_REGISTER],
-            ie_register = gb->memory->mmap[IE_REGISTER];
-
-    bool interrupt_pending = if_register & ie_register;
-    if (interrupt_pending)
+    if (pending_interrupts(gb))
     {
         LOG_DEBUG("Exiting HALTed state\n");
         gb->cpu->is_halted = false;

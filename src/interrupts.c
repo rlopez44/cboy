@@ -27,6 +27,15 @@ void enable_interrupt(gameboy *gb, INTERRUPT_TYPE interrupt)
     gb->memory->mmap[IE_REGISTER] = old_ie_register | mask;
 }
 
+uint8_t pending_interrupts(gameboy *gb)
+{
+    uint8_t if_register = gb->memory->mmap[IF_REGISTER];
+    uint8_t ie_register = gb->memory->mmap[IE_REGISTER];
+
+    // NOTE: top three bits are unused and always set, so need to mask out
+    return if_register & ie_register & 0x1f;
+}
+
 /* Service an interrupt, if any needs to be serviced.
  *
  * The interrupt priorities follow the same order as
@@ -46,8 +55,7 @@ uint8_t service_interrupt(gameboy *gb)
 {
     uint8_t handler_addr = 0, // the address of the interrupt handler
             duration = 0, // number of M-cycles taken to service the interrupt
-            if_register = read_byte(gb, IF_REGISTER),
-            ie_register = read_byte(gb, IE_REGISTER);
+            if_register = read_byte(gb, IF_REGISTER);
 
     // masks for the interrupt bits
     uint8_t vblank_mask = (1 << VBLANK),
@@ -63,7 +71,7 @@ uint8_t service_interrupt(gameboy *gb)
      * Recall that the top 3 bits of IF and IE are unused
      * and so must be masked out here.
      */
-    uint8_t interrupts_to_service = (if_register & ie_register & 0x1f);
+    uint8_t interrupts_to_service = pending_interrupts(gb);
 
     if (gb->cpu->ime_flag && interrupts_to_service)
     {
@@ -113,6 +121,7 @@ uint8_t service_interrupt(gameboy *gb)
         }
         else // shouldn't get here
         {
+            uint8_t ie_register = read_byte(gb, IE_REGISTER);
             LOG_ERROR("Invalid interrupt service request."
                       " IF: 0x%02x, IE: 0x%02x\n",
                       if_register, ie_register);
