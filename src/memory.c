@@ -36,7 +36,7 @@ uint8_t read_byte(gameboy *gb, uint16_t address)
     uint8_t ppu_status   = gb->ppu->stat & 0x3,
             oam_blocked  = (ppu_status == 3) || (ppu_status == 2);
 
-    bool boot_rom_enabled = !gb->memory->mmap[0xff50];
+    bool boot_rom_enabled = !gb->memory->mmap[BRD_REGISTER];
 
     /**************** BEGIN: Special reads where we return early **************/
     // a boot ROM was successfully loaded
@@ -255,7 +255,7 @@ static void timing_related_write(gameboy *gb, uint16_t address, uint8_t value)
  */
 void write_byte(gameboy *gb, uint16_t address, uint8_t value)
 {
-    bool boot_rom_enabled = !gb->memory->mmap[0xff50];
+    bool boot_rom_enabled = !gb->memory->mmap[BRD_REGISTER];
     bool prohibited_mem_range = 0xfea0 <= address && address <= 0xfeff;
 
     // during a DMA transfer we can only access HRAM and the DMA register
@@ -265,7 +265,7 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
 
     // attempted write to the boot ROM disabled bit
     // after the boot ROM has finished running
-    bool illegal_boot_rom_enable_write = !boot_rom_enabled && address == 0xff50;
+    bool illegal_boot_rom_enable_write = !boot_rom_enabled && address == BRD_REGISTER;
     // LY register is read-only
     bool ly_write = address == LY_REGISTER;
 

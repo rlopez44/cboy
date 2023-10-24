@@ -262,7 +262,7 @@ static void maybe_load_bootrom(gameboy *gb, const char *bootrom)
     {
         LOG_INFO("The emulator will continue without using a boot ROM.\n\n");
         // disable the boot ROM
-        gb->memory->mmap[0xff50] = 1;
+        gb->memory->mmap[BRD_REGISTER] = 1;
     }
 }
 

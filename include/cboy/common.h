@@ -78,6 +78,11 @@ enum GB_MMIO_REGISTER {
     KEY0_REGISTER  = 0xff4c,
     KEY1_REGISTER  = 0xff4d,
     VBK_REGISTER   = 0xff4f,
+
+    /* Boot ROM disable */
+    BRD_REGISTER   = 0xff50,
+
+    /* CGB-only registers cont. */
     HDMA1_REGISTER = 0xff51,
     HDMA2_REGISTER = 0xff52,
     HDMA3_REGISTER = 0xff53,
