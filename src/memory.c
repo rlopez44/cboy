@@ -36,11 +36,9 @@ uint8_t read_byte(gameboy *gb, uint16_t address)
     uint8_t ppu_status   = gb->ppu->stat & 0x3,
             oam_blocked  = (ppu_status == 3) || (ppu_status == 2);
 
-    bool boot_rom_enabled = !gb->memory->mmap[BRD_REGISTER];
-
     /**************** BEGIN: Special reads where we return early **************/
     // a boot ROM was successfully loaded
-    if (gb->run_boot_rom && address < 0x100 && boot_rom_enabled)
+    if (gb->run_boot_rom && address < 0x100 && !gb->boot_rom_disabled)
     {
         return gb->boot_rom[address];
     }
@@ -76,6 +74,10 @@ uint8_t read_byte(gameboy *gb, uint16_t address)
     else if (address >= 0xff10 && address <= 0xff3f) // APU registers + wave RAM
     {
         return apu_read(gb, address);
+    }
+    else if (address == BRD_REGISTER)
+    {
+        return gb->boot_rom_disabled;
     }
     /**************** END: Special reads where we return early **************/
 
@@ -255,7 +257,6 @@ static void timing_related_write(gameboy *gb, uint16_t address, uint8_t value)
  */
 void write_byte(gameboy *gb, uint16_t address, uint8_t value)
 {
-    bool boot_rom_enabled = !gb->memory->mmap[BRD_REGISTER];
     bool prohibited_mem_range = 0xfea0 <= address && address <= 0xfeff;
 
     // during a DMA transfer we can only access HRAM and the DMA register
@@ -265,7 +266,7 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
 
     // attempted write to the boot ROM disabled bit
     // after the boot ROM has finished running
-    bool illegal_boot_rom_enable_write = !boot_rom_enabled && address == BRD_REGISTER;
+    bool illegal_boot_rom_enable_write = gb->boot_rom_disabled && address == BRD_REGISTER;
     // LY register is read-only
     bool ly_write = address == LY_REGISTER;
 
@@ -295,6 +296,11 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
     else if (address >= LCDC_REGISTER && address <= WX_REGISTER)
     {
         ppu_write(gb, address, value);
+        return;
+    }
+    else if (address == BRD_REGISTER)
+    {
+        gb->boot_rom_disabled = value;
         return;
     }
     // until double speed mode implemented: return early

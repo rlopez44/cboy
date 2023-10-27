@@ -30,6 +30,7 @@ typedef struct gameboy {
     // Game Boy boot ROM, if passed into the emulator
     uint8_t boot_rom[BOOT_ROM_SIZE];
     bool run_boot_rom;
+    bool boot_rom_disabled;
 
     bool is_stopped, dma_requested;
 

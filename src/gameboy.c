@@ -220,6 +220,7 @@ static void maybe_load_bootrom(gameboy *gb, const char *bootrom)
     if (gb->run_mode == GB_CGB_MODE)
     {
         LOG_INFO("Note: boot ROM playback not yet supported for GBC games. Skipping...\n\n");
+        gb->boot_rom_disabled = true;
         return;
     }
 
@@ -262,7 +263,7 @@ static void maybe_load_bootrom(gameboy *gb, const char *bootrom)
     {
         LOG_INFO("The emulator will continue without using a boot ROM.\n\n");
         // disable the boot ROM
-        gb->memory->mmap[BRD_REGISTER] = 1;
+        gb->boot_rom_disabled = true;
     }
 }
 
@@ -368,6 +369,8 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom, bool force
      */
     if (bootrom != NULL)
         maybe_load_bootrom(gb, bootrom);
+    else
+        gb->boot_rom_disabled = true;
 
     // initialize the screen after all other components
     if (!init_screen(gb))
