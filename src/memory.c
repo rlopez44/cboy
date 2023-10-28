@@ -64,7 +64,7 @@ uint8_t read_byte(gameboy *gb, uint16_t address)
         return ppu_read(gb, address);
     }
     else if (address == JOYP_REGISTER)
-        return report_button_states(gb, gb->memory->mmap[JOYP_REGISTER]);
+        return report_button_states(gb);
 
     else if ((address <= 0x7fff) // cartridge ROM
              || (0xa000 <= address && address <= 0xbfff)) // cartridge RAM
@@ -311,6 +311,12 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
 
         return;
     }
+    // writes to JOYP determine which set of buttons are reported
+    else if (address == JOYP_REGISTER)
+    {
+        update_button_set(gb, value);
+        return;
+    }
     /**************** END: Special writes where we return early **************/
 
 
@@ -326,9 +332,6 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
     {
         value = (value & 0x1f) | 0xe0;
     }
-    // writes to JOYP determine which set of buttons are reported
-    else if (address == JOYP_REGISTER)
-        value = report_button_states(gb, value);
 
     gb->memory->mmap[address] = value;
 }
@@ -340,7 +343,6 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
  */
 static void init_io_registers(gb_memory *memory, enum GAMEBOY_MODE gb_mode)
 {
-    memory->mmap[JOYP_REGISTER] = 0xcf;
     memory->mmap[TAC_REGISTER]  = 0xf8;
     memory->mmap[IF_REGISTER]   = 0xe1;
     memory->mmap[NR10_REGISTER] = 0x80;

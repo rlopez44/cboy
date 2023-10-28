@@ -20,7 +20,9 @@ gb_joypad *init_joypad(void)
     if (joypad == NULL)
         return NULL;
 
-    // no buttons pressed initially
+    // no buttons pressed and neither button set selected
+    joypad->action_selected = false;
+    joypad->dpad_selected = false;
     joypad->action_state = 0x0f;
     joypad->direction_state = 0x0f;
 
@@ -33,31 +35,40 @@ void free_joypad(gb_joypad *joypad)
     free(joypad);
 }
 
-// report key states via the JOYP register
-uint8_t report_button_states(gameboy *gb, uint8_t joyp)
+uint8_t report_button_states(gameboy *gb)
 {
-    uint8_t button_state = 0x0f; // bottom four bits of JOYP
+    gb_joypad *joypad = gb->joypad;
 
-    // see which modes are selected (0 = selected)
-    switch (joyp & 0x30)
+    uint8_t button_state;
+    if (joypad->action_selected && joypad->dpad_selected)
     {
-        case 0x30: // none selected
-            button_state = 0x0f;
-            break;
-        case 0x20: // direction
-            button_state = gb->joypad->direction_state;
-            break;
-        case 0x10: // action
-            button_state = gb->joypad->action_state;
-            break;
-        case 0x00: // action & direction
-            button_state = gb->joypad->action_state
-                           & gb->joypad->direction_state;
-            break;
+        button_state = joypad->action_state
+                       & joypad->direction_state;
+    }
+    else if (joypad->action_selected)
+    {
+        button_state = joypad->action_state;
+    }
+    else if (joypad->dpad_selected)
+    {
+        button_state = joypad->direction_state;
+    }
+    else // neither button set selected
+    {
+        button_state = 0x0f;
     }
 
-    // bits 6 and 7 are unused and always report set
-    return 0xc0 | (joyp & 0x30) | (button_state & 0x0f);
+    // recall that 0 = selected
+    return 0xc0
+           | !joypad->action_selected << 5
+           | !joypad->dpad_selected << 4
+           | (button_state & 0x0f);
+}
+
+void update_button_set(gameboy *gb, uint8_t value)
+{
+    gb->joypad->dpad_selected = !(value & 0x10);
+    gb->joypad->action_selected = !(value & 0x20);
 }
 
 // handle Game Boy key presses
@@ -134,7 +145,8 @@ void handle_keypress(gameboy *gb, SDL_KeyboardEvent *key)
     }
 
     // handle button state change and Joypad interrupt (button selected and pressed)
-    uint8_t joyp = gb->memory->mmap[JOYP_REGISTER];
+    // NOTE: we have to update the button states before reading JOYP
+    uint8_t joyp;
     switch (keycode)
     {
         case SDLK_s:
@@ -142,6 +154,7 @@ void handle_keypress(gameboy *gb, SDL_KeyboardEvent *key)
         case SDLK_a:
         case SDLK_d:
             gb->joypad->direction_state = (gb->joypad->direction_state & ~mask) | bit;
+            joyp = report_button_states(gb);
             if (!(joyp & 0x10) && key_pressed)
                 request_interrupt(gb, JOYPAD);
             break;
@@ -151,6 +164,7 @@ void handle_keypress(gameboy *gb, SDL_KeyboardEvent *key)
         case SDLK_j:
         case SDLK_k:
             gb->joypad->action_state = (gb->joypad->action_state & ~mask) | bit;
+            joyp = report_button_states(gb);
             if (!(joyp & 0x20) && key_pressed)
                 request_interrupt(gb, JOYPAD);
             break;
