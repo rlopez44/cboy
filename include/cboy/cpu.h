@@ -27,6 +27,9 @@ typedef struct gb_cpu {
     // the Interrupt Master Enable Flag
     bool ime_flag;
 
+    // the interrupt flags and enable registers
+    uint8_t if_register, ie_register;
+
     // to keep track of when the HALT bug occurs
     // See: https://gbdev.io/pandocs/halt.html?highlight=HALT#halt
     bool halt_bug;
@@ -92,5 +95,8 @@ bool read_subtract_flag(gb_registers *reg);
 bool read_half_carry_flag(gb_registers *reg);
 
 bool read_carry_flag(gb_registers *reg);
+
+uint8_t interrupt_register_read(gb_cpu *cpu, uint16_t address);
+void interrupt_register_write(gb_cpu *cpu, uint16_t address, uint8_t value);
 
 #endif

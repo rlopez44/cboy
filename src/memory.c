@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include "cboy/common.h"
+#include "cboy/cpu.h"
 #include "cboy/gameboy.h"
 #include "cboy/apu.h"
 #include "cboy/joypad.h"
@@ -78,6 +79,10 @@ uint8_t read_byte(gameboy *gb, uint16_t address)
     else if (address == BRD_REGISTER)
     {
         return gb->boot_rom_disabled;
+    }
+    else if (address == IF_REGISTER || address == IE_REGISTER)
+    {
+        return interrupt_register_read(gb->cpu, address);
     }
     /**************** END: Special reads where we return early **************/
 
@@ -317,6 +322,11 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
         update_button_set(gb, value);
         return;
     }
+    else if (address == IF_REGISTER || address == IE_REGISTER)
+    {
+        interrupt_register_write(gb->cpu, address, value);
+        return;
+    }
     /**************** END: Special writes where we return early **************/
 
 
@@ -326,11 +336,6 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
         // map to the appropriate address in WRAM
         // the offset is 0xe000 - 0xc000 = 0x2000
         address -= 0x2000;
-    }
-    // make sure the IF and IE registers' upper three bits are always set
-    else if (address == IF_REGISTER || address == IE_REGISTER)
-    {
-        value = (value & 0x1f) | 0xe0;
     }
 
     gb->memory->mmap[address] = value;
@@ -344,7 +349,6 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
 static void init_io_registers(gb_memory *memory, enum GAMEBOY_MODE gb_mode)
 {
     memory->mmap[TAC_REGISTER]  = 0xf8;
-    memory->mmap[IF_REGISTER]   = 0xe1;
 
     // CGB-only registers
     if (gb_mode == GB_CGB_MODE)

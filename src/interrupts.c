@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include "cboy/common.h"
+#include "cboy/cpu.h"
 #include "cboy/interrupts.h"
 #include "cboy/gameboy.h"
 #include "cboy/memory.h"
@@ -8,32 +9,19 @@
 // request an interrupt by setting the appropriate bit in the IF register
 void request_interrupt(gameboy *gb, INTERRUPT_TYPE interrupt)
 {
-    // mask to select the appropriate bit to set
-    uint8_t mask = 1 << interrupt;
-
-    // set the bit
-    uint8_t old_if_register = gb->memory->mmap[IF_REGISTER];
-    gb->memory->mmap[IF_REGISTER] = old_if_register | mask;
+    gb->cpu->if_register |= 1 << interrupt;
 }
 
 // set the appropriate bit in the IE register to enable the given interrupt
 void enable_interrupt(gameboy *gb, INTERRUPT_TYPE interrupt)
 {
-    // mask to select the appropriate bit to set
-    uint8_t mask = 1 << interrupt;
-
-    // set the bit
-    uint8_t old_ie_register = gb->memory->mmap[IE_REGISTER];
-    gb->memory->mmap[IE_REGISTER] = old_ie_register | mask;
+    gb->cpu->ie_register |= 1 << interrupt;
 }
 
 uint8_t pending_interrupts(gameboy *gb)
 {
-    uint8_t if_register = gb->memory->mmap[IF_REGISTER];
-    uint8_t ie_register = gb->memory->mmap[IE_REGISTER];
-
     // NOTE: top three bits are unused and always set, so need to mask out
-    return if_register & ie_register & 0x1f;
+    return gb->cpu->if_register & gb->cpu->ie_register & 0x1f;
 }
 
 /* Service an interrupt, if any needs to be serviced.
@@ -54,8 +42,7 @@ uint8_t pending_interrupts(gameboy *gb)
 uint8_t service_interrupt(gameboy *gb)
 {
     uint8_t handler_addr = 0, // the address of the interrupt handler
-            duration = 0, // number of M-cycles taken to service the interrupt
-            if_register = read_byte(gb, IF_REGISTER);
+            duration = 0; // number of M-cycles taken to service the interrupt
 
     // masks for the interrupt bits
     uint8_t vblank_mask = (1 << VBLANK),
@@ -91,40 +78,40 @@ uint8_t service_interrupt(gameboy *gb)
          */
         if (interrupts_to_service & vblank_mask)        // VBLANK
         {
-            if_register &= ~vblank_mask;
+            gb->cpu->if_register &= ~vblank_mask;
             handler_addr = 0x40;
             LOG_DEBUG("Servicing VBlank IRQ\n");
         }
         else if (interrupts_to_service & lcd_stat_mask) // LCD_STAT
         {
-            if_register &= ~lcd_stat_mask;
+            gb->cpu->if_register &= ~lcd_stat_mask;
             handler_addr = 0x48;
             LOG_DEBUG("Servicing STAT IRQ\n");
         }
         else if (interrupts_to_service & timer_mask)    // TIMER
         {
-            if_register &= ~timer_mask;
+            gb->cpu->if_register &= ~timer_mask;
             handler_addr = 0x50;
             LOG_DEBUG("Servicing Timer IRQ\n");
         }
         else if (interrupts_to_service & serial_mask)   // SERIAL
         {
-            if_register &= ~serial_mask;
+            gb->cpu->if_register &= ~serial_mask;
             handler_addr = 0x58;
             LOG_DEBUG("Servicing Serial IRQ\n");
         }
         else if (interrupts_to_service & joypad_mask)   // JOYPAD
         {
-            if_register &= ~joypad_mask;
+            gb->cpu->if_register &= ~joypad_mask;
             handler_addr = 0x60;
             LOG_DEBUG("Servicing Joypad IRQ\n");
         }
         else // shouldn't get here
         {
-            uint8_t ie_register = read_byte(gb, IE_REGISTER);
             LOG_ERROR("Invalid interrupt service request."
                       " IF: 0x%02x, IE: 0x%02x\n",
-                      if_register, ie_register);
+                      gb->cpu->if_register,
+                      gb->cpu->ie_register);
             exit(1);
         }
 
@@ -135,9 +122,6 @@ uint8_t service_interrupt(gameboy *gb)
         // disable interrupts in preparation for this
         // interrupt handler to be executed
         gb->cpu->ime_flag = false;
-
-        // store the IF register's new value
-        write_byte(gb, IF_REGISTER, if_register);
 
         // servicing the interrupt takes 5 M-cycles
         duration += 5;

@@ -129,6 +129,51 @@ bool read_carry_flag(gb_registers *reg)
     return (reg->f >> 4) & 1;
 }
 
+void interrupt_register_write(gb_cpu *cpu, uint16_t address, uint8_t value)
+{
+    // make sure the IF and IE registers' upper three bits are always set
+    value = (value & 0x1f) | 0xe0;
+    switch (address)
+    {
+        case IF_REGISTER:
+            cpu->if_register = value;
+            break;
+
+        case IE_REGISTER:
+            cpu->ie_register = value;
+            break;
+
+        default:
+            LOG_ERROR("Expected IF/IE register access."
+                      " Got address: %04x\n",
+                      address);
+            exit(1);
+    }
+}
+
+uint8_t interrupt_register_read(gb_cpu *cpu, uint16_t address)
+{
+    uint8_t value;
+    switch (address)
+    {
+        case IF_REGISTER:
+            value = cpu->if_register;
+            break;
+
+        case IE_REGISTER:
+            value = cpu->ie_register;
+            break;
+
+        default:
+            LOG_ERROR("Expected IF/IE register access."
+                      " Got address: %04x\n",
+                      address);
+            exit(1);
+    }
+
+    return value;
+}
+
 /* Allocate memory for the CPU struct
  * and initialize its components.
  *
@@ -160,6 +205,10 @@ gb_cpu *init_cpu(enum GAMEBOY_MODE gb_mode)
      * during initialization, so I will too.
      */
     cpu->ime_flag = false;
+
+    // bit mapping for IF and IE: 111BBBBB
+    cpu->if_register = 0xe1;
+    cpu->ie_register = 0xe0;
 
     // only true when a EI instruction is executed
     cpu->ime_delayed_set = false;
