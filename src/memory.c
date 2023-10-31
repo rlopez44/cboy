@@ -345,22 +345,6 @@ static void init_io_registers(gb_memory *memory, enum GAMEBOY_MODE gb_mode)
 {
     memory->mmap[TAC_REGISTER]  = 0xf8;
     memory->mmap[IF_REGISTER]   = 0xe1;
-    memory->mmap[NR10_REGISTER] = 0x80;
-    memory->mmap[NR11_REGISTER] = 0xbf;
-    memory->mmap[NR12_REGISTER] = 0xf3;
-    memory->mmap[NR14_REGISTER] = 0xbf;
-    memory->mmap[NR21_REGISTER] = 0x3f;
-    memory->mmap[NR23_REGISTER] = 0xff;
-    memory->mmap[NR24_REGISTER] = 0xbf;
-    memory->mmap[NR30_REGISTER] = 0x7f;
-    memory->mmap[NR31_REGISTER] = 0xff;
-    memory->mmap[NR32_REGISTER] = 0x9f;
-    memory->mmap[NR34_REGISTER] = 0xbf;
-    memory->mmap[NR41_REGISTER] = 0xff;
-    memory->mmap[NR44_REGISTER] = 0xbf;
-    memory->mmap[NR50_REGISTER] = 0x77;
-    memory->mmap[NR51_REGISTER] = 0xf3;
-    memory->mmap[NR52_REGISTER] = 0xf1;
 
     // CGB-only registers
     if (gb_mode == GB_CGB_MODE)
