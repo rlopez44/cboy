@@ -49,6 +49,9 @@ typedef struct gameboy {
      */
     uint16_t clock_counter;
 
+    // timer counter, modulo, and control registers
+    uint8_t tima, tma, tac;
+
     /* A counter to track the number of clocks since
      * a DMA transfer was requested so that we can
      * emulate the DMA transfer timing.
@@ -82,6 +85,9 @@ void increment_tima(gameboy *gb);
  * incrementing the DIV and TIMA registers as needed.
  */
 void increment_clock_counter(gameboy *gb, uint16_t num_clocks);
+
+void timing_related_write(gameboy *gb, uint16_t address, uint8_t value);
+uint8_t timing_related_read(gameboy *gb, uint16_t address);
 
 // the emulator's game loop
 void run_gameboy(gameboy *gb);

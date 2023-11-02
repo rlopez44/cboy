@@ -21,6 +21,13 @@
 /* 3 seems like a good scale factor */
 #define WINDOW_SCALE 3
 
+/* Bit masks to select a bit out of the internal clock
+ * counter based on the value of bits 1-0 of TAC. These
+ * are arranged such that each value is the index of the
+ * appropriate bit mask.
+ */
+static const uint16_t timer_circuit_bitmasks[4] = {1 << 9, 1 << 3, 1 << 5, 1 << 7};
+
 void report_volume_level(gameboy *gb, bool add_newline)
 {
     const char *fmt = "%s\rCurrent volume:%*s%d/100";
@@ -311,6 +318,7 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom, bool force
     gb->volume_slider = 100;
     gb->throttle_fps = true;
     gb->run_mode = GB_DMG_MODE; // updated once game ROM is read in
+    gb->tac = 0xf8;
 
     gb->joypad = init_joypad();
     gb->cart = init_cartridge();
@@ -419,16 +427,12 @@ void free_gameboy(gameboy *gb)
  */
 void increment_tima(gameboy *gb)
 {
-    uint8_t tma = gb->memory->mmap[TMA_REGISTER],
-            incremented_tima = gb->memory->mmap[TIMA_REGISTER] + 1;
-
-    if (!incremented_tima) // TIMA overflowed
+    gb->tima += 1;
+    if (!gb->tima)
     {
-        incremented_tima = tma;
+        gb->tima = gb->tma;
         request_interrupt(gb, TIMER);
     }
-
-    gb->memory->mmap[TIMA_REGISTER] = incremented_tima;
 }
 
 /* Increment the Game Boy's internal clock counter
@@ -471,13 +475,11 @@ void increment_tima(gameboy *gb)
  */
 void increment_clock_counter(gameboy *gb, uint16_t num_clocks)
 {
-    uint8_t tac = gb->memory->mmap[TAC_REGISTER];
-
-    bool tima_enabled = tac & 0x4;
+    bool tima_enabled = gb->tac & 0x4;
 
     // the number of CPU clock ticks between TIMA increments
     uint16_t tima_tick_interval;
-    switch (tac & 0x3)
+    switch (gb->tac & 0x3)
     {
         case 0x0:
             tima_tick_interval = 0x400;
@@ -505,6 +507,137 @@ void increment_clock_counter(gameboy *gb, uint16_t num_clocks)
             increment_tima(gb);
         }
     }
+}
+
+/* Handle writes to the timing-related registers (DIV, TIMA, TMA, TAC)
+ * -------------------------------------------------------------------
+ * To determine when to increment TIMA, the Game Boy's timer circuit
+ * selects a certain bit of the internal clock counter (see below),
+ * performs a logical AND between this bit and the TIMA enable bit of
+ * TAC (bit 2), then monitors when this signal switches from 1 to 0.
+ *
+ * The internal clock counter bit is selected based on the value of
+ * bits 1-0 of TAC, such that its flips from 1 to 0 occur at the
+ * current TIMA increment frequency:
+ *
+ *     > Bits 1 and 0 of TAC:
+ *           00: Bit 9 of internal clock counter (freq = CPU Clock / 1024)
+ *           01: Bit 3 of internal clock counter (freq = CPU Clock / 16)
+ *           10: Bit 5 of internal clock counter (freq = CPU Clock / 64)
+ *           11: Bit 7 of internal clock counter (freq = CPU Clock / 256)
+ *
+ * Given the manner in which the monitored signal is constructed, the
+ * following conditions cause the 1 -> 0 signal switch to occur:
+ *
+ *    1. The selected bit of the internal clock counter flips from
+ *       1 to 0 while TIMA is enabled (bit 2 of TAC is 1), either
+ *       because the clock counter incremented or the DIV register
+ *       was written to (here we're interested in the latter).
+ *
+ *    2. TIMA is currently enabled and a write to TAC occurs that
+ *       disables it (i.e. bit 2 of TAC flips from 1 to 0) while the
+ *       selected bit of the internal clock counter is 1.
+ *
+ *    3. TIMA is currently enabled, a write to TAC occurs that switches
+ *       the TIMA increment frequency, and this causes the circuit to
+ *       switch from a selected bit that is 1, to one that is 0.
+ *
+ * In this function we check if any of these conditions occur so
+ * that we increment TIMA appropriately during the write to memory.
+ *
+ * See: https://gbdev.io/pandocs/#timer-and-divider-registers
+ */
+void timing_related_write(gameboy *gb, uint16_t address, uint8_t value)
+{
+    // the bit mask used by the timer circuit
+    uint16_t bitmask = timer_circuit_bitmasks[gb->tac & 0x3];
+
+    bool selected_bit_is_set = gb->clock_counter & bitmask,
+         tima_enabled        = gb->tac & 0x4,
+         writing_to_tac      = address == TAC_REGISTER,          // TIMA frequency might change
+         disabling_tima      = writing_to_tac && !(value & 0x4), // TIMA will be disabled by write to TAC
+         resetting_counter   = address == DIV_REGISTER;
+
+    /********** Check if we need to increment TIMA **********/
+
+    // condition 1 or condition 2 for TIMA increment is met
+    if ((disabling_tima || resetting_counter) && tima_enabled && selected_bit_is_set)
+    {
+        increment_tima(gb);
+    }
+    // check if condition 3 for TIMA increment is met
+    else if (tima_enabled && writing_to_tac)
+    {
+        // condition 3 is met if we're switching from
+        // a bit that is 1 to one that is 0
+        bitmask = timer_circuit_bitmasks[value & 0x3];
+        bool new_selected_bit_is_set = gb->clock_counter & bitmask;
+
+        if (selected_bit_is_set && !new_selected_bit_is_set)
+        {
+            increment_tima(gb);
+        }
+    }
+
+    /********** Perform the actual writes **********/
+    switch (address)
+    {
+        // writing to DIV resets the internal clock counter
+        case DIV_REGISTER:
+            gb->clock_counter = 0;
+            break;
+
+        case TIMA_REGISTER:
+            gb->tima = value;
+            break;
+
+        case TMA_REGISTER:
+            gb->tma = value;
+            break;
+
+        // only the lower 3 bits of TAC can be written to
+        case TAC_REGISTER:
+            gb->tac = 0xf8 | (value & 0x07);
+            break;
+
+        default:
+            LOG_ERROR("Expected write to timing-related address."
+                      " Got: %04x\n",
+                      address);
+            exit(1);
+    }
+}
+
+uint8_t timing_related_read(gameboy *gb, uint16_t address)
+{
+    uint8_t value;
+    switch (address)
+    {
+        // DIV maps to the upper byte of the internal clock counter
+        case DIV_REGISTER:
+            value = gb->clock_counter >> 8;
+            break;
+
+        case TIMA_REGISTER:
+            value = gb->tima;
+            break;
+
+        case TMA_REGISTER:
+            value = gb->tma;
+            break;
+
+        case TAC_REGISTER:
+            value = gb->tac;
+            break;
+
+        default:
+            LOG_ERROR("Expected read from timing-related address."
+                      " Got: %04x\n",
+                      address);
+            exit(1);
+    }
+
+    return value;
 }
 
 /* Check if a DMA transfer needs to be performed
