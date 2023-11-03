@@ -364,10 +364,18 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom, bool force
     maybe_import_cartridge_ram(gb->cart, rom_file_path);
 
     // allocate and init the memory map
-    gb->memory = init_memory_map(gb->cart, gb->run_mode);
+    gb->memory = init_memory_map(gb->cart);
 
     if (gb->memory == NULL)
         goto init_error;
+
+    // finish initializing I/O registers
+    if (gb->run_mode == GB_CGB_MODE)
+    {
+        gb->key0 = gb->cart->rom_banks[0][0x0143];
+        gb->key1 = gb->vbk = gb->svbk = 0xff;
+        gb->hdma1 = gb->hdma2 = gb->hdma3 = gb->hdma4 = gb->hdma5 = 0xff;
+    }
 
     /* Load the boot ROM into the emulator if it was passed in.
      * We need to do this after the memory map is initialized

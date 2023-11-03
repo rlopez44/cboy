@@ -244,32 +244,6 @@ void write_byte(gameboy *gb, uint16_t address, uint8_t value)
     gb->memory->mmap[address] = value;
 }
 
-/* Initialize the I/O registers of the Game Boy
- * whose initial value is non-zero.
- *
- * See: https://gbdev.io/pandocs/#power-up-sequence
- */
-static void init_io_registers(gb_memory *memory, enum GAMEBOY_MODE gb_mode)
-{
-    // CGB-only registers
-    if (gb_mode == GB_CGB_MODE)
-    {
-        memory->mmap[KEY0_REGISTER]  = memory->mmap[0x0143];
-        memory->mmap[KEY1_REGISTER]  = 0xff;
-        memory->mmap[VBK_REGISTER]   = 0xff;
-        memory->mmap[HDMA1_REGISTER] = 0xff;
-        memory->mmap[HDMA2_REGISTER] = 0xff;
-        memory->mmap[HDMA3_REGISTER] = 0xff;
-        memory->mmap[HDMA4_REGISTER] = 0xff;
-        memory->mmap[HDMA5_REGISTER] = 0xff;
-        memory->mmap[BCPS_REGISTER]  = 0xff;
-        memory->mmap[BCPD_REGISTER]  = 0xff;
-        memory->mmap[OCPS_REGISTER]  = 0xff;
-        memory->mmap[OCPD_REGISTER]  = 0xff;
-        memory->mmap[SVBK_REGISTER]  = 0xff;
-    }
-}
-
 /* Allocate memory for the Game Boy's memory map and
  * initialize it to zero. Then, mount the zeroth and first
  * ROM banks from the cartridge into the appropriate locations
@@ -302,7 +276,7 @@ static void init_io_registers(gb_memory *memory, enum GAMEBOY_MODE gb_mode)
  *
  * Returns NULL if the allocation fails.
  */
-gb_memory *init_memory_map(gb_cartridge *cart, enum GAMEBOY_MODE gb_mode)
+gb_memory *init_memory_map(gb_cartridge *cart)
 {
     gb_memory *memory = malloc(sizeof(gb_memory));
 
@@ -320,8 +294,6 @@ gb_memory *init_memory_map(gb_cartridge *cart, enum GAMEBOY_MODE gb_mode)
     // mount the zeroth and first ROM banks
     memcpy(memory->mmap, cart->rom_banks[0], ROM_BANK_SIZE);
     memcpy(memory->mmap + ROM_BANK_SIZE, cart->rom_banks[1], ROM_BANK_SIZE);
-
-    init_io_registers(memory, gb_mode);
 
     return memory;
 }

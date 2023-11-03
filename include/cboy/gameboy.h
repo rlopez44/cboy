@@ -52,6 +52,18 @@ typedef struct gameboy {
     // timer counter, modulo, and control registers
     uint8_t tima, tma, tac;
 
+    uint8_t key0; // GB compatibility
+    uint8_t key1; // prepare speed switch
+    uint8_t vbk;  // VRAM bank
+    uint8_t svbk; // WRAM bank
+
+    // VRAM DMA
+    uint8_t hdma1; // HDMA source high
+    uint8_t hdma2; // HDMA source low
+    uint8_t hdma3; // HDMA destination high
+    uint8_t hdma4; // HDMA destination low
+    uint8_t hdma5; // HDMA length/mode/start
+
     /* A counter to track the number of clocks since
      * a DMA transfer was requested so that we can
      * emulate the DMA transfer timing.

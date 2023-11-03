@@ -75,6 +75,9 @@ typedef struct gb_ppu {
     // the PPU I/O registers
     uint8_t lcdc, stat, scy, scx, ly, lyc;
     uint8_t dma, bgp, obp0, obp1,  wx, wy;
+
+    // CGB PPU I/O registers
+    uint8_t bcps, bcpd, ocps, ocpd, opri;
 } gb_ppu;
 
 void ppu_write(gameboy *gb, uint16_t address, uint8_t value);

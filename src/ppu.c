@@ -90,6 +90,14 @@ gb_ppu *init_ppu(enum GAMEBOY_MODE gb_mode)
     ppu->obp0 = 0xff;
     ppu->obp1 = 0xff;
 
+    // CGB-only I/O registers
+    if (gb_mode == GB_CGB_MODE)
+    {
+        ppu->bcps = ppu->bcpd = 0xff;
+        ppu->ocps = ppu->ocpd = 0xff;
+        ppu->opri = 0xfe;
+    }
+
     init_display_colors(&ppu->colors);
 
     return ppu;
