@@ -84,6 +84,8 @@ void ppu_write(gameboy *gb, uint16_t address, uint8_t value);
 
 uint8_t ppu_read(gameboy *gb, uint16_t address);
 
+void dma_transfer(gameboy *gb);
+
 void render_scanline(gameboy *gb);
 
 void display_frame(gameboy *gb);

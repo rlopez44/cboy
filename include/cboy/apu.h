@@ -24,6 +24,9 @@
 /* number of bytes in wave RAM */
 #define WAVE_RAM_SIZE 16
 
+#define WAVE_RAM_START 0xff30
+#define WAVE_RAM_STOP  0xff3f
+
 typedef enum APU_CHANNELS {
     CHANNEL_ONE,
     CHANNEL_TWO,

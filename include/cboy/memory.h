@@ -2,35 +2,36 @@
 #define MEMORY_H_
 
 #include <stdint.h>
-#include "cboy/cartridge.h"
+#include "cboy/common.h"
 
-/* 2^16 bytes */
-#define MEMORY_MAP_SIZE 65536
+/* sizes in bytes */
+#define OAM_SIZE 160
+#define HRAM_SIZE 127
 
-/* This header file needs to be included in gameboy.h
- * to define the gameboy type, so we need to forward
- * declare this type for the read_byte and write_byte
- * functions below.
- */
 typedef struct gameboy gameboy;
 
-// the Game Boy CPU's 16-bit memory map (addresses 0x0000 to 0xFFFF)
+// the Game Boy's internal RAM
 typedef struct gb_memory {
-    // map to a simple array of length 2^16 for now
-    uint8_t mmap[MEMORY_MAP_SIZE];
+    uint8_t vram[8 * KB];
+    uint8_t wram[2][4 * KB];
+    uint8_t oam[OAM_SIZE];
+    uint8_t hram[HRAM_SIZE];
 } gb_memory;
 
 // Utility functions for reading and writing to memory
 uint8_t read_byte(gameboy *gb, uint16_t address);
 void write_byte(gameboy *gb, uint16_t address, uint8_t value);
 
-// perform a DMA transfer
-void dma_transfer(gameboy *gb);
+ // read data from a RAM address
+ uint8_t ram_read(gameboy *gb, uint16_t address);
 
-// function to initialize the memory struct
-gb_memory *init_memory_map(gb_cartridge *cart);
+ // write data to a RAM address
+ void ram_write(gameboy *gb, uint16_t address, uint8_t value);
 
-// function to free the memory struct
+// Initialize the memory struct
+gb_memory *init_memory_map(void);
+
+// Free the memory struct
 void free_memory_map(gb_memory *memory);
 
 #endif

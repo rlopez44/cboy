@@ -5,6 +5,7 @@
 #include <SDL.h>
 #include "cboy/common.h"
 #include "cboy/gameboy.h"
+#include "cboy/memory.h"
 #include "cboy/ppu.h"
 #include "cboy/interrupts.h"
 #include "cboy/log.h"
@@ -179,6 +180,52 @@ void ppu_write(gameboy *gb, uint16_t address, uint8_t value)
     }
 }
 
+/* Perform a DMA transfer from ROM or RAM to OAM
+ * ---------------------------------------------
+ * On hardware, the DMA transfer takes 160 m-cycles to complete,
+ * but this function performs the transfer all at once. As such,
+ * emulating the timing of the transfer should be handled by the
+ * caller.
+ *
+ * The DMA source address is really the upper byte of the full
+ * 16-bit starting address for the transfer (See below).
+ *
+ * Source and Destination
+ * ~~~~~~~~~~~~~~~~~~~~~~
+ * DMA source address: XX (<= 0xdf)
+ * Source:          0xXX00 - 0xXX9f
+ * Destination:     0xfe00 - 0xfe9f
+ *
+ */
+void dma_transfer(gameboy *gb)
+{
+    if (gb->ppu->dma > 0xdf)
+    {
+        LOG_ERROR("Invalid DMA source hi: %02x."
+                  " Must be between 00 and df\n",
+                  gb->ppu->dma);
+        exit(1);
+    }
+
+    uint16_t source, dest;
+    uint8_t value;
+    bool mbc_read;
+    for (uint16_t lo = 0x0000; lo <= 0x009f; ++lo)
+    {
+        source = ((uint16_t)gb->ppu->dma << 8) | lo;
+        dest = 0xfe00 | lo;
+        mbc_read = source <= 0x7fff || (0xa000 <= source && source <= 0xbfff);
+
+        // source may be in cartridge RAM/ROM
+        if (mbc_read)
+            value = cartridge_read(gb, source);
+        else
+            value = ram_read(gb, source);
+
+        ram_write(gb, dest, value);
+    }
+}
+
 /* Reset the PPU.
  *
  * Should be called when the LCD/PPU
@@ -326,9 +373,9 @@ static inline uint16_t color_from_palette(gameboy *gb, uint16_t palette_reg, uin
 // load pixel color data for one line of the tile (8 pixels) into the given buffer
 static void load_tile_color_data(gameboy *gb, uint16_t load_addr, uint8_t *buff)
 {
-    // each line of the tile is 2 bytes
-    uint8_t lo = gb->memory->mmap[load_addr],
-            hi = gb->memory->mmap[load_addr + 1];
+    // each line of the tile is 2 bytes in VRAM
+    uint8_t lo = ram_read(gb, load_addr),
+            hi = ram_read(gb, load_addr + 1);
 
     // convert these bytes into the corresponding color indices
     // See: https://gbdev.io/pandocs/Tile_Data.html
@@ -413,14 +460,17 @@ static void load_bg_tiles(gameboy *gb, bool tile_data_area_bit, bool tile_map_ar
 
     // traverse tile map until we've loaded a full frame width of pixels
     uint8_t tile_index, pixels_to_load, pixels_remaining = FRAME_WIDTH;
-    uint16_t tile_addr;
+    uint16_t tile_addr, tile_index_addr;
     uint8_t tile_color_data[TILE_WIDTH] = {0};
     uint8_t *tile_color_data_load_start;
     for (uint16_t tileno = tile_xoffset;
          pixels_remaining > 0;
          tileno = (tileno + 1) % TILE_MAP_TILE_WIDTH)
     {
-        tile_index = gb->memory->mmap[base_map_addr + TILE_MAP_TILE_WIDTH * tile_yoffset + tileno];
+        tile_index_addr = base_map_addr
+                          + TILE_MAP_TILE_WIDTH * tile_yoffset
+                          + tileno;
+        tile_index = ram_read(gb, tile_index_addr);
         tile_addr = tile_addr_from_index(tile_data_area_bit, tile_index);
         load_tile_color_data(gb,
                              tile_addr + 2 * tile_pixel_yoffset, // two bytes per line
@@ -468,10 +518,10 @@ static void load_window_tiles(gameboy *gb, bool tile_data_area_bit, bool tile_ma
         * from the top left tile, offsetting by how many visible window
         * scanlines have been rendered so far this frame.
         */
-    uint16_t tile_addr,
-                pixel_yoffset      = gb->ppu->window_line_counter,
-                tile_yoffset       = pixel_yoffset / TILE_WIDTH,
-                tile_pixel_yoffset = pixel_yoffset % TILE_WIDTH;
+    uint16_t tile_addr, tile_index_addr;
+    uint16_t pixel_yoffset      = gb->ppu->window_line_counter,
+             tile_yoffset       = pixel_yoffset / TILE_WIDTH,
+             tile_pixel_yoffset = pixel_yoffset % TILE_WIDTH;
 
     // we need one extra tile for when the window is shifted left
     uint8_t scanline_buff[FRAME_WIDTH + TILE_WIDTH] = {0};
@@ -481,9 +531,10 @@ static void load_window_tiles(gameboy *gb, bool tile_data_area_bit, bool tile_ma
          tile_xoffset < 1 + (FRAME_WIDTH / TILE_WIDTH);
          ++tile_xoffset)
     {
-        tile_index = gb->memory->mmap[base_map_addr
-                                      + tile_yoffset * TILE_MAP_TILE_WIDTH
-                                      + tile_xoffset];
+        tile_index_addr = base_map_addr
+                          + tile_yoffset * TILE_MAP_TILE_WIDTH
+                          + tile_xoffset;
+        tile_index = ram_read(gb, tile_index_addr);
         tile_addr = tile_addr_from_index(tile_data_area_bit, tile_index);
 
         load_tile_color_data(gb,
@@ -573,7 +624,7 @@ static void render_loaded_sprites(gameboy *gb, gb_sprite *sprites, uint8_t n_spr
 
         base_tile_addr = tile_addr_from_index(true, curr_sprite->tile_idx);
         for (uint16_t offset = 0; offset < curr_sprite->ysize * 2; ++offset)
-            curr_sprite->tile_data[offset] = gb->memory->mmap[base_tile_addr + offset];
+            curr_sprite->tile_data[offset] = ram_read(gb, base_tile_addr + offset);
 
         // perform xflip and yflip before rendering by adjusting xpos and ypos
         perform_sprite_reflections(curr_sprite);
@@ -600,14 +651,14 @@ static void load_sprites(gameboy *gb, bool obj_size_bit)
         if (sprite_count >= 10)
             break;
 
-        ypos = gb->memory->mmap[oam_base_addr + oam_offset]; // sprite vertical pos + 16
+        ypos = ram_read(gb, oam_base_addr + oam_offset); // sprite vertical pos + 16
 
         // current scanline is interior to the sprite
         if (shifted_ly >= ypos && shifted_ly < ypos + sprite_ysize)
         {
-            xpos = gb->memory->mmap[oam_base_addr + oam_offset + 1];
-            tile_idx = gb->memory->mmap[oam_base_addr + oam_offset + 2];
-            flags = gb->memory->mmap[oam_base_addr + oam_offset + 3];
+            xpos = ram_read(gb, oam_base_addr + oam_offset + 1);
+            tile_idx = ram_read(gb, oam_base_addr + oam_offset + 2);
+            flags = ram_read(gb, oam_base_addr + oam_offset + 3);
 
             sprites_to_render[sprite_count].ypos     = ypos; // sprite vertical pos + 16
             sprites_to_render[sprite_count].xpos     = xpos;
