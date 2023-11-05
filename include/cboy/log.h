@@ -12,9 +12,6 @@
 #define LOG_ERROR(...) do {SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, __VA_ARGS__);} while (0)
 #define LOG_INFO(...)  do {SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, __VA_ARGS__);} while (0)
 
-// dump the Game Boy's memory contents
-void dump_memory(gameboy *gb);
-
 // print out the current CPU register contents
 void print_registers(gameboy *gb);
 

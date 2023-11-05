@@ -96,10 +96,6 @@ int main(int argc, char *argv[])
 
     run_gameboy(gb);
 
-#ifdef DEBUG
-    dump_memory(gb);
-#endif
-
     save_cartridge_ram(gb->cart, romfile);
 
     // display the total number of frames rendered

@@ -41,9 +41,8 @@ This will compile the release build of the emulator and copy it into
 `/usr/local/bin`.
 
 # Notes
-Currently, the emulator can't be run on Windows because the debug mode
-memory dumping functionality writes to the `/tmp/` directory and because
-the POSIX `getopt` function is used for command line options processing.
+Currently, the emulator can't be run on Windows because the POSIX
+`getopt` function is used for command line options processing.
 
 # Supported MBCs
 CBoy currently supports the following Memory Bank Controllers:
