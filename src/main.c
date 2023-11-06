@@ -98,7 +98,6 @@ int main(int argc, char *argv[])
 
     save_cartridge_ram(gb->cart, romfile);
 
-    // display the total number of frames rendered
     LOG_INFO("\n\nFrames rendered: %" PRIu64 "\n", gb->ppu->frames_rendered);
 
     free_gameboy(gb);

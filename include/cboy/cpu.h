@@ -87,7 +87,7 @@ void set_half_carry_flag(gb_registers *reg, bool value);
 
 void set_carry_flag(gb_registers *reg, bool value);
 
-// utility functions for reading indiidual flags
+// utility functions for reading individual flags
 bool read_zero_flag(gb_registers *reg);
 
 bool read_subtract_flag(gb_registers *reg);

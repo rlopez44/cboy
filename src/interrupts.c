@@ -41,23 +41,16 @@ uint8_t pending_interrupts(gameboy *gb)
  */
 uint8_t service_interrupt(gameboy *gb)
 {
-    uint8_t handler_addr = 0, // the address of the interrupt handler
-            duration = 0; // number of M-cycles taken to service the interrupt
+    uint8_t handler_addr = 0;
+    // number of M-cycles taken to service the interrupt
+    uint8_t duration = 0;
 
-    // masks for the interrupt bits
     uint8_t vblank_mask = (1 << VBLANK),
             lcd_stat_mask = (1 << LCD_STAT),
             timer_mask = (1 << TIMER),
             serial_mask = (1 << SERIAL),
             joypad_mask = (1 << JOYPAD);
 
-    /* An interrupt will be serviced only if the CPU's IME
-     * flag is set and the interrupt's bits in the IE and
-     * IF registers are both set.
-     *
-     * Recall that the top 3 bits of IF and IE are unused
-     * and so must be masked out here.
-     */
     uint8_t interrupts_to_service = pending_interrupts(gb);
 
     if (gb->cpu->ime_flag && interrupts_to_service)
@@ -115,8 +108,6 @@ uint8_t service_interrupt(gameboy *gb)
             exit(1);
         }
 
-        // set the high byte of the PC to zero and the low
-        // byte to the address of the interrupt handler
         gb->cpu->reg->pc = (uint16_t)handler_addr;
 
         // disable interrupts in preparation for this

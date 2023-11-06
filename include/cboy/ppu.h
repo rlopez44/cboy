@@ -33,7 +33,7 @@ typedef struct gb_sprite {
         uint8_t tile_data[32];
 } gb_sprite;
 
-/* colors for use by the display */
+/* colors for use by the display in monochrome mode */
 typedef struct display_colors {
     uint16_t white,
              light_gray,

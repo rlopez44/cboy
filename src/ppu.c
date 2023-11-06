@@ -296,11 +296,6 @@ void cycle_display_colors(display_colors *colors, bool cycle_forward)
  *   Set:   unsigned offset (0 to 255)
  *   Reset: signed offset (-128 to 127)
  *
- * We'll perform any signed arithmetic needed using
- * unsigned values. Therefore, if we're interpreting
- * the tile index as a signed offset, we must sign
- * extend it to 16 bits.
- *
  * See: https://gbdev.io/pandocs/#vram-tile-data
  */
 static uint16_t tile_addr_from_index(bool tile_data_area_bit, uint8_t tile_index)
@@ -308,7 +303,7 @@ static uint16_t tile_addr_from_index(bool tile_data_area_bit, uint8_t tile_index
     uint16_t base_data_addr = tile_data_area_bit ? 0x8000 : 0x9000,
              tile_offset    = (uint16_t)tile_index;
 
-    // sign extension needed
+    // interpret as signed offset, so sign extension needed
     if (!tile_data_area_bit && (tile_index & 0x80) >> 7)
     {
         tile_offset |= 0xff00;
@@ -515,9 +510,9 @@ static void load_window_tiles(gameboy *gb, bool tile_data_area_bit, bool tile_ma
     uint16_t base_map_addr = tile_map_area_bit ? 0x9c00 : 0x9800;
 
     /* The window tile map is not scrollable -- it is always rendered
-        * from the top left tile, offsetting by how many visible window
-        * scanlines have been rendered so far this frame.
-        */
+     * from the top left tile, offsetting by how many visible window
+     * scanlines have been rendered so far this frame.
+     */
     uint16_t tile_addr, tile_index_addr;
     uint16_t pixel_yoffset      = gb->ppu->window_line_counter,
              tile_yoffset       = pixel_yoffset / TILE_WIDTH,
@@ -707,7 +702,6 @@ static void push_scanline_data(gameboy *gb)
 // Render a single scanline into the frame buffer
 void render_scanline(gameboy *gb)
 {
-    // get the bit info out of the LCDC register
     uint8_t lcdc = gb->ppu->lcdc;
     bool window_tile_map_area_bit  = lcdc & 0x40,
          window_enable_bit         = lcdc & 0x20,
@@ -717,7 +711,6 @@ void render_scanline(gameboy *gb)
          obj_enable_bit            = lcdc & 0x02,
          bg_and_window_enable_bit  = lcdc & 0x01;
 
-    // render the background and window, if enabled
     if (bg_and_window_enable_bit)
     {
         load_bg_tiles(gb, bg_win_tile_data_area_bit,
@@ -736,11 +729,9 @@ void render_scanline(gameboy *gb)
                0, sizeof gb->ppu->scanline_coloridx_buff);
     }
 
-    // render the sprites, if enabled
     if (obj_enable_bit)
         load_sprites(gb, obj_size_bit);
 
-    // Push the completed scanline into the frame buffer
     push_scanline_data(gb);
 }
 

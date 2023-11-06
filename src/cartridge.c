@@ -29,24 +29,20 @@ void unload_cartridge(gb_cartridge *cart)
     if (!cart)
         return;
 
-    // free the ROM banks
     if (cart->rom_banks)
         for (int i = 0; i < cart->num_rom_banks; ++i)
             free(cart->rom_banks[i]);
 
     free(cart->rom_banks);
 
-    // free the RAM banks, if any
     if (cart->ram_banks)
         for (int i = 0; i < cart->num_ram_banks; ++i)
             free(cart->ram_banks[i]);
 
     free(cart->ram_banks);
 
-    // free the MBC, if any
     free(cart->mbc);
 
-    // free the cartridge
     free(cart);
 }
 
@@ -84,7 +80,6 @@ static ROM_LOAD_STATUS load_rom_bank(uint8_t *buffer, FILE *rom_file)
  *
  * Returns NULL if the allocation failed.
  */
-
 gb_cartridge *init_cartridge(void)
 {
     gb_cartridge *cart = calloc(1, sizeof(gb_cartridge));
@@ -105,7 +100,6 @@ gb_cartridge *init_cartridge(void)
 /* determine the number of banks in the ROM given the zeroth ROM bank */
 static uint16_t get_num_rom_banks(uint8_t *rom0)
 {
-    // byte 0x148 tells us the number of banks.
     uint16_t num_rom_banks;
     switch (rom0[0x148])
     {
@@ -155,7 +149,6 @@ static uint16_t get_num_rom_banks(uint8_t *rom0)
 /* determine the MBC type given the zeroth ROM bank */
 static MBC_TYPE get_mbc_type(uint8_t *rom0)
 {
-    // byte 0x147 tells us the MBC type.
     MBC_TYPE mbc;
     switch (rom0[0x147])
     {
@@ -219,7 +212,6 @@ static MBC_TYPE get_mbc_type(uint8_t *rom0)
 /* determine the external RAM size */
 static int get_ext_ram_size(uint8_t *rom0)
 {
-    // byte 0x149 tells us the external RAM size
     int ram_size;
     switch (rom0[0x149])
     {
@@ -334,7 +326,6 @@ static ROM_LOAD_STATUS init_banks(gb_cartridge *cart, int n_rombanks, int n_ramb
  */
 ROM_LOAD_STATUS load_rom(gb_cartridge *cart, FILE *rom_file)
 {
-    // buffer for loading the ROM banks
     uint8_t rom_bank_buffer[ROM_BANK_SIZE] = {0};
 
     /* The first 16 KB (2^14 bytes) are guaranteed
@@ -364,10 +355,8 @@ ROM_LOAD_STATUS load_rom(gb_cartridge *cart, FILE *rom_file)
     if (bank_load_status != ROM_LOAD_SUCCESS)
         return bank_load_status;
 
-    // copy ROM bank 0 from buffer to the actual bank
     memcpy(cart->rom_banks[0], rom_bank_buffer, ROM_BANK_SIZE);
 
-    // copy the remaining ROM banks
     for (int i = 1; i < cart->num_rom_banks; ++i)
     {
         bank_load_status = load_rom_bank(rom_bank_buffer, rom_file);

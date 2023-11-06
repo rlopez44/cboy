@@ -16,8 +16,6 @@
  * The setting of this flag is delayed by one
  * instruction. It is only set after the
  * instruction following the EI.
- *
- * TODO: see about possibly inlining this function
  */
 void ei(gameboy *gb)
 {
@@ -31,8 +29,6 @@ void ei(gameboy *gb)
 /* The disable interrupts instruction
  * ----------------------------------
  *  Disables interrupts by clearing the IME flag.
- *
- *  TODO: see about possibly inlining this function
  */
 void di(gameboy *gb)
 {
@@ -287,8 +283,6 @@ void daa(gameboy *gb)
  *  Subtract Flag:      reset
  *  Half Carry Flag:    reset
  *  Carry Flag:         set
- *
- * TODO: see about inlining this function
  */
 void scf(gameboy *gb)
 {
@@ -308,12 +302,9 @@ void scf(gameboy *gb)
  *  Subtract Flag:      reset
  *  Half Carry Flag:    reset
  *  Carry Flag:         invert
- *
- * TODO: see about inlining this function
  */
 void ccf(gameboy *gb)
 {
-    // invert the carry flag by xoring it with 1
     set_carry_flag(gb->cpu->reg, read_carry_flag(gb->cpu->reg) ^ 1);
 
     // set the remaining flags
@@ -330,15 +321,9 @@ void ccf(gameboy *gb)
  * --------------
  *  Subtract Flag:      set
  *  Half Carry Flag:    set
- *
- *  TODO: see about inlining this function
  */
 void cpl(gameboy *gb)
 {
-    /* Two ways we could complement the accumulator,
-     * either A ~= A or A ^= 0xff. I'll use the latter
-     * because I'm lazy and it's less typing.
-     */
     gb->cpu->reg->a ^= 0xff;
 
     // set flags

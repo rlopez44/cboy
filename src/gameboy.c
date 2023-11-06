@@ -101,7 +101,6 @@ static bool verify_logo(gameboy *gb)
     uint8_t *logo_addr = gb->cart->rom_banks[0] + 0x104;
     memcpy(rom_nintendo_logo, logo_addr, sizeof rom_nintendo_logo);
 
-    // check the bitmap
     bool valid_bitmap = !memcmp(nintendo_logo,
                                 rom_nintendo_logo,
                                 sizeof nintendo_logo);
@@ -269,7 +268,6 @@ static void maybe_load_bootrom(gameboy *gb, const char *bootrom)
     else
     {
         LOG_INFO("The emulator will continue without using a boot ROM.\n\n");
-        // disable the boot ROM
         gb->boot_rom_disabled = true;
     }
 }
@@ -313,7 +311,7 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom, bool force
         return NULL;
     }
 
-    gb->is_on = true; // the Game Boy is running
+    gb->is_on = true;
     gb->audio_sync_signal = true;
     gb->volume_slider = 100;
     gb->throttle_fps = true;
@@ -332,7 +330,6 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom, bool force
     if (!all_alloc)
         goto init_error;
 
-    // open the ROM file to load it into the emulator
     FILE *rom_file = fopen(rom_file_path, "rb");
 
     if (rom_file == NULL)
@@ -341,7 +338,6 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom, bool force
         goto init_error;
     }
 
-    // load the ROM file into the emulator
     ROM_LOAD_STATUS load_status = load_rom(gb->cart, rom_file);
     fclose(rom_file);
 
@@ -384,7 +380,7 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom, bool force
     else
         gb->boot_rom_disabled = true;
 
-    // initialize the screen after all other components
+    // screen must be initialized after the PPU
     if (!init_screen(gb))
         goto init_error;
 
