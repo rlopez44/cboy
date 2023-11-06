@@ -296,7 +296,7 @@ void cycle_display_colors(display_colors *colors, bool cycle_forward)
  *   Set:   unsigned offset (0 to 255)
  *   Reset: signed offset (-128 to 127)
  *
- * See: https://gbdev.io/pandocs/#vram-tile-data
+ * See: https://gbdev.io/pandocs/Tile_Data.html
  */
 static uint16_t tile_addr_from_index(bool tile_data_area_bit, uint8_t tile_index)
 {

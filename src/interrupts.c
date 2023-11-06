@@ -37,7 +37,7 @@ uint8_t pending_interrupts(gameboy *gb)
  * Returns the number of M-cycles needed to service
  * the interrupt (zero if no interrupt needs to be
  * serviced, 5 otherwise).
- * See: https://gbdev.io/pandocs/#interrupts
+ * See: https://gbdev.io/pandocs/Interrupts.html
  */
 uint8_t service_interrupt(gameboy *gb)
 {

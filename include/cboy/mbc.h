@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 /* Memory Bank Controller types.
- * See: https://gbdev.io/pandocs/#the-cartridge-header
+ * See: https://gbdev.io/pandocs/The_Cartridge_Header.html
  */
 typedef enum MBC_TYPE {
     UNKNOWN_MBC,

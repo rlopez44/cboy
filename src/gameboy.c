@@ -86,7 +86,7 @@ uint16_t stack_pop(gameboy *gb)
 static bool verify_logo(gameboy *gb)
 {
     // The correct bytes for the Game Boy logo
-    // See: https://gbdev.io/pandocs/#the-cartridge-header
+    // See: https://gbdev.io/pandocs/The_Cartridge_Header.html
     const uint8_t nintendo_logo[48] = {
         0xce, 0xed, 0x66, 0x66, 0xcc, 0x0d, 0x00, 0x0b,
         0x03, 0x73, 0x00, 0x83, 0x00, 0x0c, 0x00, 0x0d,
@@ -126,7 +126,7 @@ static bool verify_checksum(gameboy *gb)
             header_checksum = rom0[0x14d];
 
     // calculate checksum of bytes at addresses 0x134-0x14c
-    // See: https://gbdev.io/pandocs/#the-cartridge-header
+    // See: https://gbdev.io/pandocs/The_Cartridge_Header.html
     int calculated_checksum = 0;
     for (int i = 0x134; i <= 0x14c; ++i)
     {
@@ -545,7 +545,7 @@ void increment_clock_counter(gameboy *gb, uint16_t num_clocks)
  * In this function we check if any of these conditions occur so
  * that we increment TIMA appropriately during the write to memory.
  *
- * See: https://gbdev.io/pandocs/#timer-and-divider-registers
+ * See: https://gbdev.io/pandocs/Timer_and_Divider_Registers.html
  */
 void timing_related_write(gameboy *gb, uint16_t address, uint8_t value)
 {
