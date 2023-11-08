@@ -101,6 +101,9 @@ void increment_clock_counter(gameboy *gb, uint16_t num_clocks);
 void timing_related_write(gameboy *gb, uint16_t address, uint8_t value);
 uint8_t timing_related_read(gameboy *gb, uint16_t address);
 
+void cgb_core_io_write(gameboy *gb, uint16_t address, uint8_t value);
+uint8_t cgb_core_io_read(gameboy *gb, uint16_t address);
+
 // the emulator's game loop
 void run_gameboy(gameboy *gb);
 

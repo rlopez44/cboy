@@ -417,6 +417,44 @@ void free_gameboy(gameboy *gb)
     free(gb);
 }
 
+/*
+ * Handle writes to the following I/O registers:
+ * KEY0, KEY1, VBK, SVBK, HDMA[1-5]
+ */
+void cgb_core_io_write(gameboy *gb, uint16_t address, uint8_t value)
+{
+    switch (address)
+    {
+        case VBK_REGISTER:
+            gb->vbk = 0xfe | (value & 1);
+            break;
+
+        default:
+            break;
+    }
+}
+
+/*
+ * Handle reads from the following I/O registers:
+ * KEY0, KEY1, VBK, SVBK, HDMA[1-5]
+ */
+uint8_t cgb_core_io_read(gameboy *gb, uint16_t address)
+{
+    uint8_t value;
+    switch (address)
+    {
+        case VBK_REGISTER:
+            value = gb->vbk;
+            break;
+
+        default:
+            value = 0xff;
+            break;
+    }
+
+    return value;
+}
+
 /* Increment the TIMA register, including handling its
  * overflow behavior. When TIMA overflows the value of
  * TMA is loaded and a timer interrupt is requested.

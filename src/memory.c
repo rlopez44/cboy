@@ -19,7 +19,9 @@ uint8_t ram_read(gameboy *gb, uint16_t address)
     gb_memory *mem = gb->memory;
     if (address >= 0x8000 && address <= 0x9fff)
     {
-        value = mem->vram[address & 0x1fff];
+        uint16_t offset = address & 0x1fff;
+        bool bankno = gb->run_mode == GB_CGB_MODE && gb->vbk & 1;
+        value = mem->vram[bankno][offset];
     }
     else if (address >= 0xc000 && address <= 0xfdff)
     {
@@ -51,7 +53,9 @@ void ram_write(gameboy *gb, uint16_t address, uint8_t value)
     gb_memory * mem = gb->memory;
     if (address >= 0x8000 && address <= 0x9fff)
     {
-        mem->vram[address & 0x1fff] = value;
+        uint16_t offset = address & 0x1fff;
+        bool bankno = gb->run_mode == GB_CGB_MODE && gb->vbk & 1;
+        mem->vram[bankno][offset] = value;
     }
     else if (address >= 0xc000 && address <= 0xfdff)
     {
@@ -99,6 +103,10 @@ static uint8_t io_register_read(gameboy *gb, uint16_t address)
     {
         value = ppu_read(gb, address);
     }
+    else if (address == VBK_REGISTER && gb->run_mode == GB_CGB_MODE)
+    {
+        value = cgb_core_io_read(gb, VBK_REGISTER);
+    }
     else if (address == BRD_REGISTER)
     {
         value = gb->boot_rom_disabled;
@@ -132,6 +140,10 @@ static void io_register_write(gameboy *gb, uint16_t address, uint8_t value)
     else if (address >= LCDC_REGISTER && address <= WX_REGISTER)
     {
         ppu_write(gb, address, value);
+    }
+    else if (address == VBK_REGISTER && gb->run_mode == GB_CGB_MODE)
+    {
+        cgb_core_io_write(gb, VBK_REGISTER, value);
     }
     else if (address == BRD_REGISTER)
     {

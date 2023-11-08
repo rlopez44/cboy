@@ -12,7 +12,8 @@ typedef struct gameboy gameboy;
 
 // the Game Boy's internal RAM
 typedef struct gb_memory {
-    uint8_t vram[8 * KB];
+    // two VRAM banks - second one only used in CGB mode
+    uint8_t vram[2][8 * KB];
     uint8_t wram[2][4 * KB];
     uint8_t oam[OAM_SIZE];
     uint8_t hram[HRAM_SIZE];
