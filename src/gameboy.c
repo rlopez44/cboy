@@ -429,6 +429,10 @@ void cgb_core_io_write(gameboy *gb, uint16_t address, uint8_t value)
             gb->vbk = 0xfe | (value & 1);
             break;
 
+        case SVBK_REGISTER:
+            gb->svbk = 0xf8 | (value & 0x7);
+            break;
+
         default:
             break;
     }
@@ -445,6 +449,10 @@ uint8_t cgb_core_io_read(gameboy *gb, uint16_t address)
     {
         case VBK_REGISTER:
             value = gb->vbk;
+            break;
+
+        case SVBK_REGISTER:
+            value = gb->svbk;
             break;
 
         default:

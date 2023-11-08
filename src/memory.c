@@ -13,6 +13,27 @@
 #include "cboy/ppu.h"
 #include "cboy/log.h"
 
+// Determine which WRAM bank to map to the given address
+static int get_wram_bank(gameboy *gb, uint16_t address)
+{
+    // outward-facing bank based on address
+    int mmap_bank = (address >> 12) & 1;
+
+    // translate to which physical bank is mapped
+    int bankno;
+    if (gb->run_mode == GB_CGB_MODE && mmap_bank)
+    {
+        int svbk = gb->svbk & 0x7;
+        bankno = svbk ? svbk : 1;
+    }
+    else
+    {
+        bankno = mmap_bank;
+    }
+
+    return bankno;
+}
+
 uint8_t ram_read(gameboy *gb, uint16_t address)
 {
     uint8_t value;
@@ -26,7 +47,7 @@ uint8_t ram_read(gameboy *gb, uint16_t address)
     else if (address >= 0xc000 && address <= 0xfdff)
     {
         // handle both WRAM and ECHO RAM
-        int bank = (address >> 12) & 1;
+        int bank = get_wram_bank(gb, address);
         value = mem->wram[bank][address & 0x0fff];
     }
     else if (address >= 0xfe00 && address <= 0xfe9f)
@@ -60,7 +81,7 @@ void ram_write(gameboy *gb, uint16_t address, uint8_t value)
     else if (address >= 0xc000 && address <= 0xfdff)
     {
         // handle both WRAM and ECHO RAM
-        int bank = (address >> 12) & 1;
+        int bank = get_wram_bank(gb, address);
         mem->wram[bank][address & 0x0fff] = value;
     }
     else if (address >= 0xfe00 && address <= 0xfe9f)
@@ -111,6 +132,10 @@ static uint8_t io_register_read(gameboy *gb, uint16_t address)
     {
         value = gb->boot_rom_disabled;
     }
+    else if (address == SVBK_REGISTER && gb->run_mode == GB_CGB_MODE)
+    {
+        value = cgb_core_io_read(gb, SVBK_REGISTER);
+    }
     else if (address == IE_REGISTER)
     {
         value = interrupt_register_read(gb->cpu, IE_REGISTER);
@@ -149,6 +174,10 @@ static void io_register_write(gameboy *gb, uint16_t address, uint8_t value)
     {
         if (!gb->boot_rom_disabled)
             gb->boot_rom_disabled = value;
+    }
+    else if (address == SVBK_REGISTER && gb->run_mode == GB_CGB_MODE)
+    {
+        cgb_core_io_write(gb, SVBK_REGISTER, value);
     }
     else if (address == IE_REGISTER)
     {

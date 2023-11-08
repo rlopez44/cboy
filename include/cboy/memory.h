@@ -14,7 +14,10 @@ typedef struct gameboy gameboy;
 typedef struct gb_memory {
     // two VRAM banks - second one only used in CGB mode
     uint8_t vram[2][8 * KB];
-    uint8_t wram[2][4 * KB];
+
+    // 8 WRAM banks - banks 2-7 only used in CGB mode
+    uint8_t wram[8][4 * KB];
+
     uint8_t oam[OAM_SIZE];
     uint8_t hram[HRAM_SIZE];
 } gb_memory;
