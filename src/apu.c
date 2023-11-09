@@ -954,7 +954,7 @@ static inline void tick_volumes(gb_apu *apu)
 
 static void queue_audio(void *userdata, uint8_t *stream, int len)
 {
-    gb_apu *apu = (gb_apu *)userdata;
+    gb_apu *apu = userdata;
     float *buff = (float *)stream;
     int sample_len = len / sizeof(float);
 
