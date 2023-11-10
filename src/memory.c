@@ -132,6 +132,10 @@ static uint8_t io_register_read(gameboy *gb, uint16_t address)
     {
         value = gb->boot_rom_disabled;
     }
+    else if (address == OPRI_REGISTER && gb->run_mode == GB_CGB_MODE)
+    {
+        value = ppu_read(gb, OPRI_REGISTER);
+    }
     else if (address == SVBK_REGISTER && gb->run_mode == GB_CGB_MODE)
     {
         value = cgb_core_io_read(gb, SVBK_REGISTER);
@@ -174,6 +178,10 @@ static void io_register_write(gameboy *gb, uint16_t address, uint8_t value)
     {
         if (!gb->boot_rom_disabled)
             gb->boot_rom_disabled = value;
+    }
+    else if (address == OPRI_REGISTER && gb->run_mode == GB_CGB_MODE)
+    {
+        ppu_write(gb, OPRI_REGISTER, value);
     }
     else if (address == SVBK_REGISTER && gb->run_mode == GB_CGB_MODE)
     {

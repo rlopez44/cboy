@@ -44,12 +44,12 @@ static const uint16_t display_color_palettes[4*NUM_DISPLAY_PALETTES] = {
     0x84e1, 0x9986, 0x86b1, 0x86f3,
 };
 
-/* Use to sort sprites according to their drawing priority.
+/* Use to sort sprites according to their DMG drawing priority.
  *
  * Smaller X coordinate -> higher priority
  * Same X coordinate -> located first in OAM -> higher priority
  */
-static int sprite_comp(const void *a, const void *b)
+static int dmg_sprite_comp(const void *a, const void *b)
 {
     const gb_sprite *sprite1 = a, *sprite2 = b;
     uint8_t xpos1 = sprite1->xpos,
@@ -127,6 +127,7 @@ uint8_t ppu_read(gameboy *gb, uint16_t address)
         case OBP1_REGISTER: value = ppu->obp1; break;
         case WY_REGISTER: value = ppu->wy; break;
         case WX_REGISTER: value = ppu->wx; break;
+        case OPRI_REGISTER: value = ppu->opri; break;
         default: break;
     }
 
@@ -176,6 +177,7 @@ void ppu_write(gameboy *gb, uint16_t address, uint8_t value)
         case OBP1_REGISTER: ppu->obp1 = value; break;
         case WY_REGISTER: ppu->wy = value; break;
         case WX_REGISTER: ppu->wx = value; break;
+        case OPRI_REGISTER: ppu->opri = 0xfe | (value & 1); break;
         default: break;
     }
 }
@@ -603,8 +605,11 @@ static void perform_sprite_reflections(gb_sprite *sprite)
 // Render the selected sprites from OAM
 static void render_loaded_sprites(gameboy *gb, gb_sprite *sprites, uint8_t n_sprites)
 {
-    // apply drawing priority then draw
-    qsort(sprites, n_sprites, sizeof(gb_sprite), &sprite_comp);
+    // Apply drawing priority then draw. Because objects are selected
+    // out of OAM by scanning from start to end, they are already in
+    // the correct ordering when using CGB priority
+    if (gb->run_mode == GB_DMG_MODE || gb->ppu->opri & 1)
+        qsort(sprites, n_sprites, sizeof(gb_sprite), dmg_sprite_comp);
 
     for (uint8_t sprite_idx = 0; sprite_idx < n_sprites; ++sprite_idx)
     {
