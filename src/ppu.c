@@ -656,22 +656,32 @@ static void load_sprites(gameboy *gb, bool obj_size_bit)
         // current scanline is interior to the sprite
         if (shifted_ly >= ypos && shifted_ly < ypos + sprite_ysize)
         {
+            gb_sprite *curr_sprite = sprites_to_render + sprite_count;
+
             xpos = ram_read(gb, oam_base_addr + oam_offset + 1);
             tile_idx = ram_read(gb, oam_base_addr + oam_offset + 2);
             flags = ram_read(gb, oam_base_addr + oam_offset + 3);
 
-            sprites_to_render[sprite_count].ypos     = ypos; // sprite vertical pos + 16
-            sprites_to_render[sprite_count].xpos     = xpos;
-            sprites_to_render[sprite_count].tile_idx = tile_idx;
-            sprites_to_render[sprite_count].ysize    = sprite_ysize;
+            curr_sprite->ypos       = ypos; // sprite vertical pos + 16
+            curr_sprite->xpos       = xpos;
+            curr_sprite->tile_idx   = tile_idx;
+            curr_sprite->ysize      = sprite_ysize;
+            curr_sprite->oam_offset = oam_offset;
 
-            sprites_to_render[sprite_count].oam_offset = oam_offset;
+            // unpack sprite attributes
+            curr_sprite->bg_over_obj = (flags >> 7) & 1;
+            curr_sprite->yflip       = (flags >> 6) & 1;
+            curr_sprite->xflip       = (flags >> 5) & 1;
 
-            // unpack sprite attributes (bits 0-3 are for CGB only)
-            sprites_to_render[sprite_count].bg_over_obj = (flags >> 7) & 1;
-            sprites_to_render[sprite_count].yflip       = (flags >> 6) & 1;
-            sprites_to_render[sprite_count].xflip       = (flags >> 5) & 1;
-            sprites_to_render[sprite_count].palette_no  = (flags >> 4) & 1;
+            if (gb->run_mode == GB_DMG_MODE)
+            {
+                curr_sprite->palette_no = (flags >> 4) & 1;
+            }
+            else
+            {
+                curr_sprite->palette_no = flags & 0x7;
+                curr_sprite->vram_bank = (flags >> 3) & 1;
+            }
 
             ++sprite_count;
         }

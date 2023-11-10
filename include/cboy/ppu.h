@@ -22,10 +22,15 @@ typedef struct gb_sprite {
         uint8_t oam_offset;
 
         // sprite attributes
-        bool bg_over_obj,
-             yflip,
-             xflip,
-             palette_no;
+        bool bg_over_obj, // object priority
+             yflip,       // vertical mirror
+             xflip;       // horizontal mirror
+
+        // selects OBP0-1 (DMG) or OBP0-7 (CGB)
+        uint8_t palette_no;
+
+        // select VRAM bank 0 or 1 (CGB only)
+        bool vram_bank;
 
         // The sprite's tile data. Recall that each tile is
         // 16 bytes in size, so if using 8x8 sprites, the
