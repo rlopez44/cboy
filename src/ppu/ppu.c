@@ -9,6 +9,7 @@
 #include "cboy/ppu.h"
 #include "cboy/interrupts.h"
 #include "cboy/log.h"
+#include "ppu_internal.h"
 
 /* tile map dimensions (32 tiles = 256 pixels) */
 #define TILE_WIDTH 8
@@ -22,27 +23,6 @@
 
 /* clock duration for a single frame of the Game Boy */
 #define FRAME_CLOCK_DURATION 70224
-
-#define NUM_DISPLAY_PALETTES 4
-
-/* colors encoded in XBGR1555 format */
-static const uint16_t display_color_palettes[4*NUM_DISPLAY_PALETTES] = {
-    // grayscale
-    // #000000, #555555, #aaaaaa, #ffffff,
-    0x8000, 0xa94a, 0xd6b5, 0xffff,
-
-    // green-tinted grayscale
-    // #001000, #80a080, #c0d0c0, #f4fff4,
-    0x8040, 0xc290, 0xe358, 0xfbfe,
-
-    // pastel green shades
-    // #081810, #396139, #84a563, #c9de8c,
-    0x8861, 0x9d87, 0xb290, 0xc779,
-
-    // acid green shades
-    //#0f380f, #306230, #8bac0f, #9bbc0f,
-    0x84e1, 0x9986, 0x86b1, 0x86f3,
-};
 
 /* Use to sort sprites according to their DMG drawing priority.
  *
@@ -63,15 +43,6 @@ static int dmg_sprite_comp(const void *a, const void *b)
         return offset1 < offset2 ? -1 : 1;
 
     return 0;
-}
-
-static void init_display_colors(display_colors *colors)
-{
-    colors->black = display_color_palettes[0];
-    colors->dark_gray = display_color_palettes[1];
-    colors->light_gray = display_color_palettes[2];
-    colors->white = display_color_palettes[3];
-    colors->palette_index = 0;
 }
 
 gb_ppu *init_ppu(enum GAMEBOY_MODE gb_mode)
@@ -99,7 +70,8 @@ gb_ppu *init_ppu(enum GAMEBOY_MODE gb_mode)
         ppu->opri = 0xfe;
     }
 
-    init_display_colors(&ppu->colors);
+    if (gb_mode == GB_DMG_MODE)
+        init_display_colors(&ppu->colors);
 
     return ppu;
 }
@@ -267,22 +239,6 @@ static inline bool stat_interrupt_line(gb_ppu *ppu)
            | ppu->hblank_stat_line
            | ppu->vblank_stat_line
            | ppu->oam_stat_line;
-}
-
-void cycle_display_colors(display_colors *colors, bool cycle_forward)
-{
-    uint8_t step = cycle_forward ? 1 : -1;
-    uint8_t index = colors->palette_index;
-
-    if (!index && !cycle_forward)
-        index = NUM_DISPLAY_PALETTES;
-
-    colors->palette_index = (index + step) % NUM_DISPLAY_PALETTES;
-
-    colors->black = display_color_palettes[4*colors->palette_index];
-    colors->dark_gray = display_color_palettes[4*colors->palette_index + 1];
-    colors->light_gray = display_color_palettes[4*colors->palette_index + 2];
-    colors->white = display_color_palettes[4*colors->palette_index + 3];
 }
 
 /* Get the memory address of a tile given its index
