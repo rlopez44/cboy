@@ -20,6 +20,7 @@ void init_display_colors(display_colors *colors);
 void dmg_render_sprite_pixels(gameboy *gb, gb_sprite *sprite);
 void dmg_load_bg_tiles(gameboy *gb);
 void dmg_load_window_tiles(gameboy *gb);
+void dmg_render_scanline(gameboy *gb);
 void dmg_push_scanline_data(gameboy *gb);
 
 #endif /* !CBOY_PPU_INTERNAL_H */

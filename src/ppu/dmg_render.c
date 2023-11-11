@@ -5,6 +5,12 @@
 
 #define NUM_DISPLAY_PALETTES 4
 
+// track palette and color index data for the scanline
+// being rendered so we can mix the background, window,
+// and sprites into a final image
+static uint16_t scanline_palette_buff[FRAME_WIDTH] = {0};
+static uint8_t scanline_coloridx_buff[FRAME_WIDTH] = {0};
+
 /* colors encoded in XBGR1555 format */
 static const uint16_t display_color_palettes[4*NUM_DISPLAY_PALETTES] = {
     // grayscale
@@ -130,9 +136,6 @@ static void load_tile_color_data(gameboy *gb, uint16_t load_addr, uint8_t *buff)
 // mixing the sprite's pixels with the background and window
 void dmg_render_sprite_pixels(gameboy *gb, gb_sprite *sprite)
 {
-    uint16_t *palette_buff = gb->ppu->scanline_palette_buff;
-    uint8_t *coloridx_buff = gb->ppu->scanline_coloridx_buff;
-
     // select which line of the sprite will be rendered
     uint8_t line_to_render = gb->ppu->ly + 16 - sprite->ypos;
 
@@ -159,20 +162,20 @@ void dmg_render_sprite_pixels(gameboy *gb, gb_sprite *sprite)
         uint8_t pixel_loc = shifted_pixel_loc - 8;
 
         // if the pixel is already occupied by a sprite, it will not be overwritten
-        if (palette_buff[pixel_loc] == OBP0_REGISTER
-            || palette_buff[pixel_loc] == OBP1_REGISTER)
+        if (scanline_palette_buff[pixel_loc] == OBP0_REGISTER
+            || scanline_palette_buff[pixel_loc] == OBP1_REGISTER)
             continue;
 
         // bg_over_obj only applies for BG/window colors 1-3
-        bool sprite_is_drawn = !sprite->bg_over_obj || !coloridx_buff[pixel_loc];
+        bool sprite_is_drawn = !sprite->bg_over_obj || !scanline_coloridx_buff[pixel_loc];
         sprite_is_drawn = sprite_is_drawn && color_index; // color index 0 is transparent
 
         if (sprite_is_drawn)
         {
-            coloridx_buff[pixel_loc] = color_index;
-            palette_buff[pixel_loc] = sprite->palette_no
-                                      ? OBP1_REGISTER
-                                      : OBP0_REGISTER;
+            scanline_coloridx_buff[pixel_loc] = color_index;
+            scanline_palette_buff[pixel_loc] = sprite->palette_no
+                                               ? OBP1_REGISTER
+                                               : OBP0_REGISTER;
         }
     }
 }
@@ -225,7 +228,7 @@ void dmg_load_bg_tiles(gameboy *gb)
         else
             pixels_to_load = pixels_remaining;
 
-        memcpy(ppu->scanline_coloridx_buff + FRAME_WIDTH - pixels_remaining,
+        memcpy(scanline_coloridx_buff + FRAME_WIDTH - pixels_remaining,
                tile_color_data_load_start,
                pixels_to_load * sizeof(uint8_t));
 
@@ -233,7 +236,7 @@ void dmg_load_bg_tiles(gameboy *gb)
     }
 
     for (uint8_t i = 0; i < FRAME_WIDTH; ++i)
-        ppu->scanline_palette_buff[i] = BGP_REGISTER;
+        scanline_palette_buff[i] = BGP_REGISTER;
 }
 
 // load appropriate window tiles into the pixel data buffers for a single scanline
@@ -294,20 +297,45 @@ void dmg_load_window_tiles(gameboy *gb)
         visible_pixel_count -= ppu->wx - 7;
     }
 
-    memcpy(ppu->scanline_coloridx_buff + color_data_buffer_offset,
+    memcpy(scanline_coloridx_buff + color_data_buffer_offset,
            scanline_buff + scanline_buffer_offset,
            visible_pixel_count * sizeof(uint8_t));
 
     ++ppu->window_line_counter;
 }
 
+void dmg_render_scanline(gameboy *gb)
+{
+    uint8_t lcdc = gb->ppu->lcdc;
+    bool window_enable_bit         = lcdc & 0x20,
+         obj_enable_bit            = lcdc & 0x02,
+         bg_and_window_enable_bit  = lcdc & 0x01;
+
+    if (bg_and_window_enable_bit)
+    {
+        dmg_load_bg_tiles(gb);
+
+        if (window_enable_bit)
+            dmg_load_window_tiles(gb);
+    }
+    else // background becomes blank (white)
+    {
+        // all palettes and color indices set to 0 -> all white pixels
+        memset(scanline_palette_buff,
+               DMG_NO_PALETTE, sizeof scanline_palette_buff);
+        memset(scanline_coloridx_buff,
+               0, sizeof scanline_coloridx_buff);
+    }
+
+    if (obj_enable_bit)
+        load_sprites(gb);
+
+}
+
 // translate the completed scanline data into
 // colors and push into the PPU's frame buffer
 void dmg_push_scanline_data(gameboy *gb)
 {
-    uint16_t *scanline_palette_buff = gb->ppu->scanline_palette_buff;
-    uint8_t *scanline_coloridx_buff = gb->ppu->scanline_coloridx_buff;
-
     // the starting index of the current scanline in the frame buffer
     uint16_t scanline_start = gb->ppu->ly * FRAME_WIDTH;
 

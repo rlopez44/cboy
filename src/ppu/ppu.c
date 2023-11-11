@@ -346,7 +346,7 @@ static void render_loaded_sprites(gameboy *gb, gb_sprite *sprites, uint8_t n_spr
 }
 
 // Select bytes from OAM to render for the current scanline
-static void load_sprites(gameboy *gb)
+void load_sprites(gameboy *gb)
 {
     bool obj_size_bit = gb->ppu->lcdc & 0x04;
     uint16_t oam_base_addr = 0xfe00;
@@ -406,30 +406,7 @@ static void load_sprites(gameboy *gb)
 // Render a single scanline into the frame buffer
 static void render_scanline(gameboy *gb)
 {
-    uint8_t lcdc = gb->ppu->lcdc;
-    bool window_enable_bit         = lcdc & 0x20,
-         obj_enable_bit            = lcdc & 0x02,
-         bg_and_window_enable_bit  = lcdc & 0x01;
-
-    if (bg_and_window_enable_bit)
-    {
-        dmg_load_bg_tiles(gb);
-
-        if (window_enable_bit)
-            dmg_load_window_tiles(gb);
-    }
-    else // background becomes blank (white)
-    {
-        // all palettes and color indices set to 0 -> all white pixels
-        memset(gb->ppu->scanline_palette_buff,
-               DMG_NO_PALETTE, sizeof gb->ppu->scanline_palette_buff);
-        memset(gb->ppu->scanline_coloridx_buff,
-               0, sizeof gb->ppu->scanline_coloridx_buff);
-    }
-
-    if (obj_enable_bit)
-        load_sprites(gb);
-
+    dmg_render_scanline(gb);
     dmg_push_scanline_data(gb);
 }
 
