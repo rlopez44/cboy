@@ -18,8 +18,8 @@
 void init_display_colors(display_colors *colors);
 
 void dmg_render_sprite_pixels(gameboy *gb, gb_sprite *sprite);
-void dmg_load_bg_tiles(gameboy *gb, bool tile_data_area_bit, bool tile_map_area_bit);
-void dmg_load_window_tiles(gameboy *gb, bool tile_data_area_bit, bool tile_map_area_bit);
+void dmg_load_bg_tiles(gameboy *gb);
+void dmg_load_window_tiles(gameboy *gb);
 void dmg_push_scanline_data(gameboy *gb);
 
 #endif /* !CBOY_PPU_INTERNAL_H */

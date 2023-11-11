@@ -178,15 +178,19 @@ void dmg_render_sprite_pixels(gameboy *gb, gb_sprite *sprite)
 }
 
 // load appropriate background tiles into the pixel data buffers for a single scanline
-void dmg_load_bg_tiles(gameboy *gb, bool tile_data_area_bit, bool tile_map_area_bit)
+void dmg_load_bg_tiles(gameboy *gb)
 {
+    gb_ppu *ppu = gb->ppu;
+    bool tile_data_area_bit = ppu->lcdc & 0x10;
+    bool tile_map_area_bit  = ppu->lcdc & 0x08; // BG tile map flag
+
     // get the appropriate 32x32 tile map's address in VRAM
     uint16_t base_map_addr = tile_map_area_bit ? 0x9c00 : 0x9800;
 
     // determine Y offset inside tile map based on current LY and SCY
-    uint16_t pixel_yoffset      = (gb->ppu->scy + gb->ppu->ly) % TILE_MAP_WIDTH,
-             tile_xoffset       = gb->ppu->scx / TILE_WIDTH,
-             tile_pixel_xoffset = gb->ppu->scx % TILE_WIDTH, // offset within the tile
+    uint16_t pixel_yoffset      = (ppu->scy + ppu->ly) % TILE_MAP_WIDTH,
+             tile_xoffset       = ppu->scx / TILE_WIDTH,
+             tile_pixel_xoffset = ppu->scx % TILE_WIDTH, // offset within the tile
              tile_yoffset       = pixel_yoffset / TILE_WIDTH,
              tile_pixel_yoffset = pixel_yoffset % TILE_WIDTH;
 
@@ -221,7 +225,7 @@ void dmg_load_bg_tiles(gameboy *gb, bool tile_data_area_bit, bool tile_map_area_
         else
             pixels_to_load = pixels_remaining;
 
-        memcpy(gb->ppu->scanline_coloridx_buff + FRAME_WIDTH - pixels_remaining,
+        memcpy(ppu->scanline_coloridx_buff + FRAME_WIDTH - pixels_remaining,
                tile_color_data_load_start,
                pixels_to_load * sizeof(uint8_t));
 
@@ -229,17 +233,21 @@ void dmg_load_bg_tiles(gameboy *gb, bool tile_data_area_bit, bool tile_map_area_
     }
 
     for (uint8_t i = 0; i < FRAME_WIDTH; ++i)
-        gb->ppu->scanline_palette_buff[i] = BGP_REGISTER;
+        ppu->scanline_palette_buff[i] = BGP_REGISTER;
 }
 
 // load appropriate window tiles into the pixel data buffers for a single scanline
-void dmg_load_window_tiles(gameboy *gb, bool tile_data_area_bit, bool tile_map_area_bit)
+void dmg_load_window_tiles(gameboy *gb)
 {
+    gb_ppu *ppu = gb->ppu;
+    bool tile_data_area_bit = ppu->lcdc & 0x10;
+    bool tile_map_area_bit  = ppu->lcdc & 0x40; // window tile map flag
+
     // the window is only visible if WX is in 0..166 and WY is in 0..143
-    bool window_is_visible = gb->ppu->wx <= 166 && gb->ppu->wy <= 143;
+    bool window_is_visible = ppu->wx <= 166 && ppu->wy <= 143;
 
     // we only need to draw if the current scanline overlaps the window
-    bool scanline_overlaps_window = gb->ppu->ly >= gb->ppu->wy;
+    bool scanline_overlaps_window = ppu->ly >= ppu->wy;
 
     if (!(window_is_visible && scanline_overlaps_window))
         return;
@@ -251,7 +259,7 @@ void dmg_load_window_tiles(gameboy *gb, bool tile_data_area_bit, bool tile_map_a
      * scanlines have been rendered so far this frame.
      */
     uint16_t tile_addr, tile_index_addr;
-    uint16_t pixel_yoffset      = gb->ppu->window_line_counter,
+    uint16_t pixel_yoffset      = ppu->window_line_counter,
              tile_yoffset       = pixel_yoffset / TILE_WIDTH,
              tile_pixel_yoffset = pixel_yoffset % TILE_WIDTH;
 
@@ -279,18 +287,18 @@ void dmg_load_window_tiles(gameboy *gb, bool tile_data_area_bit, bool tile_map_a
     // right offset by that many pixels.
     uint16_t color_data_buffer_offset = 0;
     uint8_t visible_pixel_count = FRAME_WIDTH;
-    uint8_t scanline_buffer_offset = gb->ppu->wx >= 7 ? 0 : 7 - gb->ppu->wx;
-    if (gb->ppu->wx > 7)
+    uint8_t scanline_buffer_offset = ppu->wx >= 7 ? 0 : 7 - ppu->wx;
+    if (ppu->wx > 7)
     {
-        color_data_buffer_offset += gb->ppu->wx - 7;
-        visible_pixel_count -= gb->ppu->wx - 7;
+        color_data_buffer_offset += ppu->wx - 7;
+        visible_pixel_count -= ppu->wx - 7;
     }
 
-    memcpy(gb->ppu->scanline_coloridx_buff + color_data_buffer_offset,
+    memcpy(ppu->scanline_coloridx_buff + color_data_buffer_offset,
            scanline_buff + scanline_buffer_offset,
            visible_pixel_count * sizeof(uint8_t));
 
-    ++gb->ppu->window_line_counter;
+    ++ppu->window_line_counter;
 }
 
 // translate the completed scanline data into

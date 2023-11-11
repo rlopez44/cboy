@@ -337,8 +337,9 @@ static void render_loaded_sprites(gameboy *gb, gb_sprite *sprites, uint8_t n_spr
 }
 
 // Select bytes from OAM to render for the current scanline
-static void load_sprites(gameboy *gb, bool obj_size_bit)
+static void load_sprites(gameboy *gb)
 {
+    bool obj_size_bit = gb->ppu->lcdc & 0x04;
     uint16_t oam_base_addr = 0xfe00;
     uint8_t ypos, xpos, tile_idx, flags;
     uint8_t sprite_ysize = obj_size_bit ? 16 : 8;
@@ -397,22 +398,16 @@ static void load_sprites(gameboy *gb, bool obj_size_bit)
 static void render_scanline(gameboy *gb)
 {
     uint8_t lcdc = gb->ppu->lcdc;
-    bool window_tile_map_area_bit  = lcdc & 0x40,
-         window_enable_bit         = lcdc & 0x20,
-         bg_win_tile_data_area_bit = lcdc & 0x10,
-         bg_tile_map_area_bit      = lcdc & 0x08,
-         obj_size_bit              = lcdc & 0x04,
+    bool window_enable_bit         = lcdc & 0x20,
          obj_enable_bit            = lcdc & 0x02,
          bg_and_window_enable_bit  = lcdc & 0x01;
 
     if (bg_and_window_enable_bit)
     {
-        dmg_load_bg_tiles(gb, bg_win_tile_data_area_bit,
-                          bg_tile_map_area_bit);
+        dmg_load_bg_tiles(gb);
 
         if (window_enable_bit)
-            dmg_load_window_tiles(gb, bg_win_tile_data_area_bit,
-                                  window_tile_map_area_bit);
+            dmg_load_window_tiles(gb);
     }
     else // background becomes blank (white)
     {
@@ -424,7 +419,7 @@ static void render_scanline(gameboy *gb)
     }
 
     if (obj_enable_bit)
-        load_sprites(gb, obj_size_bit);
+        load_sprites(gb);
 
     dmg_push_scanline_data(gb);
 }
