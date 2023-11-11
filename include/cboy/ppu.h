@@ -91,9 +91,9 @@ uint8_t ppu_read(gameboy *gb, uint16_t address);
 
 void dma_transfer(gameboy *gb);
 
-void render_scanline(gameboy *gb);
-
 void display_frame(gameboy *gb);
+
+uint16_t tile_addr_from_index(bool tile_data_area_bit, uint8_t tile_index);
 
 void run_ppu(gameboy *gb, uint8_t num_clocks);
 
