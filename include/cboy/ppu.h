@@ -60,6 +60,12 @@ typedef struct gb_ppu {
     uint16_t scanline_palette_buff[FRAME_WIDTH];
     uint8_t scanline_coloridx_buff[FRAME_WIDTH];
 
+    // background/window palette (color) RAM
+    uint8_t bg_pram[8][8];
+
+    // object palette (color) RAM
+    uint8_t obj_pram[8][8];
+
     // an internal counter that tracks how many lines of
     // the window have been rendered for the current frame
     uint8_t window_line_counter;

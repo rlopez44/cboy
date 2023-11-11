@@ -52,12 +52,21 @@ gb_ppu *init_ppu(enum GAMEBOY_MODE gb_mode)
     ppu->obp0 = 0xff;
     ppu->obp1 = 0xff;
 
-    // CGB-only I/O registers
+    // CGB-only functionality
     if (gb_mode == GB_CGB_MODE)
     {
         ppu->bcps = ppu->bcpd = 0xff;
         ppu->ocps = ppu->ocpd = 0xff;
         ppu->opri = 0xfe;
+
+        for (int i = 0; i < 8; ++i)
+        {
+            for (int j = 0; j < 8; ++j)
+            {
+                ppu->bg_pram[i][j] = 0xff;
+                ppu->obj_pram[i][j] = 0xff;
+            }
+        }
     }
 
     if (gb_mode == GB_DMG_MODE)
