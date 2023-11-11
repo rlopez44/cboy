@@ -55,18 +55,13 @@ gb_ppu *init_ppu(enum GAMEBOY_MODE gb_mode)
     // CGB-only functionality
     if (gb_mode == GB_CGB_MODE)
     {
-        ppu->bcps = ppu->bcpd = 0xff;
-        ppu->ocps = ppu->ocpd = 0xff;
+        ppu->bcps = 0xff;
+        ppu->ocps = 0xff;
         ppu->opri = 0xfe;
 
-        for (int i = 0; i < 8; ++i)
-        {
-            for (int j = 0; j < 8; ++j)
-            {
-                ppu->bg_pram[i][j] = 0xff;
-                ppu->obj_pram[i][j] = 0xff;
-            }
-        }
+        // all palettes start out as white
+        memset(ppu->bg_pram, -1, sizeof ppu->bg_pram);
+        memset(ppu->obj_pram, -1, sizeof ppu->obj_pram);
     }
 
     if (gb_mode == GB_DMG_MODE)
@@ -98,6 +93,10 @@ uint8_t ppu_read(gameboy *gb, uint16_t address)
         case OBP1_REGISTER: value = ppu->obp1; break;
         case WY_REGISTER: value = ppu->wy; break;
         case WX_REGISTER: value = ppu->wx; break;
+        case BCPS_REGISTER: value = ppu->bcps; break;
+        case BCPD_REGISTER: value = ppu->bg_pram[ppu->bcps & 0x3f]; break;
+        case OCPS_REGISTER: value = ppu->ocps; break;
+        case OCPD_REGISTER: value = ppu->obj_pram[ppu->ocps & 0x3f]; break;
         case OPRI_REGISTER: value = ppu->opri; break;
         default: break;
     }
@@ -148,6 +147,37 @@ void ppu_write(gameboy *gb, uint16_t address, uint8_t value)
         case OBP1_REGISTER: ppu->obp1 = value; break;
         case WY_REGISTER: ppu->wy = value; break;
         case WX_REGISTER: ppu->wx = value; break;
+        case BCPS_REGISTER: ppu->bcps = value | (1 << 6); break;
+
+        case BCPD_REGISTER:
+        {
+            uint8_t pram_addr = ppu->bcps & 0x3f;
+            bool auto_inc = (ppu->bcps >> 7) & 1;
+
+            ppu->bg_pram[pram_addr] = value;
+            if (auto_inc)
+            {
+                pram_addr = (pram_addr + 1) & 0x3f;
+                ppu->bcps = (ppu->bcps & 0xc0) | pram_addr;
+            }
+            break;
+        }
+
+        case OCPS_REGISTER: ppu->ocps = value | (1 << 6); break;
+
+        case OCPD_REGISTER:
+        {
+            uint8_t pram_addr = ppu->ocps & 0x3f;
+            bool auto_inc = (ppu->ocps >> 7) & 1;
+
+            ppu->obj_pram[pram_addr] = value;
+            if (auto_inc)
+            {
+                pram_addr = (pram_addr + 1) & 0x3f;
+                ppu->ocps = (ppu->ocps & 0xc0) | pram_addr;
+            }
+            break;
+        }
         case OPRI_REGISTER: ppu->opri = 0xfe | (value & 1); break;
         default: break;
     }

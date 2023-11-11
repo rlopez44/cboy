@@ -9,6 +9,9 @@
 #define FRAME_WIDTH  160
 #define FRAME_HEIGHT 144
 
+/* palette/color RAM */
+#define PRAM_SIZE 64
+
 typedef struct gameboy gameboy;
 
 /* Sprite rendering data */
@@ -55,10 +58,10 @@ typedef struct gb_ppu {
     uint64_t frames_rendered;
 
     // background/window palette (color) RAM
-    uint8_t bg_pram[8][8];
+    uint8_t bg_pram[PRAM_SIZE];
 
     // object palette (color) RAM
-    uint8_t obj_pram[8][8];
+    uint8_t obj_pram[PRAM_SIZE];
 
     // an internal counter that tracks how many lines of
     // the window have been rendered for the current frame
@@ -82,7 +85,7 @@ typedef struct gb_ppu {
     uint8_t dma, bgp, obp0, obp1,  wx, wy;
 
     // CGB PPU I/O registers
-    uint8_t bcps, bcpd, ocps, ocpd, opri;
+    uint8_t bcps, ocps, opri;
 } gb_ppu;
 
 void ppu_write(gameboy *gb, uint16_t address, uint8_t value);
