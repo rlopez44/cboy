@@ -5,6 +5,11 @@
 
 #define NUM_DISPLAY_PALETTES 4
 
+/* sentinel value to indicate the background and
+ * window are disabled when rendering scanlines
+ */
+#define DMG_NO_PALETTE 0x0000
+
 // track palette and color index data for the scanline
 // being rendered so we can mix the background, window,
 // and sprites into a final image
@@ -181,7 +186,7 @@ void dmg_render_sprite_pixels(gameboy *gb, gb_sprite *sprite)
 }
 
 // load appropriate background tiles into the pixel data buffers for a single scanline
-void dmg_load_bg_tiles(gameboy *gb)
+static void dmg_load_bg_tiles(gameboy *gb)
 {
     gb_ppu *ppu = gb->ppu;
     bool tile_data_area_bit = ppu->lcdc & 0x10;
@@ -240,7 +245,7 @@ void dmg_load_bg_tiles(gameboy *gb)
 }
 
 // load appropriate window tiles into the pixel data buffers for a single scanline
-void dmg_load_window_tiles(gameboy *gb)
+static void dmg_load_window_tiles(gameboy *gb)
 {
     gb_ppu *ppu = gb->ppu;
     bool tile_data_area_bit = ppu->lcdc & 0x10;

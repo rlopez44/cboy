@@ -1,6 +1,7 @@
 #ifndef CBOY_PPU_INTERNAL_H
 #define CBOY_PPU_INTERNAL_H
 
+#include <stdint.h>
 #include "cboy/gameboy.h"
 #include "cboy/ppu.h"
 
@@ -9,18 +10,15 @@
 #define TILE_MAP_TILE_WIDTH 32
 #define TILE_MAP_WIDTH 256
 
-/* sentinel value to indicate the background and
- * window are disabled when rendering scanlines
- */
-#define DMG_NO_PALETTE 0x0000
-
+uint8_t reverse_byte(uint8_t b);
 
 void init_display_colors(display_colors *colors);
 
 void dmg_render_sprite_pixels(gameboy *gb, gb_sprite *sprite);
-void dmg_load_bg_tiles(gameboy *gb);
-void dmg_load_window_tiles(gameboy *gb);
 void dmg_render_scanline(gameboy *gb);
 void dmg_push_scanline_data(gameboy *gb);
+
+void cgb_render_scanline(gameboy *gb);
+void cgb_push_scanline_data(gameboy *gb);
 
 #endif /* !CBOY_PPU_INTERNAL_H */

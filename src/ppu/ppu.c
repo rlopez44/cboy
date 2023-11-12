@@ -14,6 +14,18 @@
 /* clock duration for a single frame of the Game Boy */
 #define FRAME_CLOCK_DURATION 70224
 
+// reverse the bits of the given byte
+// See https://stackoverflow.com/a/2603254
+const uint8_t byte_reverse_lookup[16] = {
+    0x0, 0x8, 0x4, 0xc, 0x2, 0xa, 0x6, 0xe,
+    0x1, 0x9, 0x5, 0xd, 0x3, 0xb, 0x7, 0xf,
+};
+
+uint8_t reverse_byte(uint8_t b)
+{
+    return (byte_reverse_lookup[b & 0xf] << 4) | byte_reverse_lookup[b >> 4];
+}
+
 /* Use to sort sprites according to their DMG drawing priority.
  *
  * Smaller X coordinate -> higher priority
@@ -299,17 +311,6 @@ uint16_t tile_addr_from_index(bool tile_data_area_bit, uint8_t tile_index)
     return base_data_addr + 16 * tile_offset; // each tile is 16 bytes
 }
 
-// reverse the bits of the given byte
-// See https://stackoverflow.com/a/2603254
-static const uint8_t byte_reverse_lookup[16] = {
-    0x0, 0x8, 0x4, 0xc, 0x2, 0xa, 0x6, 0xe,
-    0x1, 0x9, 0x5, 0xd, 0x3, 0xb, 0x7, 0xf,
-};
-static inline uint8_t reverse_byte(uint8_t b)
-{
-    return (byte_reverse_lookup[b & 0xf] << 4) | byte_reverse_lookup[b >> 4];
-}
-
 // Reflect the sprite in the x and y directions if needed
 static void perform_sprite_reflections(gb_sprite *sprite)
 {
@@ -436,8 +437,16 @@ void load_sprites(gameboy *gb)
 // Render a single scanline into the frame buffer
 static void render_scanline(gameboy *gb)
 {
-    dmg_render_scanline(gb);
-    dmg_push_scanline_data(gb);
+    if (gb->run_mode == GB_DMG_MODE)
+    {
+        dmg_render_scanline(gb);
+        dmg_push_scanline_data(gb);
+    }
+    else
+    {
+        cgb_render_scanline(gb);
+        cgb_push_scanline_data(gb);
+    }
 }
 
 // Display the current frame buffer to the screen
