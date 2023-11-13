@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 #include "cboy/gameboy.h"
 #include "cboy/memory.h"
 #include "cboy/ppu.h"
@@ -143,9 +144,102 @@ static void cgb_load_bg_tiles(gameboy *gb)
     }
 }
 
+// load appropriate window tiles into the pixel data buffers for a single scanline
+static void cgb_load_window_tiles(gameboy *gb)
+{
+    gb_ppu *ppu = gb->ppu;
+    bool tile_data_area_bit = ppu->lcdc & 0x10;
+    bool tile_map_area_bit  = ppu->lcdc & 0x40; // window tile map flag
+
+    // the window is only visible if WX is in 0..166 and WY is in 0..143
+    bool window_is_visible = ppu->wx <= 166 && ppu->wy <= 143;
+
+    // we only need to draw if the current scanline overlaps the window
+    bool scanline_overlaps_window = ppu->ly >= ppu->wy;
+
+    if (!(window_is_visible && scanline_overlaps_window))
+        return;
+
+    uint16_t base_map_addr = tile_map_area_bit ? 0x9c00 : 0x9800;
+
+    /* The window tile map is not scrollable -- it is always rendered
+     * from the top left tile, offsetting by how many visible window
+     * scanlines have been rendered so far this frame.
+     */
+    uint16_t tile_addr, tile_index_addr;
+    uint16_t pixel_yoffset      = ppu->window_line_counter,
+             tile_yoffset       = pixel_yoffset / TILE_WIDTH,
+             tile_pixel_yoffset = pixel_yoffset % TILE_WIDTH;
+
+    // we need one extra tile for when the window is shifted left
+    uint8_t scanline_buff[FRAME_WIDTH + TILE_WIDTH] = {0};
+    uint8_t scanline_pbuff[FRAME_WIDTH + TILE_WIDTH] = {0};
+    uint8_t scanline_prio_buff[FRAME_WIDTH + TILE_WIDTH] = {0};
+    uint8_t tile_index;
+
+    for (uint8_t tile_xoffset = 0;
+         tile_xoffset < 1 + (FRAME_WIDTH / TILE_WIDTH);
+         ++tile_xoffset)
+    {
+        tile_index_addr = base_map_addr
+                          + tile_yoffset * TILE_MAP_TILE_WIDTH
+                          + tile_xoffset;
+        tile_index = gb->memory->vram[0][tile_index_addr & VRAM_MASK];
+        tile_addr = tile_addr_from_index(tile_data_area_bit, tile_index);
+
+        // window map attributes for the corresponding tile index
+        uint8_t attrs = gb->memory->vram[1][tile_index_addr & VRAM_MASK];
+        parse_bg_attrs(attrs);
+
+        uint8_t offset = TILE_WIDTH * tile_xoffset;
+        load_tile_color_data(gb, tile_addr,
+                             tile_pixel_yoffset,
+                             scanline_buff + offset);
+
+        for (int i = 0; i < 8; ++i)
+        {
+            scanline_pbuff[offset + i] = curr_bg_attrs.paletteno;
+            scanline_prio_buff[offset + i] = curr_bg_attrs.priority;
+        }
+    }
+
+    // Copy the visible portion of the window scanline to the frame buffer.
+    // Shifts left cover the entire visible scanline (WX < 7) and shifts
+    // right offset by that many pixels.
+    uint16_t color_data_buffer_offset = 0;
+    uint8_t visible_pixel_count = FRAME_WIDTH;
+    uint8_t scanline_buffer_offset = ppu->wx >= 7 ? 0 : 7 - ppu->wx;
+    if (ppu->wx > 7)
+    {
+        color_data_buffer_offset += ppu->wx - 7;
+        visible_pixel_count -= ppu->wx - 7;
+    }
+
+    // color indices
+    memcpy(scanline_coloridx_info + color_data_buffer_offset,
+           scanline_buff + scanline_buffer_offset,
+           visible_pixel_count);
+
+    // palette numbers
+    memcpy(scanline_palette_info + color_data_buffer_offset,
+           scanline_pbuff + scanline_buffer_offset,
+           visible_pixel_count);
+
+    // priorities
+    memcpy(scanline_bg_prio_info + color_data_buffer_offset,
+           scanline_prio_buff + scanline_buffer_offset,
+           visible_pixel_count);
+
+    ++ppu->window_line_counter;
+}
+
 void cgb_render_scanline(gameboy *gb)
 {
+    bool window_enable = gb->ppu->lcdc & 0x20;
     cgb_load_bg_tiles(gb);
+
+    if (window_enable)
+        cgb_load_window_tiles(gb);
 }
 
 // translate the completed scanline data into
