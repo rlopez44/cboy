@@ -6,8 +6,6 @@
 #include "cboy/ppu.h"
 #include "ppu_internal.h"
 
-#define VRAM_MASK 0x1fff
-
 struct bg_attrs {
     bool priority;
     bool yflip;
@@ -24,12 +22,27 @@ static struct bg_attrs curr_bg_attrs;
 static uint8_t scanline_palette_info[FRAME_WIDTH] = {0};
 static uint8_t scanline_coloridx_info[FRAME_WIDTH] = {0};
 static bool scanline_bg_prio_info[FRAME_WIDTH] = {false};
+static bool scanline_obj_occupancy[FRAME_WIDTH] = {false};
 
-static uint16_t cgb_color_from_palette(gameboy *gb, uint8_t palette_reg, uint8_t color_idx)
+static uint16_t cgb_color_from_palette(gameboy *gb, int loc)
 {
+    uint8_t palette_reg = scanline_palette_info[loc];
+    uint8_t color_idx = scanline_coloridx_info[loc];
+    bool is_sprite = scanline_obj_occupancy[loc];
+
     uint8_t offset = 8*palette_reg + 2*color_idx;
-    uint8_t lo = gb->ppu->bg_pram[offset];
-    uint8_t hi = gb->ppu->bg_pram[offset + 1];
+    uint8_t lo, hi;
+    if (is_sprite)
+    {
+        lo = gb->ppu->obj_pram[offset];
+        hi = gb->ppu->obj_pram[offset + 1];
+    }
+    else
+    {
+        lo = gb->ppu->bg_pram[offset];
+        hi = gb->ppu->bg_pram[offset + 1];
+    }
+
     return (uint16_t)hi << 8 | lo;
 }
 
@@ -76,6 +89,64 @@ static void load_tile_color_data(gameboy *gb, uint16_t tile_addr, uint8_t yoffse
         lo_bit = (lo & mask) >> bitno;
         color_index = (hi_bit << 1) | lo_bit;
         buff[i] = color_index;
+    }
+}
+
+// determine whether a given sprite pixel will be drawn
+// See: https://gbdev.io/pandocs/Tile_Maps.html#bg-to-obj-priority-in-cgb-mode
+static bool resolve_obj_priority(gb_ppu *ppu, gb_sprite *sprite, uint8_t pixel_loc)
+{
+    bool bg_win_prio = ppu->lcdc & 1;
+
+    // if the pixel is already occupied by a sprite, it will not be overwritten
+    if (scanline_obj_occupancy[pixel_loc])
+        return false;
+
+    if (!bg_win_prio)
+        return true;
+
+    if (!sprite->bg_over_obj && !scanline_bg_prio_info[pixel_loc])
+        return true;
+
+    return !scanline_coloridx_info[pixel_loc];
+}
+
+// load pixel color data for the sprite line (8 bytes) to be rendered,
+// mixing the sprite's pixels with the background and window
+void cgb_render_sprite_pixels(gameboy *gb, gb_sprite *sprite)
+{
+    // select which line of the sprite will be rendered
+    uint8_t line_to_render = gb->ppu->ly + 16 - sprite->ypos;
+
+    // each line of the tile is 2 bytes
+    uint8_t lo = sprite->tile_data[2*line_to_render],
+            hi = sprite->tile_data[2*line_to_render + 1];
+
+    uint8_t color_index, mask, bitno, hi_bit, lo_bit;
+    for (uint8_t i = 0; i < 8; ++i)
+    {
+        bitno = 7 - i;
+        mask = 1 << bitno;
+        hi_bit = (hi & mask) >> bitno;
+        lo_bit = (lo & mask) >> bitno;
+        color_index = (hi_bit << 1) | lo_bit;
+
+        // Recall: xpos is the sprite's horizontal position + 8
+        uint8_t shifted_pixel_loc = sprite->xpos + i;
+
+        // pixel is offscreen
+        if (shifted_pixel_loc < 8 || shifted_pixel_loc >= FRAME_WIDTH + 8)
+            continue;
+
+        // no overflow because shifted_pixel_loc >= 8
+        uint8_t pixel_loc = shifted_pixel_loc - 8;
+
+        if (resolve_obj_priority(gb->ppu, sprite, pixel_loc) && color_index)
+        {
+            scanline_coloridx_info[pixel_loc] = color_index;
+            scanline_palette_info[pixel_loc] = sprite->palette_no;
+            scanline_obj_occupancy[pixel_loc] = true;
+        }
     }
 }
 
@@ -233,13 +304,24 @@ static void cgb_load_window_tiles(gameboy *gb)
     ++ppu->window_line_counter;
 }
 
+static void reset_object_occupancy(void)
+{
+    memset(scanline_obj_occupancy, 0,
+           sizeof scanline_obj_occupancy);
+}
+
 void cgb_render_scanline(gameboy *gb)
 {
     bool window_enable = gb->ppu->lcdc & 0x20;
+    bool obj_enable    = gb->ppu->lcdc & 0x02;
+
     cgb_load_bg_tiles(gb);
 
     if (window_enable)
         cgb_load_window_tiles(gb);
+
+    if (obj_enable)
+        load_sprites(gb);
 }
 
 // translate the completed scanline data into
@@ -249,16 +331,13 @@ void cgb_push_scanline_data(gameboy *gb)
     // the starting index of the current scanline in the frame buffer
     uint16_t scanline_start = gb->ppu->ly * FRAME_WIDTH;
 
-    uint8_t color_idx;
-    uint8_t palette_reg;
     uint16_t color;
     for (uint16_t i = 0; i < FRAME_WIDTH; ++i)
     {
-        palette_reg = scanline_palette_info[i];
-        color_idx = scanline_coloridx_info[i];
-        color = cgb_color_from_palette(gb, palette_reg, color_idx);
+        color = cgb_color_from_palette(gb, i);
 
         gb->ppu->frame_buffer[scanline_start + i] = color;
     }
 
+    reset_object_occupancy();
 }

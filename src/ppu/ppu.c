@@ -366,13 +366,19 @@ static void render_loaded_sprites(gameboy *gb, gb_sprite *sprites, uint8_t n_spr
 
         base_tile_addr = tile_addr_from_index(true, curr_sprite->tile_idx);
         for (uint16_t offset = 0; offset < curr_sprite->ysize * 2; ++offset)
-            curr_sprite->tile_data[offset] = ram_read(gb, base_tile_addr + offset);
+        {
+            uint16_t vram_offset = (base_tile_addr + offset) & VRAM_MASK;
+            bool bankno = gb->run_mode == GB_DMG_MODE ? 0 : curr_sprite->vram_bank;
+            curr_sprite->tile_data[offset] = gb->memory->vram[bankno][vram_offset];
+        }
 
         // perform xflip and yflip before rendering by adjusting xpos and ypos
         perform_sprite_reflections(curr_sprite);
 
-        // TODO: implement CGB sprite rendering
-        dmg_render_sprite_pixels(gb, curr_sprite);
+        if (gb->run_mode == GB_DMG_MODE)
+            dmg_render_sprite_pixels(gb, curr_sprite);
+        else
+            cgb_render_sprite_pixels(gb, curr_sprite);
     }
 }
 
