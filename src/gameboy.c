@@ -366,7 +366,10 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom, bool force
     {
         gb->key0 = gb->cart->rom_banks[0][0x0143];
         gb->key1 = gb->vbk = gb->svbk = 0xff;
-        gb->hdma1 = gb->hdma2 = gb->hdma3 = gb->hdma4 = gb->hdma5 = 0xff;
+        gb->hdma_source = gb->hdma_dest = 0xffff;
+        gb->hdma_length = 0;
+        gb->hdma_hblank = false;
+        gb->hdma_running = false;
     }
 
     /* Load the boot ROM into the emulator if it was passed in.
@@ -417,6 +420,42 @@ void free_gameboy(gameboy *gb)
     free(gb);
 }
 
+static void perform_vram_dma(gameboy *gb)
+{
+    // TODO: improve implementation so other components still tick
+    // TODO: implement HBLANK DMA
+    if (gb->hdma_hblank)
+    {
+        LOG_INFO("HBLANK HDMA not yet supported... Exiting\n");
+        exit(1);
+    }
+
+    uint16_t source_addr = gb->hdma_source & 0xfff0;
+    uint16_t dest_addr = 0x8000 | (gb->hdma_dest & 0x1ff0);
+    uint8_t value;
+    for (; gb->hdma_length; --gb->hdma_length, ++dest_addr, ++source_addr)
+    {
+        if (source_addr <= 0x7fff || (source_addr >= 0xa000 && source_addr <= 0xbfff))
+            value = cartridge_read(gb, source_addr);
+        else if (source_addr >= 0xc000 && source_addr <= 0xdfff)
+            value = ram_read(gb, source_addr);
+        else // reading VRAM during HDMA writes garbage to VRAM
+            value = 0xa5; // 0b1010_0101
+
+        // TODO: delete me
+        if (dest_addr < 0x8000 || dest_addr > 0x9fff)
+        {
+            LOG_ERROR("Logic Error: src: %04x, dest: %04x, length: %04x\n",
+                      source_addr, dest_addr, gb->hdma_length);
+            exit(1);
+        }
+        ram_write(gb, dest_addr, value);
+    }
+
+    gb->hdma_running = false;
+    gb->hdma_source = gb->hdma_dest = 0xffff;
+}
+
 /*
  * Handle writes to the following I/O registers:
  * KEY0, KEY1, VBK, SVBK, HDMA[1-5]
@@ -431,6 +470,44 @@ void cgb_core_io_write(gameboy *gb, uint16_t address, uint8_t value)
 
         case SVBK_REGISTER:
             gb->svbk = 0xf8 | (value & 0x7);
+            break;
+
+        case HDMA1_REGISTER:
+            // source must be in ROM, cartridge RAM, or WRAM
+            if (value > 0x7f && !(value >= 0xa0 && value <= 0xdf))
+            {
+                LOG_ERROR("Invalid HDMA source high: %02x\n", value);
+                exit(1);
+            }
+
+            gb->hdma_source = (gb->hdma_source & 0x00ff) | (uint16_t)value << 8;
+            break;
+
+        case HDMA2_REGISTER:
+            gb->hdma_source = (gb->hdma_source & 0xff00) | value;
+            break;
+
+        case HDMA3_REGISTER:
+            gb->hdma_dest = (gb->hdma_dest & 0x00ff) | (uint16_t)value << 8;
+            break;
+
+        case HDMA4_REGISTER:
+            gb->hdma_dest = (gb->hdma_dest & 0xff00) | value;
+            break;
+
+        case HDMA5_REGISTER:
+            // HBLANK DMA can be canceled before completion
+            if (gb->hdma_running && gb->hdma_hblank)
+            {
+                gb->hdma_running = !(value & 0x80);
+                break;
+            }
+
+            gb->hdma_hblank = value & 0x80;
+            gb->hdma_length = ((value & 0x7f) + 1) << 4;
+            gb->hdma_running = true;
+
+            perform_vram_dma(gb);
             break;
 
         default:
@@ -453,6 +530,31 @@ uint8_t cgb_core_io_read(gameboy *gb, uint16_t address)
 
         case SVBK_REGISTER:
             value = gb->svbk;
+            break;
+
+        case HDMA1_REGISTER:
+            value = (gb->hdma_source >> 8) & 0xff;
+            break;
+
+        case HDMA2_REGISTER:
+            value = gb->hdma_source & 0xff;
+            break;
+
+        case HDMA3_REGISTER:
+            value = (gb->hdma_dest >> 8) & 0xff;
+            break;
+
+        case HDMA4_REGISTER:
+            value = gb->hdma_dest & 0xff;
+            break;
+
+        case HDMA5_REGISTER:
+            // only time this register can be read from while
+            // HDMA is still active is if it's an HBLANK DMA
+            if (!gb->hdma_length)
+                value = 0xff;
+            else
+                value = 0x80 | ((gb->hdma_length >> 4) - 1);
             break;
 
         default:

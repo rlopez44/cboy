@@ -58,11 +58,11 @@ typedef struct gameboy {
     uint8_t svbk; // WRAM bank
 
     // VRAM DMA
-    uint8_t hdma1; // HDMA source high
-    uint8_t hdma2; // HDMA source low
-    uint8_t hdma3; // HDMA destination high
-    uint8_t hdma4; // HDMA destination low
-    uint8_t hdma5; // HDMA length/mode/start
+    uint16_t hdma_source;
+    uint16_t hdma_dest;
+    bool hdma_running;
+    uint16_t hdma_length;
+    bool hdma_hblank; // general purpose or HBLANK DMA
 
     /* A counter to track the number of clocks since
      * a DMA transfer was requested so that we can
