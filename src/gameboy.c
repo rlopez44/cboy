@@ -532,22 +532,6 @@ uint8_t cgb_core_io_read(gameboy *gb, uint16_t address)
             value = gb->svbk;
             break;
 
-        case HDMA1_REGISTER:
-            value = (gb->hdma_source >> 8) & 0xff;
-            break;
-
-        case HDMA2_REGISTER:
-            value = gb->hdma_source & 0xff;
-            break;
-
-        case HDMA3_REGISTER:
-            value = (gb->hdma_dest >> 8) & 0xff;
-            break;
-
-        case HDMA4_REGISTER:
-            value = gb->hdma_dest & 0xff;
-            break;
-
         case HDMA5_REGISTER:
             // only time this register can be read from while
             // HDMA is still active is if it's an HBLANK DMA
