@@ -1,5 +1,5 @@
 # CBoy
-A Nintendo Game Boy emulator written in C.
+A Nintendo Game Boy and Game Boy Color emulator written in C.
 
 # Compiling the Emulator
 In order to compile the emulator, you must have [SDL2](https://www.libsdl.org/)
@@ -22,6 +22,9 @@ are created with `make`, `make profile`, and `make debug`,
 respectively. The corresponding executables are located at `bin/cboy`,
 `bin/profile/cboy`, and `bin/debug/cboy`.
 
+>**_NOTE:_** The emulator makes use of POSIX functions and has only
+been tested on Linux and MacOS.
+
 # Running the Emulator
 The emulator accepts a game ROM file and, optionally,
 a DMG boot ROM file to play before starting the game ROM.
@@ -29,6 +32,9 @@ The emulator can also be forced to run in DMG mode regardless
 of game ROM supplied with the `-m` option. For example, the
 release mode of the emulator is invoked as follows:
 `bin/cboy [-m] [-b bootrom] <romfile>`.
+
+>**_NOTE:_** Currently the emulator does not support running a boot ROM
+when in Game Boy Color mode. Any boot ROM provided in this mode is skipped.
 
 # Clean Up
 To clean up object files used in prior compilations, run `make clean`.
@@ -39,10 +45,6 @@ run `make full-clean`.
 To make the emulator accessible in your `$PATH`, run `sudo make install`.
 This will compile the release build of the emulator and copy it into
 `/usr/local/bin`.
-
-# Notes
-Currently, the emulator can't be run on Windows because the POSIX
-`getopt` function is used for command line options processing.
 
 # Supported MBCs
 CBoy currently supports the following Memory Bank Controllers:
@@ -70,6 +72,7 @@ The emulator currently passes the following test ROMS.
     * `acceptance/instr/*`
     * `acceptance/oam_dma/{basic,reg_read}.s`
 * [dmg-acid2](https://github.com/mattcurrie/dmg-acid2)
+* [cgb-acid2](https://github.com/mattcurrie/cgb-acid2)
 
 # References
 * [*DMG-01: How to Emulate a Game Boy*](https://rylev.github.io/DMG-01/public/book/)
