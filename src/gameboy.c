@@ -420,9 +420,9 @@ void free_gameboy(gameboy *gb)
     free(gb);
 }
 
-static void perform_vram_dma(gameboy *gb)
+// Transfer 0x10 bytes of data as part of VRAM DMA
+static void vram_dma_transfer_chunk(gameboy *gb)
 {
-    // TODO: improve implementation so other components still tick
     // TODO: implement HBLANK DMA
     if (gb->hdma_hblank)
     {
@@ -430,30 +430,38 @@ static void perform_vram_dma(gameboy *gb)
         exit(1);
     }
 
-    uint16_t source_addr = gb->hdma_source & 0xfff0;
-    uint16_t dest_addr = 0x8000 | (gb->hdma_dest & 0x1ff0);
     uint8_t value;
-    for (; gb->hdma_length; --gb->hdma_length, ++dest_addr, ++source_addr)
+    // transfer length is always a multiple of 0x10
+    for (int i = 0; i < 0x10; ++i)
     {
-        if (source_addr <= 0x7fff || (source_addr >= 0xa000 && source_addr <= 0xbfff))
-            value = cartridge_read(gb, source_addr);
-        else if (source_addr >= 0xc000 && source_addr <= 0xdfff)
-            value = ram_read(gb, source_addr);
+        if (gb->hdma_source <= 0x7fff || (gb->hdma_source >= 0xa000 && gb->hdma_source <= 0xbfff))
+            value = cartridge_read(gb, gb->hdma_source);
+        else if (gb->hdma_source >= 0xc000 && gb->hdma_source <= 0xdfff)
+            value = ram_read(gb, gb->hdma_source);
         else // reading VRAM during HDMA writes garbage to VRAM
             value = 0xa5; // 0b1010_0101
 
         // TODO: delete me
-        if (dest_addr < 0x8000 || dest_addr > 0x9fff)
+        if (gb->hdma_dest < 0x8000 || gb->hdma_dest > 0x9fff)
         {
             LOG_ERROR("Logic Error: src: %04x, dest: %04x, length: %04x\n",
-                      source_addr, dest_addr, gb->hdma_length);
+                      gb->hdma_source, gb->hdma_dest, gb->hdma_length);
             exit(1);
         }
-        ram_write(gb, dest_addr, value);
+        ram_write(gb, gb->hdma_dest, value);
+
+        ++gb->hdma_dest;
+        ++gb->hdma_source;
+        --gb->hdma_length;
     }
 
-    gb->hdma_running = false;
-    gb->hdma_source = gb->hdma_dest = 0xffff;
+    if (!gb->hdma_length || gb->hdma_dest > 0x9fff)
+    {
+        gb->hdma_running = false;
+        gb->hdma_length = 0;
+        gb->hdma_source = 0xfff0;
+        gb->hdma_dest = 0x9ff0;
+    }
 }
 
 /*
@@ -480,19 +488,19 @@ void cgb_core_io_write(gameboy *gb, uint16_t address, uint8_t value)
                 exit(1);
             }
 
-            gb->hdma_source = (gb->hdma_source & 0x00ff) | (uint16_t)value << 8;
+            gb->hdma_source = (gb->hdma_source & 0x00f0) | (uint16_t)value << 8;
             break;
 
         case HDMA2_REGISTER:
-            gb->hdma_source = (gb->hdma_source & 0xff00) | value;
+            gb->hdma_source = (gb->hdma_source & 0xff00) | (value & 0xf0);
             break;
 
         case HDMA3_REGISTER:
-            gb->hdma_dest = (gb->hdma_dest & 0x00ff) | (uint16_t)value << 8;
+            gb->hdma_dest = 0x8000 | (gb->hdma_dest & 0x00f0) | (uint16_t)(value & 0x1f) << 8;
             break;
 
         case HDMA4_REGISTER:
-            gb->hdma_dest = (gb->hdma_dest & 0xff00) | value;
+            gb->hdma_dest = 0x8000 | (gb->hdma_dest & 0x1f00) | (value & 0xf0);
             break;
 
         case HDMA5_REGISTER:
@@ -506,8 +514,6 @@ void cgb_core_io_write(gameboy *gb, uint16_t address, uint8_t value)
             gb->hdma_hblank = value & 0x80;
             gb->hdma_length = ((value & 0x7f) + 1) << 4;
             gb->hdma_running = true;
-
-            perform_vram_dma(gb);
             break;
 
         default:
@@ -865,18 +871,23 @@ void run_gameboy(gameboy *gb)
         // number of clock ticks this iteration of the event loop
         num_clocks = 0;
 
-        // if the CPU is HALTed no instructions are executed
-        if (!gb->cpu->is_halted)
+        if (gb->run_mode == GB_CGB_MODE && gb->hdma_running)
         {
-            // number of clock ticks, given number of m-cycles
-            num_clocks += 4 * execute_instruction(gb);
+            // HDMA transfers 0x10 bytes in 8 m-cycles
+            vram_dma_transfer_chunk(gb);
+            num_clocks += 4 * 8;
         }
-        else
+        else if (gb->cpu->is_halted)
         {
             // every iteration that the CPU is halted counts as 4 clock ticks
             // See: https://gbdev.io/pandocs/CPU_Instruction_Set.html#cpu-control-instructions
             num_clocks += 4;
             check_halt_wakeup(gb);
+        }
+        else
+        {
+            // number of clock ticks, given number of m-cycles
+            num_clocks += 4 * execute_instruction(gb);
         }
 
         increment_clock_counter(gb, num_clocks);
