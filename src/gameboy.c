@@ -507,13 +507,15 @@ void cgb_core_io_write(gameboy *gb, uint16_t address, uint8_t value)
             // HBLANK DMA can be canceled before completion
             if (gb->hdma_running && gb->hdma_hblank)
             {
-                gb->hdma_running = !(value & 0x80);
-                break;
+                gb->hdma_running = (value & 0x80);
+            }
+            else
+            {
+                gb->hdma_running = true;
+                gb->hdma_hblank = value & 0x80;
             }
 
-            gb->hdma_hblank = value & 0x80;
             gb->hdma_length = ((value & 0x7f) + 1) << 4;
-            gb->hdma_running = true;
             break;
 
         default:
