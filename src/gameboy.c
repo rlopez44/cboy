@@ -366,9 +366,9 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom, bool force
     {
         gb->key0 = gb->cart->rom_banks[0][0x0143];
         gb->key1 = gb->vbk = gb->svbk = 0xff;
-        gb->hdma_source = gb->hdma_dest = 0xffff;
-        gb->hdma_length = 0;
-        gb->hdma_hblank = false;
+        gb->vram_dma_source = gb->vram_dma_dest = 0xffff;
+        gb->vram_dma_length = 0;
+        gb->gdma_running = false;
         gb->hdma_running = false;
     }
 
@@ -420,45 +420,52 @@ void free_gameboy(gameboy *gb)
     free(gb);
 }
 
+/*
+ * Check whether VRAM DMA should occur.
+ * On hardware this check is performed
+ * by the CPU during each opcode fetch.
+ *
+ * General-Purpose VRAM DMA is triggered
+ * on write to HDMA5.
+ *
+ * HBLANK VRAM DMA is triggered on the
+ * rising edge of the HBLANK mode signal.
+ */
+static bool check_vram_dma_condition(gameboy *gb)
+{
+    bool prev_hblank_signal = gb->hblank_signal;
+    gb->hblank_signal = !(gb->ppu->stat & 0x3);
+    bool do_hdma = gb->hdma_running && !prev_hblank_signal && gb->hblank_signal;
+
+    return gb->gdma_running || do_hdma;
+}
+
 // Transfer 0x10 bytes of data as part of VRAM DMA
 static void vram_dma_transfer_chunk(gameboy *gb)
 {
-    // TODO: implement HBLANK DMA
-    if (gb->hdma_hblank)
-    {
-        LOG_INFO("HBLANK HDMA not yet supported... Exiting\n");
-        exit(1);
-    }
-
     uint8_t value;
     // transfer length is always a multiple of 0x10
     for (int i = 0; i < 0x10; ++i)
     {
-        if (gb->hdma_source <= 0x7fff || (gb->hdma_source >= 0xa000 && gb->hdma_source <= 0xbfff))
-            value = cartridge_read(gb, gb->hdma_source);
-        else if (gb->hdma_source >= 0xc000 && gb->hdma_source <= 0xdfff)
-            value = ram_read(gb, gb->hdma_source);
-        else // reading VRAM during HDMA writes garbage to VRAM
+        if (gb->vram_dma_source <= 0x7fff || (gb->vram_dma_source >= 0xa000 && gb->vram_dma_source <= 0xbfff))
+            value = cartridge_read(gb, gb->vram_dma_source);
+        else if (gb->vram_dma_source >= 0xc000 && gb->vram_dma_source <= 0xdfff)
+            value = ram_read(gb, gb->vram_dma_source);
+        else // reading VRAM during vram_dma writes garbage to VRAM
             value = 0xa5; // 0b1010_0101
 
-        // TODO: delete me
-        if (gb->hdma_dest < 0x8000 || gb->hdma_dest > 0x9fff)
-        {
-            LOG_ERROR("Logic Error: src: %04x, dest: %04x, length: %04x\n",
-                      gb->hdma_source, gb->hdma_dest, gb->hdma_length);
-            exit(1);
-        }
-        ram_write(gb, gb->hdma_dest, value);
+        ram_write(gb, gb->vram_dma_dest, value);
 
-        ++gb->hdma_dest;
-        ++gb->hdma_source;
-        --gb->hdma_length;
+        ++gb->vram_dma_dest;
+        ++gb->vram_dma_source;
     }
 
-    if (!gb->hdma_length || gb->hdma_dest > 0x9fff)
+    gb->vram_dma_length -= 0x10;
+
+    if (!gb->vram_dma_length)
     {
         gb->hdma_running = false;
-        gb->hdma_length = 0;
+        gb->gdma_running = false;
     }
 }
 
@@ -486,34 +493,31 @@ void cgb_core_io_write(gameboy *gb, uint16_t address, uint8_t value)
                 exit(1);
             }
 
-            gb->hdma_source = (gb->hdma_source & 0x00f0) | (uint16_t)value << 8;
+            gb->vram_dma_source = (gb->vram_dma_source & 0x00f0) | (uint16_t)value << 8;
             break;
 
         case HDMA2_REGISTER:
-            gb->hdma_source = (gb->hdma_source & 0xff00) | (value & 0xf0);
+            gb->vram_dma_source = (gb->vram_dma_source & 0xff00) | (value & 0xf0);
             break;
 
         case HDMA3_REGISTER:
-            gb->hdma_dest = 0x8000 | (gb->hdma_dest & 0x00f0) | (uint16_t)(value & 0x1f) << 8;
+            gb->vram_dma_dest = 0x8000 | (gb->vram_dma_dest & 0x00f0) | (uint16_t)(value & 0x1f) << 8;
             break;
 
         case HDMA4_REGISTER:
-            gb->hdma_dest = 0x8000 | (gb->hdma_dest & 0x1f00) | (value & 0xf0);
+            gb->vram_dma_dest = 0x8000 | (gb->vram_dma_dest & 0x1f00) | (value & 0xf0);
             break;
 
         case HDMA5_REGISTER:
             // HBLANK DMA can be canceled before completion
-            if (gb->hdma_running && gb->hdma_hblank)
-            {
-                gb->hdma_running = (value & 0x80);
-            }
-            else
-            {
+            if (gb->hdma_running)
+                gb->hdma_running = value & 0x80;
+            else if (value & 0x80)
                 gb->hdma_running = true;
-                gb->hdma_hblank = value & 0x80;
-            }
+            else
+                gb->gdma_running = true;
 
-            gb->hdma_length = ((value & 0x7f) + 1) << 4;
+            gb->vram_dma_length = ((value & 0x7f) + 1) << 4;
             break;
 
         default:
@@ -541,10 +545,10 @@ uint8_t cgb_core_io_read(gameboy *gb, uint16_t address)
         case HDMA5_REGISTER:
             // only time this register can be read from while
             // HDMA is still active is if it's an HBLANK DMA
-            if (!gb->hdma_length)
+            if (!gb->vram_dma_length)
                 value = 0xff;
             else
-                value = 0x80 | ((gb->hdma_length >> 4) - 1);
+                value = gb->hdma_running << 7 | ((gb->vram_dma_length >> 4) - 1);
             break;
 
         default:
@@ -871,7 +875,7 @@ void run_gameboy(gameboy *gb)
         // number of clock ticks this iteration of the event loop
         num_clocks = 0;
 
-        if (gb->run_mode == GB_CGB_MODE && gb->hdma_running)
+        if (gb->run_mode == GB_CGB_MODE && check_vram_dma_condition(gb))
         {
             // HDMA transfers 0x10 bytes in 8 m-cycles
             vram_dma_transfer_chunk(gb);
