@@ -459,8 +459,6 @@ static void vram_dma_transfer_chunk(gameboy *gb)
     {
         gb->hdma_running = false;
         gb->hdma_length = 0;
-        gb->hdma_source = 0xfff0;
-        gb->hdma_dest = 0x9ff0;
     }
 }
 
