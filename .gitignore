@@ -1,3 +1,9 @@
+# VSCode workspaces
+*.code-workspace
+
+# throwaway code scraps
+scraps/
+
 # gprof profiling
 gmon.*
 
