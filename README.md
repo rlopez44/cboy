@@ -73,6 +73,11 @@ The emulator currently passes the following test ROMS.
     * `acceptance/oam_dma/{basic,reg_read}.s`
 * [dmg-acid2](https://github.com/mattcurrie/dmg-acid2)
 * [cgb-acid2](https://github.com/mattcurrie/cgb-acid2)
+* [SameSuite](https://github.com/LIJI32/SameSuite) (binaries can be found [here](https://github.com/daid/GBEmulatorShootout))
+    * `dma/gbc_dma_cont`
+* [MagenTests](https://github.com/alloncm/MagenTests)
+    * `color_bg_oam_priority`
+    * `oam_internal_priority`
 
 # References
 * [*DMG-01: How to Emulate a Game Boy*](https://rylev.github.io/DMG-01/public/book/)

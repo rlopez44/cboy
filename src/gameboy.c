@@ -365,7 +365,8 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom, bool force
     if (gb->run_mode == GB_CGB_MODE)
     {
         gb->key0 = gb->cart->rom_banks[0][0x0143];
-        gb->key1 = gb->vbk = gb->svbk = 0xff;
+        gb->key1 = gb->svbk = 0xff;
+        gb->vbk = 0xfe;
         gb->vram_dma_source = gb->vram_dma_dest = 0xffff;
         gb->vram_dma_length = 0;
         gb->gdma_running = false;
