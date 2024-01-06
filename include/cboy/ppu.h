@@ -4,23 +4,13 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <SDL.h>
+#include "cboy/common.h"
 
 #define FRAME_WIDTH  160
 #define FRAME_HEIGHT 144
 
-/* PPU-related registers */
-#define LCDC_REGISTER 0xff40
-#define STAT_REGISTER 0xff41
-#define SCY_REGISTER  0xff42
-#define SCX_REGISTER  0xff43
-#define LY_REGISTER   0xff44
-#define LYC_REGISTER  0xff45
-#define DMA_REGISTER  0xff46
-#define BGP_REGISTER  0xff47
-#define OBP0_REGISTER 0xff48
-#define OBP1_REGISTER 0xff49
-#define WY_REGISTER   0xff4a
-#define WX_REGISTER   0xff4b
+/* palette/color RAM */
+#define PRAM_SIZE 64
 
 typedef struct gameboy gameboy;
 
@@ -35,10 +25,15 @@ typedef struct gb_sprite {
         uint8_t oam_offset;
 
         // sprite attributes
-        bool bg_over_obj,
-             yflip,
-             xflip,
-             palette_no;
+        bool bg_over_obj, // object priority
+             yflip,       // vertical mirror
+             xflip;       // horizontal mirror
+
+        // selects OBP0-1 (DMG) or OBP0-7 (CGB)
+        uint8_t palette_no;
+
+        // select VRAM bank 0 or 1 (CGB only)
+        bool vram_bank;
 
         // The sprite's tile data. Recall that each tile is
         // 16 bytes in size, so if using 8x8 sprites, the
@@ -46,9 +41,9 @@ typedef struct gb_sprite {
         uint8_t tile_data[32];
 } gb_sprite;
 
-/* colors for use by the display */
+/* colors for use by the display in monochrome mode */
 typedef struct display_colors {
-    uint32_t white,
+    uint16_t white,
              light_gray,
              dark_gray,
              black;
@@ -57,17 +52,16 @@ typedef struct display_colors {
 } display_colors;
 
 typedef struct gb_ppu {
-    uint32_t frame_buffer[FRAME_WIDTH * FRAME_HEIGHT];
+    uint16_t frame_buffer[FRAME_WIDTH * FRAME_HEIGHT];
     display_colors colors;
     uint32_t dot_clock;
     uint64_t frames_rendered;
-    uint8_t scx, scy, ly, wx, wy;
 
-    // track palette and color index data for the scanline
-    // being rendered so we can mix the background, window,
-    // and sprites into a final image
-    uint16_t scanline_palette_buff[FRAME_WIDTH];
-    uint8_t scanline_coloridx_buff[FRAME_WIDTH];
+    // background/window palette (color) RAM
+    uint8_t bg_pram[PRAM_SIZE];
+
+    // object palette (color) RAM
+    uint8_t obj_pram[PRAM_SIZE];
 
     // an internal counter that tracks how many lines of
     // the window have been rendered for the current frame
@@ -85,17 +79,32 @@ typedef struct gb_ppu {
          hblank_stat_line,
          vblank_stat_line,
          oam_stat_line;
+
+    // the PPU I/O registers
+    uint8_t lcdc, stat, scy, scx, ly, lyc;
+    uint8_t dma, bgp, obp0, obp1,  wx, wy;
+
+    // CGB PPU I/O registers
+    uint8_t bcps, ocps, opri;
 } gb_ppu;
 
-void render_scanline(gameboy *gb);
+void ppu_write(gameboy *gb, uint16_t address, uint8_t value);
+
+uint8_t ppu_read(gameboy *gb, uint16_t address);
+
+void dma_transfer(gameboy *gb);
 
 void display_frame(gameboy *gb);
+
+uint16_t tile_addr_from_index(bool tile_data_area_bit, uint8_t tile_index);
+
+void load_sprites(gameboy *gb);
 
 void run_ppu(gameboy *gb, uint8_t num_clocks);
 
 void cycle_display_colors(display_colors *colors, bool cycle_forward);
 
-gb_ppu *init_ppu(void);
+gb_ppu *init_ppu(enum GAMEBOY_MODE gb_mode);
 
 void free_ppu(gb_ppu *ppu);
 

@@ -3,22 +3,13 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "cboy/common.h"
 #include "cboy/cpu.h"
 #include "cboy/memory.h"
 #include "cboy/cartridge.h"
 #include "cboy/ppu.h"
 #include "cboy/joypad.h"
 #include "cboy/apu.h"
-
-#define DIV_REGISTER 0xff04
-#define TIMA_REGISTER 0xff05
-#define TMA_REGISTER 0xff06
-#define TAC_REGISTER 0xff07
-
-#define GB_CPU_FREQUENCY 4194304
-
-/* frame duration is 16.74 ms */
-#define GB_FRAME_DURATION_MS 17
 
 /* boot ROM size in bytes */
 #define BOOT_ROM_SIZE 256
@@ -34,9 +25,12 @@ typedef struct gameboy {
     // if the Game Boy is still on
     bool is_on;
 
+    enum GAMEBOY_MODE run_mode;
+
     // Game Boy boot ROM, if passed into the emulator
     uint8_t boot_rom[BOOT_ROM_SIZE];
     bool run_boot_rom;
+    bool boot_rom_disabled;
 
     bool is_stopped, dma_requested;
 
@@ -54,6 +48,22 @@ typedef struct gameboy {
      * to memory.
      */
     uint16_t clock_counter;
+
+    // timer counter, modulo, and control registers
+    uint8_t tima, tma, tac;
+
+    uint8_t key0; // GB compatibility
+    uint8_t key1; // prepare speed switch
+    uint8_t vbk;  // VRAM bank
+    uint8_t svbk; // WRAM bank
+
+    // VRAM DMA
+    uint16_t vram_dma_source;
+    uint16_t vram_dma_dest;
+    uint16_t vram_dma_length;
+    bool gdma_running;
+    bool hdma_running;
+    bool hblank_signal; // to time HDMA transfers
 
     /* A counter to track the number of clocks since
      * a DMA transfer was requested so that we can
@@ -75,7 +85,7 @@ void stack_push(gameboy *gb, uint16_t value);
 uint16_t stack_pop(gameboy *gb);
 
 // initialize the Game Boy
-gameboy *init_gameboy(const char *rom_file_path, const char *bootrom);
+gameboy *init_gameboy(const char *rom_file_path, const char *bootrom, bool force_dmg);
 
 // free the Game Boy
 void free_gameboy(gameboy *gb);
@@ -88,6 +98,12 @@ void increment_tima(gameboy *gb);
  * incrementing the DIV and TIMA registers as needed.
  */
 void increment_clock_counter(gameboy *gb, uint16_t num_clocks);
+
+void timing_related_write(gameboy *gb, uint16_t address, uint8_t value);
+uint8_t timing_related_read(gameboy *gb, uint16_t address);
+
+void cgb_core_io_write(gameboy *gb, uint16_t address, uint8_t value);
+uint8_t cgb_core_io_read(gameboy *gb, uint16_t address);
 
 // the emulator's game loop
 void run_gameboy(gameboy *gb);

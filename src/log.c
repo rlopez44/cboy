@@ -1,55 +1,13 @@
 #include <stdint.h>
 #include <string.h>
+#include "cboy/common.h"
+#include "cboy/cpu.h"
 #include "cboy/log.h"
 #include "cboy/gameboy.h"
 #include "cboy/ppu.h"
 #include "cboy/apu.h"
 
 #ifdef DEBUG
-// dump the Game Boy's memory contents
-void dump_memory(gameboy *gb)
-{
-    // update the memory map with I/O registers that don't
-    // live directly in the map before dumping it
-    gb->memory->mmap[DIV_REGISTER] = gb->clock_counter >> 8;
-    gb->memory->mmap[SCY_REGISTER] = gb->ppu->scy;
-    gb->memory->mmap[SCX_REGISTER] = gb->ppu->scx;
-    gb->memory->mmap[LY_REGISTER] = gb->ppu->ly;
-    gb->memory->mmap[WY_REGISTER] = gb->ppu->wy;
-    gb->memory->mmap[WX_REGISTER] = gb->ppu->wx;
-
-    // ECHO RAM is a mirror of 0xC000 - 0xDDFF (in Work RAM)
-    memcpy(gb->memory->mmap + 0xe000,
-           gb->memory->mmap + 0xc000,
-           (0xddff - 0xc000 + 1) * sizeof(uint8_t));
-
-    // APU registers and wave RAM
-    for (uint16_t address = 0xff10; address <= 0xff3f; ++address)
-        gb->memory->mmap[address] = apu_read(gb, address);
-
-    const char *dumpfile_path = "/tmp/gb.dump";
-    FILE *dumpfile = fopen(dumpfile_path, "wb");
-
-    if (dumpfile == NULL)
-    {
-        LOG_DEBUG("Error opening Game Boy memory dumpfile (%s)\n", dumpfile_path);
-        return;
-    }
-
-    size_t bytes_written = fwrite(gb->memory->mmap, sizeof(uint8_t), MEMORY_MAP_SIZE, dumpfile);
-
-    if (bytes_written != MEMORY_MAP_SIZE * sizeof(uint8_t))
-    {
-        LOG_DEBUG("Error dumping Game Boy memory into %s\n", dumpfile_path);
-    }
-    else
-    {
-        LOG_DEBUG("Game Boy memory dumped to %s\n", dumpfile_path);
-    }
-
-    fclose(dumpfile);
-}
-
 // print out the current CPU register contents
 void print_registers(gameboy *gb)
 {

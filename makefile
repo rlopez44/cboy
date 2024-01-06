@@ -10,10 +10,13 @@ INSTALL_DIR = /usr/local/bin
 BIN = cboy
 
 # so we can reference all our source files without directories
-vpath %.c src/ src/instructions/ src/mbcs/
+vpath %.c src/ src/instructions/ src/mbcs/ src/ppu
 
 # list of all our source files without directories
-SRC = $(notdir $(wildcard src/*.c) $(wildcard src/instructions/*.c) $(wildcard src/mbcs/*.c))
+SRC = $(notdir $(wildcard src/*.c)\
+			   $(wildcard src/instructions/*.c)\
+			   $(wildcard src/mbcs/*.c)\
+			   $(wildcard src/ppu/*.c))
 
 # list of object file names for debug, profiling, and release builds
 OBJS = $(patsubst %.c, $(OBJ_DIR)/%.o, $(SRC))

@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include "cboy/common.h"
 #include "cboy/cpu.h"
 #include "cboy/log.h"
 
@@ -76,56 +77,92 @@ void set_flags(gb_registers *reg, bool zero, bool subtract,
 // set individual flags
 void set_zero_flag(gb_registers *reg, bool value)
 {
-    // zero flag is the seventh bit of the flag register
     uint8_t mask = 1 << 7;
     reg->f = (reg->f & ~mask) | (value << 7);
 }
 
 void set_subtract_flag(gb_registers *reg, bool value)
 {
-    // subtract flag is the sixth bit of the flag register
     uint8_t mask = 1 << 6;
     reg->f = (reg->f & ~mask) | (value << 6);
 }
 
 void set_half_carry_flag(gb_registers *reg, bool value)
 {
-    // half carry flag is the fifth bit of the flag register
     uint8_t mask = 1 << 5;
     reg->f = (reg->f & ~mask) | (value << 5);
 }
 
 void set_carry_flag(gb_registers *reg, bool value)
 {
-    // carry flag is the fourth bit of the flag register
     uint8_t mask = 1 << 4;
     reg->f = (reg->f & ~mask) | (value << 4);
 }
 
-// TODO: see about inlining these functions
 // read individual flags
 bool read_zero_flag(gb_registers *reg)
 {
-    // seventh bit of the flags register
     return (reg->f >> 7) & 1;
 }
 
 bool read_subtract_flag(gb_registers *reg)
 {
-    // sixth bit of the flags register
     return (reg->f >> 6) & 1;
 }
 
 bool read_half_carry_flag(gb_registers *reg)
 {
-    // fifth bit of the flags register
     return (reg->f >> 5) & 1;
 }
 
 bool read_carry_flag(gb_registers *reg)
 {
-    // fourth bit of the flags register
     return (reg->f >> 4) & 1;
+}
+
+void interrupt_register_write(gb_cpu *cpu, uint16_t address, uint8_t value)
+{
+    // make sure the IF and IE registers' upper three bits are always set
+    value = (value & 0x1f) | 0xe0;
+    switch (address)
+    {
+        case IF_REGISTER:
+            cpu->if_register = value;
+            break;
+
+        case IE_REGISTER:
+            cpu->ie_register = value;
+            break;
+
+        default:
+            LOG_ERROR("Expected IF/IE register access."
+                      " Got address: %04x\n",
+                      address);
+            exit(1);
+    }
+}
+
+uint8_t interrupt_register_read(gb_cpu *cpu, uint16_t address)
+{
+    uint8_t value;
+    switch (address)
+    {
+        case IF_REGISTER:
+            value = cpu->if_register;
+            break;
+
+        case IE_REGISTER:
+            value = cpu->ie_register;
+            break;
+
+        default:
+            LOG_ERROR("Expected IF/IE register access."
+                      " Got address: %04x\n",
+                      address);
+            exit(1);
+    }
+
+    return value;
 }
 
 /* Allocate memory for the CPU struct
@@ -142,7 +179,7 @@ bool read_carry_flag(gb_registers *reg)
  *
  * Returns NULL if the allocation fails.
  */
-gb_cpu *init_cpu(void)
+gb_cpu *init_cpu(enum GAMEBOY_MODE gb_mode)
 {
     gb_cpu *cpu = malloc(sizeof(gb_cpu));
 
@@ -160,10 +197,13 @@ gb_cpu *init_cpu(void)
      */
     cpu->ime_flag = false;
 
+    // bit mapping for IF and IE: 111BBBBB
+    cpu->if_register = 0xe1;
+    cpu->ie_register = 0xe0;
+
     // only true when a EI instruction is executed
     cpu->ime_delayed_set = false;
 
-    // allocate the registers
     cpu->reg = malloc(sizeof(gb_registers));
 
     if (cpu->reg == NULL)
@@ -173,10 +213,21 @@ gb_cpu *init_cpu(void)
     }
 
     // set the initial register values
-    write_af(cpu->reg, 0x01b0);
-    write_bc(cpu->reg, 0x0013);
-    write_de(cpu->reg, 0x00d8);
-    write_hl(cpu->reg, 0x014d);
+    if (gb_mode == GB_DMG_MODE)
+    {
+        write_af(cpu->reg, 0x01b0);
+        write_bc(cpu->reg, 0x0013);
+        write_de(cpu->reg, 0x00d8);
+        write_hl(cpu->reg, 0x014d);
+    }
+    else
+    {
+        write_af(cpu->reg, 0x1180);
+        write_bc(cpu->reg, 0x0000);
+        write_de(cpu->reg, 0xff56);
+        write_hl(cpu->reg, 0x000d);
+    }
+
     cpu->reg->sp = 0xfffe;
     cpu->reg->pc = 0x0100;
 

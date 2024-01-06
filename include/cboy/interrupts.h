@@ -4,10 +4,6 @@
 #include <stdbool.h>
 #include "cboy/gameboy.h"
 
-#define IF_REGISTER 0xff0f
-#define IE_REGISTER 0xffff
-
-
 // The five interrupt types. These interrupts are listed
 // such that their value is also their appropriate bit in IF
 // and IE registers
@@ -27,5 +23,8 @@ void enable_interrupt(gameboy *gb, INTERRUPT_TYPE interrupt);
 
 // handle an interrupt, if any needs to be handled
 uint8_t service_interrupt(gameboy *gb);
+
+// returns set bits for all interrupts that are both pending and enabled
+uint8_t pending_interrupts(gameboy *gb);
 
 #endif

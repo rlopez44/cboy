@@ -9,6 +9,15 @@
 #include "cboy/mbc.h"
 #include "cboy/log.h"
 
+static inline void usage(const char *progname)
+{
+    const char *usage_str = "Usage: %s [-m] [-b bootrom] <romfile>\n"
+                            "Options:\n"
+                            "-m    Force the emulator to run in monochrome mode\n"
+                            "-b    Specify a boot ROM file to play before running the game ROM\n";
+    LOG_ERROR(usage_str, progname);
+}
+
 int main(int argc, char *argv[])
 {
 #ifdef DEBUG
@@ -22,18 +31,23 @@ int main(int argc, char *argv[])
     // parse arguments
     opterr = false;
     int opt;
-    const char *usage_str = "Usage: %s [-b bootrom] <romfile>\n",
-               *progname = argv[0],
+    const char *progname = argv[0],
                *bootrom = NULL,
                *romfile;
 
-    while ((opt = getopt(argc, argv, "b:")) != -1)
+    bool force_dmg = false;
+
+    while ((opt = getopt(argc, argv, "mb:")) != -1)
     {
         switch (opt)
         {
             case 'b':
                 bootrom = optarg;
                 LOG_INFO("Boot ROM supplied: %s\n", bootrom);
+                break;
+
+            case 'm':
+                force_dmg = true;
                 break;
 
             case '?':
@@ -44,7 +58,7 @@ int main(int argc, char *argv[])
                 // fallthrough
 
             default:
-                LOG_ERROR(usage_str, progname);
+                usage(progname);
                 return 1;
         }
     }
@@ -52,7 +66,7 @@ int main(int argc, char *argv[])
     // we don't allow extraneous non-option arguments
     if (optind != argc - 1)
     {
-        LOG_ERROR(usage_str, progname);
+        usage(progname);
         return 1;
     }
     else // only one non-option argument -- the romfile
@@ -60,7 +74,7 @@ int main(int argc, char *argv[])
         romfile = argv[optind];
     }
 
-    gameboy *gb = init_gameboy(romfile, bootrom);
+    gameboy *gb = init_gameboy(romfile, bootrom, force_dmg);
 
     if (gb == NULL)
     {
@@ -76,19 +90,14 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    print_button_mappings();
+    print_button_mappings(gb->run_mode);
 
     report_volume_level(gb, true);
 
     run_gameboy(gb);
 
-#ifdef DEBUG
-    dump_memory(gb);
-#endif
-
     save_cartridge_ram(gb->cart, romfile);
 
-    // display the total number of frames rendered
     LOG_INFO("\n\nFrames rendered: %" PRIu64 "\n", gb->ppu->frames_rendered);
 
     free_gameboy(gb);

@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "cboy/common.h"
 
 // the Game Boy CPU registers
 typedef struct gb_registers {
@@ -26,6 +27,9 @@ typedef struct gb_cpu {
     // the Interrupt Master Enable Flag
     bool ime_flag;
 
+    // the interrupt flags and enable registers
+    uint8_t if_register, ie_register;
+
     // to keep track of when the HALT bug occurs
     // See: https://gbdev.io/pandocs/halt.html?highlight=HALT#halt
     bool halt_bug;
@@ -41,7 +45,7 @@ typedef struct gb_cpu {
 } gb_cpu;
 
 // initializes the Game Boy's CPU
-gb_cpu *init_cpu(void);
+gb_cpu *init_cpu(enum GAMEBOY_MODE gb_mode);
 
 // free the CPU struct
 void free_cpu(gb_cpu *cpu);
@@ -83,7 +87,7 @@ void set_half_carry_flag(gb_registers *reg, bool value);
 
 void set_carry_flag(gb_registers *reg, bool value);
 
-// utility functions for reading indiidual flags
+// utility functions for reading individual flags
 bool read_zero_flag(gb_registers *reg);
 
 bool read_subtract_flag(gb_registers *reg);
@@ -91,5 +95,8 @@ bool read_subtract_flag(gb_registers *reg);
 bool read_half_carry_flag(gb_registers *reg);
 
 bool read_carry_flag(gb_registers *reg);
+
+uint8_t interrupt_register_read(gb_cpu *cpu, uint16_t address);
+void interrupt_register_write(gb_cpu *cpu, uint16_t address, uint8_t value);
 
 #endif
