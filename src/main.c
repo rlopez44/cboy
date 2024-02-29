@@ -31,23 +31,24 @@ int main(int argc, char *argv[])
     // parse arguments
     opterr = false;
     int opt;
-    const char *progname = argv[0],
-               *bootrom = NULL,
-               *romfile;
-
-    bool force_dmg = false;
+    const char *progname = argv[0];
+    struct gb_init_args init_args = {
+        .bootrom = NULL,
+        .romfile = NULL,
+        .force_dmg = false,
+    };
 
     while ((opt = getopt(argc, argv, "mb:")) != -1)
     {
         switch (opt)
         {
             case 'b':
-                bootrom = optarg;
-                LOG_INFO("Boot ROM supplied: %s\n", bootrom);
+                init_args.bootrom = optarg;
+                LOG_INFO("Boot ROM supplied: %s\n", init_args.bootrom);
                 break;
 
             case 'm':
-                force_dmg = true;
+                init_args.force_dmg = true;
                 break;
 
             case '?':
@@ -71,10 +72,10 @@ int main(int argc, char *argv[])
     }
     else // only one non-option argument -- the romfile
     {
-        romfile = argv[optind];
+        init_args.romfile = argv[optind];
     }
 
-    gameboy *gb = init_gameboy(romfile, bootrom, force_dmg);
+    gameboy *gb = init_gameboy(&init_args);
 
     if (gb == NULL)
     {
@@ -96,7 +97,7 @@ int main(int argc, char *argv[])
 
     run_gameboy(gb);
 
-    save_cartridge_ram(gb->cart, romfile);
+    save_cartridge_ram(gb->cart, init_args.romfile);
 
     LOG_INFO("\n\nFrames rendered: %" PRIu64 "\n", gb->ppu->frames_rendered);
 

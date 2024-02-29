@@ -14,6 +14,12 @@
 /* boot ROM size in bytes */
 #define BOOT_ROM_SIZE 256
 
+struct gb_init_args {
+    char *bootrom;
+    char *romfile;
+    bool force_dmg;
+};
+
 typedef struct gameboy {
     gb_cpu *cpu;
     gb_memory *memory;
@@ -87,7 +93,7 @@ void stack_push(gameboy *gb, uint16_t value);
 uint16_t stack_pop(gameboy *gb);
 
 // initialize the Game Boy
-gameboy *init_gameboy(const char *rom_file_path, const char *bootrom, bool force_dmg);
+gameboy *init_gameboy(struct gb_init_args *args);
 
 // free the Game Boy
 void free_gameboy(gameboy *gb);

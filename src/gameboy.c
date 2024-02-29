@@ -301,7 +301,7 @@ static void determine_and_report_run_mode(gameboy *gb, bool force_dmg)
  * If initialization fails then NULL is returned
  * and an error message is printed out.
  */
-gameboy *init_gameboy(const char *rom_file_path, const char *bootrom, bool force_dmg)
+gameboy *init_gameboy(struct gb_init_args *args)
 {
     gameboy *gb = calloc(1, sizeof(gameboy));
 
@@ -330,7 +330,7 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom, bool force
     if (!all_alloc)
         goto init_error;
 
-    FILE *rom_file = fopen(rom_file_path, "rb");
+    FILE *rom_file = fopen(args->romfile, "rb");
 
     if (rom_file == NULL)
     {
@@ -351,7 +351,7 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom, bool force
         goto init_error;
     }
 
-    determine_and_report_run_mode(gb, force_dmg);
+    determine_and_report_run_mode(gb, args->force_dmg);
 
     gb->cpu = init_cpu(gb->run_mode);
     gb->ppu = init_ppu(gb->run_mode);
@@ -359,7 +359,7 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom, bool force
     if (!gb->cpu || !gb->ppu)
         goto init_error;
 
-    maybe_import_cartridge_ram(gb->cart, rom_file_path);
+    maybe_import_cartridge_ram(gb->cart, args->romfile);
 
     // finish initializing I/O registers
     if (gb->run_mode == GB_CGB_MODE)
@@ -381,8 +381,8 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom, bool force
      * write 1 to memory adress 0xff50 to "disable" the boot
      * ROM (to be faithful to the hardware's behavior).
      */
-    if (bootrom != NULL)
-        maybe_load_bootrom(gb, bootrom);
+    if (args->bootrom != NULL)
+        maybe_load_bootrom(gb, args->bootrom);
     else
         gb->boot_rom_disabled = true;
 
