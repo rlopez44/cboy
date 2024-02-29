@@ -335,26 +335,24 @@ void cpl(gameboy *gb)
 
 /* The STOP instruction
  * ====================
- * Enters the CPU into a very low power standby mode.
- *
- * Here we only set a flag for the emulator that the
- * GB has been STOPped. The actual exiting out of this
- * state is handled via interrupts.
+ * Enters the CPU into a very low power standby mode or
+ * performs a CPU speed switch if running in CGB mode.
  *
  * Note that the STOP instruction is 2 bytes long,
  * but the second byte of the instruction is ignored.
  *
- * TODO: handle clock counter reset and disable when
- * entering STOP mode, as well as clock counter enable
- * when leaving STOP mode.
+ * TODO: actually handle entering and exiting STOP
+ * mode, clock counter reset and disable when entering
+ * STOP mode, and clock counter enable when leaving
+ * STOP mode.
  */
 void stop(gameboy *gb)
 {
     // ignore the second byte of the instruction
     ++(gb->cpu->reg->pc);
 
-    // set the Game Boy's stopped flag
-    gb->is_stopped = true;
+    if (gb->run_mode == GB_DMG_MODE || !maybe_switch_speed(gb))
+        gb->is_stopped = true;
 
     LOG_DEBUG("STOP\n");
 }

@@ -53,9 +53,11 @@ typedef struct gameboy {
     uint8_t tima, tma, tac;
 
     uint8_t key0; // GB compatibility
-    uint8_t key1; // prepare speed switch
     uint8_t vbk;  // VRAM bank
     uint8_t svbk; // WRAM bank
+
+    bool double_speed;
+    bool speed_switch_armed;
 
     // VRAM DMA
     uint16_t vram_dma_source;
@@ -104,6 +106,8 @@ uint8_t timing_related_read(gameboy *gb, uint16_t address);
 
 void cgb_core_io_write(gameboy *gb, uint16_t address, uint8_t value);
 uint8_t cgb_core_io_read(gameboy *gb, uint16_t address);
+
+bool maybe_switch_speed(gameboy *gb);
 
 // the emulator's game loop
 void run_gameboy(gameboy *gb);

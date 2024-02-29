@@ -364,8 +364,10 @@ gameboy *init_gameboy(const char *rom_file_path, const char *bootrom, bool force
     // finish initializing I/O registers
     if (gb->run_mode == GB_CGB_MODE)
     {
+        gb->speed_switch_armed = false;
+        gb->double_speed = false;
         gb->key0 = gb->cart->rom_banks[0][0x0143];
-        gb->key1 = gb->svbk = 0xff;
+        gb->svbk = 0xff;
         gb->vbk = 0xfe;
         gb->vram_dma_source = gb->vram_dma_dest = 0xffff;
         gb->vram_dma_length = 0;
@@ -419,6 +421,20 @@ void free_gameboy(gameboy *gb)
 
     SDL_Quit();
     free(gb);
+}
+
+/* CGB only: check if a CPU speed switch should be performed */
+bool maybe_switch_speed(gameboy *gb)
+{
+    if (!gb->speed_switch_armed)
+        return false;
+
+    // the internal clock counter is reset on speed switch
+    timing_related_write(gb, DIV_REGISTER, 0);
+    gb->double_speed = !gb->double_speed;
+    gb->speed_switch_armed = false;
+
+    return true;
 }
 
 /*
@@ -478,6 +494,10 @@ void cgb_core_io_write(gameboy *gb, uint16_t address, uint8_t value)
 {
     switch (address)
     {
+        case KEY1_REGISTER:
+            gb->speed_switch_armed = value & 1;
+            break;
+
         case VBK_REGISTER:
             gb->vbk = 0xfe | (value & 1);
             break;
@@ -535,6 +555,10 @@ uint8_t cgb_core_io_read(gameboy *gb, uint16_t address)
     uint8_t value;
     switch (address)
     {
+        case KEY1_REGISTER:
+            value = 0x7e | (gb->double_speed << 7) | gb->speed_switch_armed;
+            break;
+
         case VBK_REGISTER:
             value = gb->vbk;
             break;
@@ -863,8 +887,7 @@ static inline void throttle_emulation(gameboy *gb)
 // run the emulator
 void run_gameboy(gameboy *gb)
 {
-    uint8_t num_clocks;
-
+    int num_clocks;
     while (gb->is_on)
     {
 #ifdef DEBUG
@@ -873,31 +896,38 @@ void run_gameboy(gameboy *gb)
             print_registers(gb);
 #endif
 
-        // number of clock ticks this iteration of the event loop
+        // number of CPU clock ticks this iteration of the event loop
         num_clocks = 0;
 
         if (gb->run_mode == GB_CGB_MODE && check_vram_dma_condition(gb))
         {
-            // HDMA transfers 0x10 bytes in 8 m-cycles
+            // HDMA transfers 0x10 bytes in 8 normal-speed m-cycles
             vram_dma_transfer_chunk(gb);
-            num_clocks += 4 * 8;
+            if (gb->double_speed)
+                num_clocks += 8 * 8;
+            else
+                num_clocks += 4 * 8;
         }
         else if (gb->cpu->is_halted)
         {
-            // every iteration that the CPU is halted counts as 4 clock ticks
+            // same number of CPU clock ticks as a NOP
             // See: https://gbdev.io/pandocs/CPU_Instruction_Set.html#cpu-control-instructions
             num_clocks += 4;
             check_halt_wakeup(gb);
         }
         else
         {
-            // number of clock ticks, given number of m-cycles
+            // number of CPU clock ticks, given number of m-cycles
             num_clocks += 4 * execute_instruction(gb);
         }
 
         increment_clock_counter(gb, num_clocks);
 
         dma_transfer_check(gb, num_clocks);
+
+        // PPU and APU always run at normal speed (RTC as well)
+        if (gb->run_mode == GB_CGB_MODE && gb->double_speed)
+            num_clocks /= 2;
 
         if (gb->cart->has_rtc)
             tick_rtc(gb, num_clocks);

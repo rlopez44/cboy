@@ -148,6 +148,10 @@ static uint8_t io_register_read(gameboy *gb, uint16_t address)
     {
         value = interrupt_register_read(gb->cpu, IE_REGISTER);
     }
+    else if (address == KEY1_REGISTER && gb->run_mode == GB_CGB_MODE)
+    {
+        value = cgb_core_io_read(gb, KEY1_REGISTER);
+    }
 
     return value;
 }
@@ -201,8 +205,7 @@ static void io_register_write(gameboy *gb, uint16_t address, uint8_t value)
     }
     else if (address == KEY1_REGISTER && gb->run_mode == GB_CGB_MODE)
     {
-        LOG_INFO("\nNote: Speed switching not implemented."
-                 " Continuing to run in normal speed mode\n");
+        cgb_core_io_write(gb, KEY1_REGISTER, value);
     }
 }
 
