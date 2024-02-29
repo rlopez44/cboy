@@ -11,11 +11,13 @@
 
 static inline void usage(const char *progname)
 {
-    const char *usage_str = "Usage: %s [-m] [-b bootrom] <romfile>\n"
+    const char *usage_str = "Usage: %s [-123456m] [-b bootrom] <romfile>\n"
                             "Options:\n"
-                            "-m    Force the emulator to run in monochrome mode\n"
-                            "-b    Specify a boot ROM file to play before running the game ROM\n";
-    LOG_ERROR(usage_str, progname);
+                            "  -123456  Scale the window by 1x through 6x, respectively.\n"
+                            "             By default, the window is scaled by %dx.\n"
+                            "  -m       Force the emulator to run in monochrome mode.\n"
+                            "  -b       Specify a boot ROM file to play before running the game ROM.\n";
+    LOG_ERROR(usage_str, progname, DEFAULT_WINDOW_SCALE);
 }
 
 int main(int argc, char *argv[])
@@ -36,9 +38,10 @@ int main(int argc, char *argv[])
         .bootrom = NULL,
         .romfile = NULL,
         .force_dmg = false,
+        .window_scale = DEFAULT_WINDOW_SCALE,
     };
 
-    while ((opt = getopt(argc, argv, "mb:")) != -1)
+    while ((opt = getopt(argc, argv, "123456mb:")) != -1)
     {
         switch (opt)
         {
@@ -51,6 +54,15 @@ int main(int argc, char *argv[])
                 init_args.force_dmg = true;
                 break;
 
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+                init_args.window_scale = opt - '1' + 1;
+                break;
+
             case '?':
                 if (optopt == 'b')
                     LOG_ERROR("Option '%c' specified but no boot ROM was given\n", optopt);
@@ -60,7 +72,7 @@ int main(int argc, char *argv[])
 
             default:
                 usage(progname);
-                return 1;
+                return 2;
         }
     }
 
@@ -68,7 +80,7 @@ int main(int argc, char *argv[])
     if (optind != argc - 1)
     {
         usage(progname);
-        return 1;
+        return 2;
     }
     else // only one non-option argument -- the romfile
     {

@@ -18,9 +18,6 @@
 #include "cboy/apu.h"
 #include "cboy/log.h"
 
-/* 3 seems like a good scale factor */
-#define WINDOW_SCALE 3
-
 /* Bit masks to select a bit out of the internal clock
  * counter based on the value of bits 1-0 of TAC. These
  * are arranged such that each value is the index of the
@@ -151,7 +148,7 @@ static bool verify_checksum(gameboy *gb)
 }
 
 // Initialize the Game Boy's screen
-static bool init_screen(gameboy *gb)
+static bool init_screen(gameboy *gb, int window_scale)
 {
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
     {
@@ -163,8 +160,8 @@ static bool init_screen(gameboy *gb)
     gb->window = SDL_CreateWindow("Cboy -- A Game Boy Emulator",
                                   SDL_WINDOWPOS_UNDEFINED,
                                   SDL_WINDOWPOS_UNDEFINED,
-                                  WINDOW_SCALE * FRAME_WIDTH,
-                                  WINDOW_SCALE * FRAME_HEIGHT,
+                                  window_scale * FRAME_WIDTH,
+                                  window_scale * FRAME_HEIGHT,
                                   SDL_WINDOW_SHOWN);
 
     if (gb->window == NULL)
@@ -387,7 +384,7 @@ gameboy *init_gameboy(struct gb_init_args *args)
         gb->boot_rom_disabled = true;
 
     // screen must be initialized after the PPU
-    if (!init_screen(gb))
+    if (!init_screen(gb, args->window_scale))
         goto init_error;
 
     verify_logo(gb);

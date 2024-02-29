@@ -14,10 +14,14 @@
 /* boot ROM size in bytes */
 #define BOOT_ROM_SIZE 256
 
+/* 4 seems like a good default */
+#define DEFAULT_WINDOW_SCALE 4
+
 struct gb_init_args {
     char *bootrom;
     char *romfile;
     bool force_dmg;
+    int window_scale;
 };
 
 typedef struct gameboy {
