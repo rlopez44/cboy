@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
     if (optind != argc - 1)
     {
         usage(progname);
-        return 2;
+        return 1;
     }
     else // only one non-option argument -- the romfile
     {
