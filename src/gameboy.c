@@ -1,8 +1,10 @@
+#include <errno.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <SDL_events.h>
 #include <SDL_audio.h>
 #include <SDL_pixels.h>
@@ -222,51 +224,45 @@ static void maybe_load_bootrom(gameboy *gb, const char *bootrom)
 {
     if (gb->run_mode == GB_CGB_MODE)
     {
-        LOG_INFO("Note: boot ROM playback not yet supported for GBC games. Skipping...\n\n");
-        gb->boot_rom_disabled = true;
-        return;
+        LOG_INFO("Note: boot ROM playback not yet supported for GBC games.\n");
+        goto failed_open;
+    }
+
+    struct stat st;
+    if (stat(bootrom, &st))
+    {
+        LOG_ERROR("Error: Unable to access boot ROM file info: %s\n", strerror(errno));
+        goto failed_open;
+    }
+    else if (st.st_size != DMG_BOOT_ROM_SIZE)
+    {
+        LOG_ERROR("Note: Expected boot ROM of size %d bytes. Got: %zu bytes.\n",
+                  DMG_BOOT_ROM_SIZE, st.st_size);
+        goto failed_open;
     }
 
     FILE *bootrom_file = fopen(bootrom, "rb");
-    if (bootrom_file == NULL)
+    if (!bootrom_file)
     {
-        LOG_ERROR("Unable to load the boot ROM (incorrect path?).\n");
+        LOG_ERROR("Error: Unable to open the boot ROM: %s\n", strerror(errno));
+        goto failed_open;
     }
-    else
+    else if (DMG_BOOT_ROM_SIZE != fread(gb->boot_rom, 1, DMG_BOOT_ROM_SIZE, bootrom_file))
     {
-        size_t nbytes_read = fread(gb->boot_rom, sizeof(uint8_t), BOOT_ROM_SIZE, bootrom_file);
-        if (BOOT_ROM_SIZE != nbytes_read)
-        {
-            // either an I/O error occurred, or there weren't enough bytes in the file
-            if (ferror(bootrom_file))
-                LOG_ERROR("Unable to read from the boot ROM (I/O error).\n");
-
-            // the ROM was too small
-            LOG_ERROR("The specified boot ROM is only %zu "
-                    "bytes large (expected %d bytes).\n",
-                    nbytes_read,
-                    BOOT_ROM_SIZE);
-        }
-        else
-        {
-            // succeeded in reading in the boot ROM
-            gb->run_boot_rom = true;
-        }
-
-        fclose(bootrom_file);
+        LOG_ERROR("Error: Failed to fully load the boot ROM.\n");
+        goto failed_load;
     }
 
-    if (gb->run_boot_rom)
-    {
-        LOG_INFO("Boot ROM loaded successfully.\n\n");
-        // set the program counter to the beginning of the boot ROM
-        gb->cpu->reg->pc = 0x0000;
-    }
-    else
-    {
-        LOG_INFO("The emulator will continue without using a boot ROM.\n\n");
-        gb->boot_rom_disabled = true;
-    }
+    fclose(bootrom_file);
+    gb->run_boot_rom = true;
+    gb->cpu->reg->pc = 0x0000; // beginning of boot ROM
+    return;
+
+failed_load:
+    fclose(bootrom_file);
+failed_open:
+    LOG_INFO("The emulator will continue without using a boot ROM.\n\n");
+    gb->boot_rom_disabled = true;
 }
 
 // Determine whether to run in DMG or CGB mode

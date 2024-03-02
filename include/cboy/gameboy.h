@@ -11,8 +11,7 @@
 #include "cboy/joypad.h"
 #include "cboy/apu.h"
 
-/* boot ROM size in bytes */
-#define BOOT_ROM_SIZE 256
+#define DMG_BOOT_ROM_SIZE  256 /* bytes */
 
 /* 4 seems like a good default */
 #define DEFAULT_WINDOW_SCALE 4
@@ -37,8 +36,7 @@ typedef struct gameboy {
 
     enum GAMEBOY_MODE run_mode;
 
-    // Game Boy boot ROM, if passed into the emulator
-    uint8_t boot_rom[BOOT_ROM_SIZE];
+    uint8_t boot_rom[DMG_BOOT_ROM_SIZE];
     bool run_boot_rom;
     bool boot_rom_disabled;
 
