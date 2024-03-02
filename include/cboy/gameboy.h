@@ -12,6 +12,7 @@
 #include "cboy/apu.h"
 
 #define DMG_BOOT_ROM_SIZE  256 /* bytes */
+#define CGB_BOOT_ROM_SIZE 2304 /* bytes */
 
 /* 4 seems like a good default */
 #define DEFAULT_WINDOW_SCALE 4
@@ -36,7 +37,7 @@ typedef struct gameboy {
 
     enum GAMEBOY_MODE run_mode;
 
-    uint8_t boot_rom[DMG_BOOT_ROM_SIZE];
+    uint8_t boot_rom[CGB_BOOT_ROM_SIZE]; // big enough for DMG and CGB
     bool run_boot_rom;
     bool boot_rom_disabled;
 

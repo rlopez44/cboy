@@ -222,11 +222,7 @@ static bool init_screen(gameboy *gb, int window_scale)
  */
 static void maybe_load_bootrom(gameboy *gb, const char *bootrom)
 {
-    if (gb->run_mode == GB_CGB_MODE)
-    {
-        LOG_INFO("Note: boot ROM playback not yet supported for GBC games.\n");
-        goto failed_open;
-    }
+    size_t rom_size = gb->run_mode == GB_CGB_MODE ? CGB_BOOT_ROM_SIZE : DMG_BOOT_ROM_SIZE;
 
     struct stat st;
     if (stat(bootrom, &st))
@@ -234,10 +230,10 @@ static void maybe_load_bootrom(gameboy *gb, const char *bootrom)
         LOG_ERROR("Error: Unable to access boot ROM file info: %s\n", strerror(errno));
         goto failed_open;
     }
-    else if (st.st_size != DMG_BOOT_ROM_SIZE)
+    else if ((size_t)st.st_size != rom_size)
     {
-        LOG_ERROR("Note: Expected boot ROM of size %d bytes. Got: %zu bytes.\n",
-                  DMG_BOOT_ROM_SIZE, st.st_size);
+        LOG_ERROR("Note: Expected boot ROM of size %zu bytes. Got: %zu bytes.\n",
+                  rom_size, st.st_size);
         goto failed_open;
     }
 
@@ -247,7 +243,7 @@ static void maybe_load_bootrom(gameboy *gb, const char *bootrom)
         LOG_ERROR("Error: Unable to open the boot ROM: %s\n", strerror(errno));
         goto failed_open;
     }
-    else if (DMG_BOOT_ROM_SIZE != fread(gb->boot_rom, 1, DMG_BOOT_ROM_SIZE, bootrom_file))
+    else if (rom_size != fread(gb->boot_rom, 1, rom_size, bootrom_file))
     {
         LOG_ERROR("Error: Failed to fully load the boot ROM.\n");
         goto failed_load;

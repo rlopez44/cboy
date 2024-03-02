@@ -211,6 +211,16 @@ static void io_register_write(gameboy *gb, uint16_t address, uint8_t value)
 
 /********** TODO: When PPU timing emulation improves, add back OAM and VRAM blocking **********/
 
+static bool do_access_bootrom(gameboy *gb, uint16_t address)
+{
+    bool addr_range1 = address < 0x100;
+    bool addr_range2 = address >= 0x200 && address < 0x900;
+    bool rom_enabled_and_used = gb->run_boot_rom && !gb->boot_rom_disabled;
+    bool rom_addr = addr_range1 || (gb->run_mode == GB_CGB_MODE && addr_range2);
+
+    return rom_enabled_and_used && rom_addr;
+}
+
 /* Read a byte from the Game Boy's memory map.
  * This function should only be used by the CPU.
  */
@@ -227,7 +237,8 @@ uint8_t read_byte(gameboy *gb, uint16_t address)
     uint8_t value;
     if (address <= 0x7fff) // cartridge ROM
     {
-        if (gb->run_boot_rom && address < 0x100 && !gb->boot_rom_disabled)
+
+        if (do_access_bootrom(gb, address))
             value = gb->boot_rom[address];
         else
             value = cartridge_read(gb, address);
