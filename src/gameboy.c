@@ -232,8 +232,8 @@ static void maybe_load_bootrom(gameboy *gb, const char *bootrom)
     }
     else if ((size_t)st.st_size != rom_size)
     {
-        LOG_ERROR("Note: Expected boot ROM of size %zu bytes. Got: %zu bytes.\n",
-                  rom_size, st.st_size);
+        LOG_ERROR("Note: Expected boot ROM of size %zu bytes. Got: %jd bytes.\n",
+                  rom_size, (intmax_t)st.st_size);
         goto failed_open;
     }
 
