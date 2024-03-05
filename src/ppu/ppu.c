@@ -247,8 +247,9 @@ void dma_transfer(gameboy *gb)
  * enable bit in LCDC is reset.
  *
  * Resetting the PPU immediately resets LY
- * (with no LY=LYC check) and resets the PPU
- * clock, as well as reset to LCD mode 0.
+ * (with no LY=LYC check), resets the PPU
+ * clock, resets to LCD mode 0, and makes
+ * the screen go blank.
  */
 void reset_ppu(gameboy *gb)
 {
@@ -263,9 +264,10 @@ void reset_ppu(gameboy *gb)
     gb->ppu->oam_stat_line = false;
     gb->ppu->window_line_counter = 0;
 
-    // resetting the PPU makes the screen go blank (white)
+    // in DMG mode, "white" may be a shade of green, depending on user choice
+    uint16_t white = gb->run_mode == GB_CGB_MODE ? 0xffff : gb->ppu->colors.white;
     for (uint16_t i = 0; i < FRAME_WIDTH*FRAME_HEIGHT; ++i)
-        gb->ppu->frame_buffer[i] = gb->ppu->colors.white;
+        gb->ppu->frame_buffer[i] = white;
     display_frame(gb);
     LOG_DEBUG("PPU reset\n");
 }
