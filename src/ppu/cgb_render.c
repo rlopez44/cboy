@@ -225,10 +225,7 @@ static void cgb_load_window_tiles(gameboy *gb)
     // the window is only visible if WX is in 0..166 and WY is in 0..143
     bool window_is_visible = ppu->wx <= 166 && ppu->wy <= 143;
 
-    // we only need to draw if the current scanline overlaps the window
-    bool scanline_overlaps_window = ppu->ly >= ppu->wy;
-
-    if (!(window_is_visible && scanline_overlaps_window))
+    if (!(window_is_visible && ppu->wy_trigger))
         return;
 
     uint16_t base_map_addr = tile_map_area_bit ? 0x9c00 : 0x9800;

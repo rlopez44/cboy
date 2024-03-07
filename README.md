@@ -75,6 +75,9 @@ The emulator currently passes the following test ROMS.
 * [MagenTests](https://github.com/alloncm/MagenTests)
     * `color_bg_oam_priority`
     * `oam_internal_priority`
+* [TurtleTests](https://github.com/Powerlated/TurtleTests)
+    * `window_y_trigger`
+    * `window_y_trigger_wx_offscreen`
 
 # References
 * [*DMG-01: How to Emulate a Game Boy*](https://rylev.github.io/DMG-01/public/book/)

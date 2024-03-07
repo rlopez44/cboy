@@ -67,6 +67,10 @@ typedef struct gb_ppu {
     // the window have been rendered for the current frame
     uint8_t window_line_counter;
 
+    // Latched when LY first equals WY in a given frame. Reset on VBlank.
+    // The window is only eligible to be drawn after the trigger is latched.
+    bool wy_trigger;
+
     bool curr_scanline_rendered, curr_frame_displayed;
 
     /* The mode 0-2 and LY=LYC STAT mode interrupt

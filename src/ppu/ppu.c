@@ -445,6 +445,9 @@ void load_sprites(gameboy *gb)
 // Render a single scanline into the frame buffer
 static void render_scanline(gameboy *gb)
 {
+    if (gb->ppu->ly == gb->ppu->wy)
+        gb->ppu->wy_trigger = true;
+
     if (gb->run_mode == GB_DMG_MODE)
     {
         dmg_render_scanline(gb);
@@ -635,6 +638,7 @@ void run_ppu(gameboy *gb, uint8_t num_clocks)
             display_frame(gb);
             gb->ppu->curr_frame_displayed = true;
             gb->ppu->window_line_counter = 0;
+            gb->ppu->wy_trigger = false;
             gb->frame_presented_signal = true;
         }
 
