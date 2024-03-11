@@ -1,4 +1,11 @@
+UNAME := $(shell uname)
+
+ifeq ($(UNAME), Darwin)
+CC = clang
+else
 CC = gcc
+endif
+
 CFLAGS = -Wall -Wextra -pedantic -I./include/ -std=c17
 CFLAGS += `sdl2-config --cflags`
 LDLIBS = `sdl2-config --libs`
