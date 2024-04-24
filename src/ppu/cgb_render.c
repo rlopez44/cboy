@@ -24,6 +24,32 @@ static uint8_t scanline_coloridx_info[FRAME_WIDTH] = {0};
 static bool scanline_bg_prio_info[FRAME_WIDTH] = {false};
 static bool scanline_obj_occupancy[FRAME_WIDTH] = {false};
 
+static inline uint16_t min(uint16_t a, uint16_t b)
+{
+    return a < b ? a : b;
+}
+
+// Apply a correction to the given color to emulate
+// its appearance on the physical CGB LCD.
+// See: https://saveweb.github.io/near.sh/articles/video/color-emulation.html
+uint16_t apply_lcd_filter(uint16_t color)
+{
+    uint8_t red = (color & 0x1f);
+    uint8_t green = (color >> 5) & 0x1f;
+    uint8_t blue = (color >> 10) & 0x1f;
+
+    uint16_t r = 26 * red + 4 * green + 2 * blue;
+    uint16_t g = 24 * green + 8 * blue;
+    uint16_t b = 6 * red + 4 * green + 22 * blue;
+
+    const uint16_t cap = 960;
+    r = min(r, cap) >> 2;
+    g = min(g, cap) >> 2;
+    b = min(b, cap) >> 2;
+
+    return ((b & 0xf8) << 7) | ((g & 0xf8) << 2) | ((r & 0xff) >> 3);
+}
+
 static uint16_t cgb_color_from_palette(gameboy *gb, int loc)
 {
     uint8_t palette_reg = scanline_palette_info[loc];
@@ -43,7 +69,12 @@ static uint16_t cgb_color_from_palette(gameboy *gb, int loc)
         hi = gb->ppu->bg_pram[offset + 1];
     }
 
-    return (uint16_t)hi << 8 | lo;
+    uint16_t color = (uint16_t)hi << 8 | lo;
+
+    if (gb->ppu->lcd_filter)
+        color = apply_lcd_filter(color);
+
+    return color;
 }
 
 // Extract BG map attributes for the current tile from the attribute byte

@@ -74,6 +74,8 @@ gb_ppu *init_ppu(enum GAMEBOY_MODE gb_mode)
         // all palettes start out as white
         memset(ppu->bg_pram, -1, sizeof ppu->bg_pram);
         memset(ppu->obj_pram, -1, sizeof ppu->obj_pram);
+
+        ppu->lcd_filter = true;
     }
 
     if (gb_mode == GB_DMG_MODE)
@@ -265,7 +267,14 @@ void reset_ppu(gameboy *gb)
     gb->ppu->window_line_counter = 0;
 
     // in DMG mode, "white" may be a shade of green, depending on user choice
-    uint16_t white = gb->run_mode == GB_CGB_MODE ? 0xffff : gb->ppu->colors.white;
+    uint16_t white;
+    if (gb->run_mode == GB_CGB_MODE && gb->ppu->lcd_filter)
+        white = apply_lcd_filter(0xffff);
+    else if (gb->run_mode == GB_CGB_MODE)
+        white = 0xffff;
+    else
+        white = gb->ppu->colors.white;
+
     for (uint16_t i = 0; i < FRAME_WIDTH*FRAME_HEIGHT; ++i)
         gb->ppu->frame_buffer[i] = white;
     display_frame(gb);

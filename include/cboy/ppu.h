@@ -90,6 +90,9 @@ typedef struct gb_ppu {
 
     // CGB PPU I/O registers
     uint8_t bcps, ocps, opri;
+
+    // CGB only: whether to apply correction to emulate LCD color output
+    bool lcd_filter;
 } gb_ppu;
 
 void ppu_write(gameboy *gb, uint16_t address, uint8_t value);

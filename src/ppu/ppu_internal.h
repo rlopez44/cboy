@@ -15,6 +15,7 @@
 uint8_t reverse_byte(uint8_t b);
 
 void init_display_colors(display_colors *colors);
+uint16_t apply_lcd_filter(uint16_t color);
 
 void dmg_render_sprite_pixels(gameboy *gb, gb_sprite *sprite);
 void dmg_render_scanline(gameboy *gb);

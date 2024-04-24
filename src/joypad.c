@@ -83,10 +83,17 @@ void handle_keypress(gameboy *gb, SDL_KeyboardEvent *key)
 
     /**** special keys that aren't actually GB buttons ****/
     // cycle monochrome display colors (DMG mode only)
-    if (keycode == SDLK_c && gb->run_mode == GB_DMG_MODE && key_pressed)
+    if (keycode == SDLK_c && key_pressed)
     {
-        bool cycle_forward = !(key->keysym.mod & KMOD_SHIFT);
-        cycle_display_colors(&gb->ppu->colors, cycle_forward);
+        if (gb->run_mode == GB_DMG_MODE)
+        {
+            bool cycle_forward = !(key->keysym.mod & KMOD_SHIFT);
+            cycle_display_colors(&gb->ppu->colors, cycle_forward);
+        }
+        else
+        {
+            gb->ppu->lcd_filter = !gb->ppu->lcd_filter;
+        }
         return;
     }
     else if (keycode == SDLK_EQUALS && key_pressed) // volume slider up
@@ -176,7 +183,11 @@ void print_button_mappings(enum GAMEBOY_MODE gb_mode)
     const char *header = "Button Mappings\n"
                          "---------------";
 
-    const char *cycle_msg = "Cycle display palettes: <c>/<Shift-c>";
+    const char *color_msg;
+    if (gb_mode == GB_CGB_MODE)
+        color_msg = "Toggle LCD color correction: <c>";
+    else
+        color_msg = "Cycle display palettes: <c>/<Shift-c>";
 
     const char *base_msg = "Volume up/down: <Equals>/<Minus>\n"
                            "Toggle FPS throttle: <Tab>\n"
@@ -189,8 +200,5 @@ void print_button_mappings(enum GAMEBOY_MODE gb_mode)
                            "Select: <Space>\n"
                            "Start:  <Enter>";
 
-    if (gb_mode == GB_DMG_MODE)
-        LOG_INFO("\n%s\n%s\n%s\n", header, cycle_msg, base_msg);
-    else
-        LOG_INFO("\n%s\n%s\n", header, base_msg);
+    LOG_INFO("\n%s\n%s\n%s\n", header, color_msg, base_msg);
 }
