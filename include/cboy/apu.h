@@ -2,7 +2,7 @@
 #define GB_APU_H
 
 #include <stdint.h>
-#include <SDL_audio.h>
+#include <SDL3/SDL_audio.h>
 #include <stdbool.h>
 #include "cboy/common.h"
 
@@ -98,7 +98,7 @@ typedef struct apu_noise_channel {
 } apu_noise_channel;
 
 typedef struct gb_apu {
-    SDL_AudioDeviceID audio_dev;
+    SDL_AudioStream *audio_stream;
     SDL_AudioSpec audio_spec;
 
     bool enabled;

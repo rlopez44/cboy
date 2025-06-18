@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include "cboy/gameboy.h"
 #include "cboy/mbc.h"
 #include "dispatch.h"

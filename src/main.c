@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 2 /* to get access to getopt inside unistd */
+
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdbool.h>

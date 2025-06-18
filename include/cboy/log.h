@@ -2,7 +2,7 @@
 #define LOG_H_
 
 #ifdef DEBUG
-#include <SDL_log.h>
+#include <SDL3/SDL_log.h>
 #include "cboy/gameboy.h"
 
 #define ENABLE_DEBUG_LOGS() do {SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_VERBOSE);} while (0)

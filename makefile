@@ -7,8 +7,8 @@ CC = gcc
 endif
 
 CFLAGS = -Wall -Wextra -pedantic -I./include/ -std=c17
-CFLAGS += `sdl2-config --cflags`
-LDLIBS = `sdl2-config --libs`
+CFLAGS += $(shell pkg-config sdl3 --cflags)
+LDLIBS = $(shell pkg-config sdl3 --libs)
 OBJ_DIR = obj
 BIN_DIR = bin
 PROFILE_DIR = profile

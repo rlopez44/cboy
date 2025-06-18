@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
-#include <SDL.h>
+#include <SDL3/SDL.h>
 #include "cboy/common.h"
 #include "cboy/gameboy.h"
 #include "cboy/memory.h"
@@ -475,7 +475,7 @@ void display_frame(gameboy *gb)
     void *texture_pixels;
     int pitch; // length of one row in bytes
 
-    if (SDL_LockTexture(gb->screen, NULL, &texture_pixels, &pitch) < 0)
+    if (!SDL_LockTexture(gb->screen, NULL, &texture_pixels, &pitch))
     {
         LOG_ERROR("Error drawing to screen: %s\n", SDL_GetError());
         exit(1);
@@ -484,7 +484,7 @@ void display_frame(gameboy *gb)
     memcpy(texture_pixels, gb->ppu->frame_buffer, sizeof gb->ppu->frame_buffer);
     SDL_UnlockTexture(gb->screen);
     SDL_RenderClear(gb->renderer);
-    SDL_RenderCopy(gb->renderer, gb->screen, NULL, NULL);
+    SDL_RenderTexture(gb->renderer, gb->screen, NULL, NULL);
     SDL_RenderPresent(gb->renderer);
 
     ++gb->ppu->frames_rendered;

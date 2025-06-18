@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <SDL.h>
+#include <SDL3/SDL.h>
 #include "cboy/common.h"
 
 #define FRAME_WIDTH  160

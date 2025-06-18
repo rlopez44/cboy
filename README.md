@@ -2,19 +2,11 @@
 A Nintendo Game Boy and Game Boy Color emulator written in C.
 
 # Compiling the Emulator
-In order to compile the emulator, you must have [SDL2](https://www.libsdl.org/)
+In order to compile the emulator, you must have [SDL3](https://www.libsdl.org/)
 installed on your machine (the library and development files).
-For example, to install SDL2 on Debian/Ubuntu, run:
+For example, to install SDL3 on Arch Linux, run:
 
-    apt install libsdl2-dev
-
-or on Arch-based systems:
-
-    pacman -S sdl2
-
-or on MacOS using Homebrew:
-
-    brew install sdl2
+    pacman -S sdl3
 
 There are three builds of the emulator available: a release build,
 a profiling build (for use with `gprof`), and a debug build; these
