@@ -157,21 +157,13 @@ static bool init_screen(gameboy *gb, int window_scale)
 
     // We upscale our window dimensions from the Game Boy's
     // pixel dimensions so that our window isn't super small.
-    gb->window = SDL_CreateWindow("Cboy -- A Game Boy Emulator",
-                                  window_scale * FRAME_WIDTH,
-                                  window_scale * FRAME_HEIGHT,
-                                  SDL_WINDOW_HIGH_PIXEL_DENSITY);
-
-    if (gb->window == NULL)
+    if (!SDL_CreateWindowAndRenderer("Cboy -- A Game Boy Emulator",
+                                     window_scale * FRAME_WIDTH,
+                                     window_scale * FRAME_HEIGHT,
+                                     SDL_WINDOW_HIGH_PIXEL_DENSITY,
+                                     &gb->window,
+                                     &gb->renderer))
     {
-        return false;
-    }
-
-    gb->renderer = SDL_CreateRenderer(gb->window, NULL);
-
-    if (gb->renderer == NULL)
-    {
-        SDL_DestroyWindow(gb->window);
         return false;
     }
 
