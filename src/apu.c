@@ -62,12 +62,14 @@ gb_apu *init_apu(void)
     if (!SDL_Init(SDL_INIT_AUDIO))
         goto init_error;
 
-    apu->audio_spec.freq = AUDIO_FRAME_RATE;
-    apu->audio_spec.format = SDL_AUDIO_F32;
-    apu->audio_spec.channels = NUM_CHANNELS;
+    const SDL_AudioSpec audio_spec = {
+        .freq = AUDIO_FRAME_RATE,
+        .format = SDL_AUDIO_F32,
+        .channels = NUM_CHANNELS,
+    };
 
     apu->audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
-                                                  &apu->audio_spec,
+                                                  &audio_spec,
                                                   queue_audio_sdl3,
                                                   apu);
 

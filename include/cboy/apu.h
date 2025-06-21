@@ -99,7 +99,6 @@ typedef struct apu_noise_channel {
 
 typedef struct gb_apu {
     SDL_AudioStream *audio_stream;
-    SDL_AudioSpec audio_spec;
 
     bool enabled;
     uint8_t panning_info;
