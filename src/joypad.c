@@ -73,13 +73,13 @@ void update_button_set(gameboy *gb, uint8_t value)
 }
 
 // handle Game Boy key presses
-void handle_keypress(gameboy *gb, SDL_KeyboardEvent *key)
+void handle_keypress(gameboy *gb, SDL_KeyboardEvent *event)
 {
-    SDL_Keycode keycode = key->key;
+    SDL_Keycode keycode = event->key;
 
     // when a button is pressed, its key
     // state will switch from High to Low
-    bool key_pressed = key->type == SDL_EVENT_KEY_DOWN;
+    bool key_pressed = event->type == SDL_EVENT_KEY_DOWN;
     bool bit_val = !key_pressed;
 
     /**** special keys that aren't actually GB buttons ****/
@@ -88,7 +88,7 @@ void handle_keypress(gameboy *gb, SDL_KeyboardEvent *key)
     {
         if (gb->run_mode == GB_DMG_MODE)
         {
-            bool cycle_forward = !(key->mod & SDL_KMOD_SHIFT);
+            bool cycle_forward = !(event->mod & SDL_KMOD_SHIFT);
             cycle_display_colors(&gb->ppu->colors, cycle_forward);
         }
         else
