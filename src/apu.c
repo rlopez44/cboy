@@ -22,8 +22,11 @@ static void sample_audio(gameboy *gb);
 static void tick_frame_sequencer(gb_apu *apu);
 static void trigger_channel(gb_apu *apu, APU_CHANNELS channel);
 
-static void queue_audio_sdl3(void *userdata, SDL_AudioStream *stream, int adtl_amt, int tot_amt);
-static void queue_audio(void *userdata, uint8_t *stream, int len);
+static void audio_callback(void *userdata,
+                           SDL_AudioStream *stream,
+                           int additional_amount,
+                           int total_amount);
+
 static inline void tick_channels(gb_apu *apu);
 
 gb_apu *init_apu(void)
@@ -70,7 +73,7 @@ gb_apu *init_apu(void)
 
     apu->audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
                                                   &audio_spec,
-                                                  queue_audio_sdl3,
+                                                  audio_callback,
                                                   apu);
 
     if (!apu->audio_stream)
@@ -950,26 +953,9 @@ static inline void tick_volumes(gb_apu *apu)
     tick_volume(apu, CHANNEL_FOUR);
 }
 
-static void queue_audio_sdl3(void *userdata, SDL_AudioStream *stream, int adtl_amt, int tot_amt)
+static inline void queue_audio(gb_apu *apu, uint8_t *data, int len)
 {
-    (void)tot_amt;
-
-    if (adtl_amt > 0)
-    {
-        uint8_t *data = SDL_stack_alloc(uint8_t, adtl_amt);
-        if (data)
-        {
-            queue_audio(userdata, data, adtl_amt);
-            SDL_PutAudioStreamData(stream, data, adtl_amt);
-            SDL_stack_free(data);
-        }
-    }
-}
-
-static void queue_audio(void *userdata, uint8_t *stream, int len)
-{
-    gb_apu *apu = userdata;
-    float *buff = (float *)stream;
+    float *buff = (float *)data;
     int sample_len = len / sizeof(float);
 
     // we use stereo audio, so LR sample pairs
@@ -989,6 +975,26 @@ static void queue_audio(void *userdata, uint8_t *stream, int len)
             ++apu->frame_start;
             apu->frame_start %= AUDIO_BUFFER_FRAME_SIZE;
             --apu->num_frames;
+        }
+    }
+}
+
+static void audio_callback(void *userdata,
+                           SDL_AudioStream *stream,
+                           int additional_amount,
+                           int total_amount)
+{
+    (void)total_amount;
+    gb_apu *apu = userdata;
+
+    if (additional_amount > 0)
+    {
+        uint8_t *data = SDL_stack_alloc(uint8_t, additional_amount);
+        if (data)
+        {
+            queue_audio(apu, data, additional_amount);
+            SDL_PutAudioStreamData(stream, data, additional_amount);
+            SDL_stack_free(data);
         }
     }
 }
