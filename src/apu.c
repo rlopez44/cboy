@@ -22,10 +22,10 @@ static void sample_audio(gameboy *gb);
 static void tick_frame_sequencer(gb_apu *apu);
 static void trigger_channel(gb_apu *apu, APU_CHANNELS channel);
 
-static void audio_callback(void *userdata,
-                           SDL_AudioStream *stream,
-                           int additional_amount,
-                           int total_amount);
+static void SDLCALL audio_callback(void *userdata,
+                                   SDL_AudioStream *stream,
+                                   int additional_amount,
+                                   int total_amount);
 
 static inline void tick_channels(gb_apu *apu);
 
@@ -979,10 +979,10 @@ static inline void queue_audio(gb_apu *apu, uint8_t *data, int len)
     }
 }
 
-static void audio_callback(void *userdata,
-                           SDL_AudioStream *stream,
-                           int additional_amount,
-                           int total_amount)
+static void SDLCALL audio_callback(void *userdata,
+                                   SDL_AudioStream *stream,
+                                   int additional_amount,
+                                   int total_amount)
 {
     (void)total_amount;
     gb_apu *apu = userdata;
