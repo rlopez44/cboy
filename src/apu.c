@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <SDL.h>
+#include <SDL3/SDL.h>
 #include "cboy/common.h"
 #include "cboy/gameboy.h"
 #include "cboy/apu.h"
@@ -22,7 +22,11 @@ static void sample_audio(gameboy *gb);
 static void tick_frame_sequencer(gb_apu *apu);
 static void trigger_channel(gb_apu *apu, APU_CHANNELS channel);
 
-static void queue_audio(void *userdata, uint8_t *stream, int len);
+static void SDLCALL audio_callback(void *userdata,
+                                   SDL_AudioStream *stream,
+                                   int additional_amount,
+                                   int total_amount);
+
 static inline void tick_channels(gb_apu *apu);
 
 gb_apu *init_apu(void)
@@ -31,7 +35,7 @@ gb_apu *init_apu(void)
     if (apu == NULL)
         return NULL;
 
-    apu->audio_dev = 0;
+    apu->audio_stream = NULL;
     apu->enabled = false;
     apu->panning_info = 0;
     apu->left_volume = 0x7;
@@ -58,28 +62,24 @@ gb_apu *init_apu(void)
     init_wave_channel(&apu->channel_three);
     init_noise_channel(&apu->channel_four);
 
-    if (SDL_Init(SDL_INIT_AUDIO) < 0)
+    if (!SDL_Init(SDL_INIT_AUDIO))
         goto init_error;
 
-    SDL_AudioSpec desired_spec = {
+    const SDL_AudioSpec audio_spec = {
         .freq = AUDIO_FRAME_RATE,
-        .format = AUDIO_F32SYS,
+        .format = SDL_AUDIO_F32,
         .channels = NUM_CHANNELS,
-        .samples = AUDIO_BUFFER_FRAME_SIZE,
-        .callback = queue_audio,
-        .userdata = apu
     };
 
-    apu->audio_dev = SDL_OpenAudioDevice(NULL,
-                                         false,
-                                         &desired_spec,
-                                         &apu->audio_spec,
-                                         false);
+    apu->audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
+                                                  &audio_spec,
+                                                  audio_callback,
+                                                  apu);
 
-    if (!apu->audio_dev)
+    if (!apu->audio_stream)
         goto init_error;
 
-    SDL_PauseAudioDevice(apu->audio_dev, false);
+    SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(apu->audio_stream));
 
     return apu;
 
@@ -95,8 +95,8 @@ void deinit_apu(gb_apu *apu)
     if (apu == NULL)
         return;
 
-    if (apu->audio_dev)
-        SDL_CloseAudioDevice(apu->audio_dev);
+    if (apu->audio_stream)
+        SDL_DestroyAudioStream(apu->audio_stream);
 
     free(apu);
 }
@@ -953,10 +953,9 @@ static inline void tick_volumes(gb_apu *apu)
     tick_volume(apu, CHANNEL_FOUR);
 }
 
-static void queue_audio(void *userdata, uint8_t *stream, int len)
+static inline void queue_audio(gb_apu *apu, uint8_t *data, int len)
 {
-    gb_apu *apu = userdata;
-    float *buff = (float *)stream;
+    float *buff = (float *)data;
     int sample_len = len / sizeof(float);
 
     // we use stereo audio, so LR sample pairs
@@ -976,6 +975,26 @@ static void queue_audio(void *userdata, uint8_t *stream, int len)
             ++apu->frame_start;
             apu->frame_start %= AUDIO_BUFFER_FRAME_SIZE;
             --apu->num_frames;
+        }
+    }
+}
+
+static void SDLCALL audio_callback(void *userdata,
+                                   SDL_AudioStream *stream,
+                                   int additional_amount,
+                                   int total_amount)
+{
+    (void)total_amount;
+    gb_apu *apu = userdata;
+
+    if (additional_amount > 0)
+    {
+        uint8_t *data = SDL_stack_alloc(uint8_t, additional_amount);
+        if (data)
+        {
+            queue_audio(apu, data, additional_amount);
+            SDL_PutAudioStreamData(stream, data, additional_amount);
+            SDL_stack_free(data);
         }
     }
 }
@@ -1081,7 +1100,7 @@ static void push_audio_frame(gameboy *gb)
     left_sample  *= BASE_VOLUME_SCALEDOWN_FACTOR * gb->volume_slider / 100.;
     right_sample *= BASE_VOLUME_SCALEDOWN_FACTOR * gb->volume_slider / 100.;
 
-    SDL_LockAudioDevice(apu->audio_dev);
+    SDL_LockAudioStream(apu->audio_stream);
 
     // drop samples when the audio buffer is full
     // (only needed when the FPS limiter is off)
@@ -1097,7 +1116,7 @@ static void push_audio_frame(gameboy *gb)
     // audio buffer is full, signal to throttle emulation
     gb->audio_sync_signal = apu->num_frames == AUDIO_BUFFER_FRAME_SIZE;
 
-    SDL_UnlockAudioDevice(apu->audio_dev);
+    SDL_UnlockAudioStream(apu->audio_stream);
 }
 
 // Single-pole infinite impulse response low-pass filter.

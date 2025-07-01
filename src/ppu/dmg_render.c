@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "cboy/gameboy.h"
 #include "cboy/log.h"
 #include "cboy/ppu.h"

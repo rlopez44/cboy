@@ -1,5 +1,6 @@
-#include <SDL_events.h>
-#include <SDL_keycode.h>
+#include <stdlib.h>
+#include <SDL3/SDL_events.h>
+#include <SDL3/SDL_keycode.h>
 #include "cboy/common.h"
 #include "cboy/gameboy.h"
 #include "cboy/interrupts.h"
@@ -72,22 +73,22 @@ void update_button_set(gameboy *gb, uint8_t value)
 }
 
 // handle Game Boy key presses
-void handle_keypress(gameboy *gb, SDL_KeyboardEvent *key)
+void handle_keypress(gameboy *gb, SDL_KeyboardEvent *event)
 {
-    SDL_Keycode keycode = key->keysym.sym;
+    SDL_Keycode keycode = event->key;
 
     // when a button is pressed, its key
     // state will switch from High to Low
-    bool key_pressed = key->type == SDL_KEYDOWN;
+    bool key_pressed = event->type == SDL_EVENT_KEY_DOWN;
     bool bit_val = !key_pressed;
 
     /**** special keys that aren't actually GB buttons ****/
     // cycle monochrome display colors (DMG mode only)
-    if (keycode == SDLK_c && key_pressed)
+    if (keycode == SDLK_C && key_pressed)
     {
         if (gb->run_mode == GB_DMG_MODE)
         {
-            bool cycle_forward = !(key->keysym.mod & KMOD_SHIFT);
+            bool cycle_forward = !(event->mod & SDL_KMOD_SHIFT);
             cycle_display_colors(&gb->ppu->colors, cycle_forward);
         }
         else
@@ -126,23 +127,23 @@ void handle_keypress(gameboy *gb, SDL_KeyboardEvent *key)
     uint8_t mask, bit;
     switch(keycode)
     {
-        case SDLK_s:
+        case SDLK_S:
         case SDLK_RETURN:
             mask = 1 << 3;
             bit = bit_val << 3;
             break;
-        case SDLK_w:
+        case SDLK_W:
         case SDLK_SPACE:
             mask = 1 << 2;
             bit = bit_val << 2;
             break;
-        case SDLK_a:
-        case SDLK_j:
+        case SDLK_A:
+        case SDLK_J:
             mask = 1 << 1;
             bit = bit_val << 1;
             break;
-        case SDLK_d:
-        case SDLK_k:
+        case SDLK_D:
+        case SDLK_K:
             mask = 1 << 0;
             bit = bit_val << 0;
             break;
@@ -156,10 +157,10 @@ void handle_keypress(gameboy *gb, SDL_KeyboardEvent *key)
     uint8_t joyp;
     switch (keycode)
     {
-        case SDLK_s:
-        case SDLK_w:
-        case SDLK_a:
-        case SDLK_d:
+        case SDLK_S:
+        case SDLK_W:
+        case SDLK_A:
+        case SDLK_D:
             gb->joypad->direction_state = (gb->joypad->direction_state & ~mask) | bit;
             joyp = report_button_states(gb);
             if (!(joyp & 0x10) && key_pressed)
@@ -168,8 +169,8 @@ void handle_keypress(gameboy *gb, SDL_KeyboardEvent *key)
 
         case SDLK_RETURN:
         case SDLK_SPACE:
-        case SDLK_j:
-        case SDLK_k:
+        case SDLK_J:
+        case SDLK_K:
             gb->joypad->action_state = (gb->joypad->action_state & ~mask) | bit;
             joyp = report_button_states(gb);
             if (!(joyp & 0x20) && key_pressed)

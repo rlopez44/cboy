@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <stdlib.h>
 #include "cboy/common.h"
 #include "cboy/cpu.h"
 #include "cboy/interrupts.h"

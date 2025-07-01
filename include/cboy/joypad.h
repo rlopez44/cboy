@@ -2,7 +2,7 @@
 #define GB_JOYPAD_H
 
 #include <stdbool.h>
-#include <SDL_events.h>
+#include <SDL3/SDL_events.h>
 #include "cboy/common.h"
 
 /* Used to track the Joypad's state */

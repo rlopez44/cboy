@@ -5,9 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <SDL_events.h>
-#include <SDL_audio.h>
-#include <SDL_pixels.h>
+#include <SDL3/SDL_events.h>
+#include <SDL3/SDL_audio.h>
+#include <SDL3/SDL_pixels.h>
 #include "cboy/common.h"
 #include "cboy/gameboy.h"
 #include "cboy/memory.h"
@@ -152,30 +152,18 @@ static bool verify_checksum(gameboy *gb)
 // Initialize the Game Boy's screen
 static bool init_screen(gameboy *gb, int window_scale)
 {
-    if (SDL_Init(SDL_INIT_VIDEO) < 0)
-    {
+    if (!SDL_Init(SDL_INIT_VIDEO))
         return false;
-    }
 
     // We upscale our window dimensions from the Game Boy's
     // pixel dimensions so that our window isn't super small.
-    gb->window = SDL_CreateWindow("Cboy -- A Game Boy Emulator",
-                                  SDL_WINDOWPOS_UNDEFINED,
-                                  SDL_WINDOWPOS_UNDEFINED,
-                                  window_scale * FRAME_WIDTH,
-                                  window_scale * FRAME_HEIGHT,
-                                  SDL_WINDOW_SHOWN);
-
-    if (gb->window == NULL)
+    if (!SDL_CreateWindowAndRenderer("Cboy -- A Game Boy Emulator",
+                                     window_scale * FRAME_WIDTH,
+                                     window_scale * FRAME_HEIGHT,
+                                     SDL_WINDOW_HIGH_PIXEL_DENSITY,
+                                     &gb->window,
+                                     &gb->renderer))
     {
-        return false;
-    }
-
-    gb->renderer = SDL_CreateRenderer(gb->window, -1, 0);
-
-    if (gb->renderer == NULL)
-    {
-        SDL_DestroyWindow(gb->window);
         return false;
     }
 
@@ -197,12 +185,14 @@ static bool init_screen(gameboy *gb, int window_scale)
         return false;
     }
 
+    // nearest pixel sampling was SDL2's default but isn't SDL3's
+    SDL_SetTextureScaleMode(gb->screen, SDL_SCALEMODE_NEAREST);
     SDL_UpdateTexture(gb->screen,
                       NULL,
                       gb->ppu->frame_buffer,
                       FRAME_WIDTH * sizeof gb->ppu->frame_buffer[0]);
     SDL_RenderClear(gb->renderer);
-    SDL_RenderCopy(gb->renderer, gb->screen, NULL, NULL);
+    SDL_RenderTexture(gb->renderer, gb->screen, NULL, NULL);
     SDL_RenderPresent(gb->renderer);
 
     return true;
@@ -844,12 +834,12 @@ static inline void poll_input(gameboy *gb)
     {
         switch (event.type)
         {
-            case SDL_QUIT:
+            case SDL_EVENT_QUIT:
                 gb->is_on = false;
                 break;
 
-            case SDL_KEYDOWN:
-            case SDL_KEYUP:
+            case SDL_EVENT_KEY_DOWN:
+            case SDL_EVENT_KEY_UP:
                 handle_keypress(gb, &event.key);
                 break;
 
@@ -867,9 +857,9 @@ static inline void throttle_emulation(gameboy *gb)
     do
     {
         SDL_Delay(1);
-        SDL_LockAudioDevice(gb->apu->audio_dev);
+        SDL_LockAudioStream(gb->apu->audio_stream);
         wait = gb->apu->num_frames > AUDIO_BUFFER_FRAME_SIZE / 2;
-        SDL_UnlockAudioDevice(gb->apu->audio_dev);
+        SDL_UnlockAudioStream(gb->apu->audio_stream);
     } while (wait);
 }
 
